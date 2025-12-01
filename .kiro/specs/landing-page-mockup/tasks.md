@@ -14,18 +14,18 @@
 ### Phase 1: プロジェクトセットアップと型定義
 
 - [ ] 1. プロジェクト構造の確認と型定義の準備
-- [ ] 1.1 (P) 既存プロジェクト構造の検証とshadcn/uiコンポーネントの確認
+- [x] 1.1 (P) 既存プロジェクト構造の検証とshadcn/uiコンポーネントの確認
   - Next.js App Routerの`app/layout.tsx`がThemeProvider統合済みであることを確認
   - `components/ui/`配下にButton、Cardコンポーネントが存在することを確認
   - `lucide-react`（^0.511.0）がpackage.jsonに含まれることを確認
   - Tailwind CSS設定（`tailwind.config.ts`）のブレークポイント確認
   - _Requirements: 1.2, 1.4, 9.1_
 
-- [ ] 1.2 (P) 共通型定義とモックデータ構造の作成
-  - ナビゲーションリンク用の`NavLink`インターフェース定義
-  - 機能カード用の`FeatureItem`インターフェース定義
-  - フッターリンク用の`FooterLink`および`SocialLink`インターフェース定義
-  - 各インターフェースをTypeScript strict modeで型安全に実装
+- [x] 1.2 (P) 共通型定義とモックデータ構造の作成
+  - ナビゲーションリンク用の`NavLink`型定義
+  - 機能カード用の`FeatureItem`型定義
+  - フッターリンク用の`FooterLink`および`SocialLink`型定義
+  - 各型定義をTypeScript strict modeで型安全に実装（type aliasを使用）
   - _Requirements: 9.4, 9.5, 11.3, 11.5_
 
 ### Phase 2: ページレベルコンポーネント実装
