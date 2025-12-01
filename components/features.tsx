@@ -86,7 +86,11 @@ export function Features() {
           {featuresData.map((feature) => {
             const IconComponent = feature.icon;
             return (
-              <Card className="h-full" key={feature.id}>
+              <Card
+                className="h-full"
+                data-feature-card="true"
+                key={feature.id}
+              >
                 <CardHeader>
                   {/* アイコン - Requirement 4.6 */}
                   <div className="mb-4">

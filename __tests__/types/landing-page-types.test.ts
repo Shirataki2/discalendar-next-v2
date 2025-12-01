@@ -23,8 +23,9 @@ describe("Task 1.2: 共通型定義の検証", () => {
 
   describe("FeatureItem型", () => {
     it("正しい構造のFeatureItemオブジェクトを受け入れること", () => {
-      // lucide-reactアイコンのモック
-      const mockIcon = () => null;
+      // lucide-reactアイコンのモック - LucideIconと互換性のある型
+      const mockIcon = (() =>
+        null) as unknown as import("lucide-react").LucideIcon;
 
       const featureItem: FeatureItem = {
         id: "calendar-ui",
@@ -60,8 +61,9 @@ describe("Task 1.2: 共通型定義の検証", () => {
 
   describe("SocialLink型", () => {
     it("正しい構造のSocialLinkオブジェクトを受け入れること", () => {
-      // lucide-reactアイコンのモック
-      const mockIcon = () => null;
+      // lucide-reactアイコンのモック - LucideIconと互換性のある型
+      const mockIcon = (() =>
+        null) as unknown as import("lucide-react").LucideIcon;
 
       const socialLink: SocialLink = {
         platform: "Twitter",
