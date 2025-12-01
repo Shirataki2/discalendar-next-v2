@@ -30,15 +30,15 @@
 
 ### Phase 2: ページレベルコンポーネント実装
 
-- [ ] 2. メインページの実装とセマンティックHTML構造の確立
-- [ ] 2.1 新しい`app/page.tsx`の作成とServer Component実装
+- [x] 2. メインページの実装とセマンティックHTML構造の確立
+- [x] 2.1 新しい`app/page.tsx`の作成とServer Component実装
   - 既存の`app/page.tsx`を新しいランディングページ構造に置き換え
   - セマンティックHTML（`<main>`要素）でページ構造を定義
   - Server Componentとして実装（"use client"ディレクティブなし）
   - メタデータの設定（タイトル、description）
   - _Requirements: 1.1, 1.2, 7.1, 8.3_
 
-- [ ] 2.2 セクションコンポーネントの統合とレイアウト構築
+- [x] 2.2 セクションコンポーネントの統合とレイアウト構築
   - Header、Hero、Features、CTA、Footerコンポーネントのインポートと配置
   - セクション間のスペーシング設定（Tailwind CSSマージンユーティリティ）
   - 全体のページ構造が論理的な順序で表示されることを確認
@@ -46,8 +46,8 @@
 
 ### Phase 3: ヘッダーコンポーネント実装
 
-- [ ] 3. ヘッダーナビゲーションの実装
-- [ ] 3.1 (P) Headerコンポーネントの基本構造実装
+- [x] 3. ヘッダーナビゲーションの実装
+- [x] 3.1 (P) Headerコンポーネントの基本構造実装
   - `components/header.tsx`を作成しServer Componentとして実装
   - セマンティックHTML（`<header>`、`<nav>`要素）を使用
   - サービス名またはロゴの表示エリアを配置
@@ -55,14 +55,14 @@
   - レスポンシブデザイン（md:ブレークポイント以上でナビゲーション表示）
   - _Requirements: 2.1, 2.2, 2.3, 2.6, 7.1_
 
-- [ ] 3.2 (P) ヘッダーCTAボタンとレイアウト実装
+- [x] 3.2 (P) ヘッダーCTAボタンとレイアウト実装
   - shadcn/uiの`Button`コンポーネントを使用して「ログイン」および「無料で始める」ボタンを配置
   - ボタンのvariant設定（ghost、default等）で視覚的差別化
   - ヘッダー内のFlexboxレイアウトで要素を適切に配置（space-between等）
   - モバイル画面でボタンの表示調整（必要に応じて省略または縮小）
   - _Requirements: 2.4, 10.1, 10.5_
 
-- [ ] 3.3 MobileNavコンポーネントの実装とHeaderへの統合
+- [x] 3.3 MobileNavコンポーネントの実装とHeaderへの統合
   - `components/mobile-nav.tsx`を作成しClient Componentとして実装（"use client"ディレクティブ必須）
   - React useState hookでメニュー開閉状態（`isOpen`）を管理
   - lucide-reactの`Menu`および`X`アイコンを使用してハンバーガーボタンを実装
