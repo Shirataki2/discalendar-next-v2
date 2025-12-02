@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the proxy module before importing middleware
+// Mock the proxy module before importing proxy
 const mockUpdateSession = vi.fn();
 vi.mock("@/lib/supabase/proxy", () => ({
   updateSession: mockUpdateSession,
@@ -27,30 +27,36 @@ vi.mock("next/server", async () => {
   };
 });
 
-describe("Middleware", () => {
+/**
+ * Proxy tests (Next.js 16 uses proxy.ts instead of middleware.ts)
+ *
+ * Note: In Next.js 16, the middleware functionality has been moved to proxy.ts.
+ * These tests verify the proxy function behavior.
+ */
+describe("Proxy (Next.js 16 middleware)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("Task 2.1: Session update integration", () => {
     it("should call updateSession for all matching requests", async () => {
-      const { middleware } = await import("@/middleware");
+      const { proxy } = await import("@/proxy");
       const mockResponse = { type: "next" };
       mockUpdateSession.mockResolvedValue(mockResponse);
 
       const mockRequest = createMockRequest("/dashboard");
-      await middleware(mockRequest);
+      await proxy(mockRequest);
 
       expect(mockUpdateSession).toHaveBeenCalledWith(mockRequest);
     });
 
     it("should return the response from updateSession", async () => {
-      const { middleware } = await import("@/middleware");
+      const { proxy } = await import("@/proxy");
       const mockResponse = { type: "next", cookies: {} };
       mockUpdateSession.mockResolvedValue(mockResponse);
 
       const mockRequest = createMockRequest("/dashboard");
-      const result = await middleware(mockRequest);
+      const result = await proxy(mockRequest);
 
       expect(result).toBe(mockResponse);
     });
@@ -58,7 +64,7 @@ describe("Middleware", () => {
 
   describe("Task 2.1: Static asset exclusion via config matcher", () => {
     it("should have config that excludes static assets", async () => {
-      const { config } = await import("@/middleware");
+      const { config } = await import("@/proxy");
 
       expect(config).toBeDefined();
       expect(config.matcher).toBeDefined();
@@ -83,10 +89,10 @@ describe("Middleware", () => {
   });
 
   describe("Task 2.2: Route protection - Unauthenticated user to protected routes", () => {
-    it("should redirect unauthenticated user from protected route to login page (handled by proxy.ts)", async () => {
-      // This test verifies that proxy.ts updateSession is called,
+    it("should redirect unauthenticated user from protected route to login page (handled by lib/supabase/proxy.ts)", async () => {
+      // This test verifies that lib/supabase/proxy.ts updateSession is called,
       // which handles the redirect logic for unauthenticated users on protected routes
-      const { middleware } = await import("@/middleware");
+      const { proxy } = await import("@/proxy");
 
       const redirectUrl = new URL("/auth/login", "http://localhost:3000");
       const mockRedirectResponse = {
@@ -96,7 +102,7 @@ describe("Middleware", () => {
       mockUpdateSession.mockResolvedValue(mockRedirectResponse);
 
       const mockRequest = createMockRequest("/dashboard");
-      const result = await middleware(mockRequest);
+      const result = await proxy(mockRequest);
 
       expect(mockUpdateSession).toHaveBeenCalledWith(mockRequest);
       expect(result).toBe(mockRedirectResponse);
@@ -105,7 +111,7 @@ describe("Middleware", () => {
 
   describe("Task 2.2: Route protection - Authenticated user to login page", () => {
     it("should redirect authenticated user from login page to dashboard", async () => {
-      const { middleware } = await import("@/middleware");
+      const { proxy } = await import("@/proxy");
 
       // First, setup updateSession to return a response with user (simulating authenticated state)
       const mockAuthenticatedResponse = {
@@ -117,9 +123,9 @@ describe("Middleware", () => {
 
       const mockRequest = createMockRequest("/auth/login");
 
-      // Since proxy.ts needs to be modified to return user info,
-      // this test verifies the middleware behavior
-      await middleware(mockRequest);
+      // Since lib/supabase/proxy.ts needs to be modified to return user info,
+      // this test verifies the proxy behavior
+      await proxy(mockRequest);
 
       expect(mockUpdateSession).toHaveBeenCalledWith(mockRequest);
     });
@@ -127,24 +133,24 @@ describe("Middleware", () => {
 
   describe("Task 2.2: Public routes should skip auth check", () => {
     it("should allow access to root path without redirect", async () => {
-      const { middleware } = await import("@/middleware");
+      const { proxy } = await import("@/proxy");
       const mockResponse = { type: "next" };
       mockUpdateSession.mockResolvedValue(mockResponse);
 
       const mockRequest = createMockRequest("/");
-      const result = await middleware(mockRequest);
+      const result = await proxy(mockRequest);
 
       expect(mockUpdateSession).toHaveBeenCalledWith(mockRequest);
       expect(result).toBe(mockResponse);
     });
 
     it("should allow access to auth callback without redirect", async () => {
-      const { middleware } = await import("@/middleware");
+      const { proxy } = await import("@/proxy");
       const mockResponse = { type: "next" };
       mockUpdateSession.mockResolvedValue(mockResponse);
 
       const mockRequest = createMockRequest("/auth/callback");
-      const result = await middleware(mockRequest);
+      const result = await proxy(mockRequest);
 
       expect(mockUpdateSession).toHaveBeenCalledWith(mockRequest);
       expect(result).toBe(mockResponse);
@@ -167,5 +173,5 @@ function createMockRequest(pathname: string) {
       getAll: () => [],
       set: vi.fn(),
     },
-  } as unknown as Parameters<typeof import("@/middleware").middleware>[0];
+  } as unknown as Parameters<typeof import("@/proxy").proxy>[0];
 }
