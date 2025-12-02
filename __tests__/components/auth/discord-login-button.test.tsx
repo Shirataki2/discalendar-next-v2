@@ -149,7 +149,10 @@ describe("Task 9: DiscordLoginButton Security & Logging", () => {
     it("should show loading state when clicked", async () => {
       // Make OAuth hang to observe loading state
       mockSignInWithOAuth.mockImplementation(
-        () => new Promise(() => {}) // Never resolves
+        () =>
+          new Promise(() => {
+            /* intentionally never resolves */
+          })
       );
 
       const { DiscordLoginButton } = await import(
@@ -167,7 +170,10 @@ describe("Task 9: DiscordLoginButton Security & Logging", () => {
 
     it("should disable button when loading", async () => {
       mockSignInWithOAuth.mockImplementation(
-        () => new Promise(() => {}) // Never resolves
+        () =>
+          new Promise(() => {
+            /* intentionally never resolves */
+          })
       );
 
       const { DiscordLoginButton } = await import(

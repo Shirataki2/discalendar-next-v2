@@ -23,9 +23,9 @@ describe("Task 9: Security Requirements Verification", () => {
     });
 
     it("should log authentication errors to console.error", () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* suppress console output */
+      });
 
       const error: AuthError = {
         code: "auth_failed",
@@ -45,9 +45,9 @@ describe("Task 9: Security Requirements Verification", () => {
     });
 
     it("should include error code in log output", () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* suppress console output */
+      });
 
       const error: AuthError = {
         code: "access_denied",
@@ -66,9 +66,9 @@ describe("Task 9: Security Requirements Verification", () => {
     });
 
     it("should include error message in log output", () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* suppress console output */
+      });
 
       const error: AuthError = {
         code: "network_error",
@@ -87,9 +87,9 @@ describe("Task 9: Security Requirements Verification", () => {
     });
 
     it("should include details in log output when provided", () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* suppress console output */
+      });
 
       const error: AuthError = {
         code: "auth_failed",
@@ -110,9 +110,9 @@ describe("Task 9: Security Requirements Verification", () => {
     });
 
     it("should not include details parameter when not provided", () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* suppress console output */
+      });
 
       const error: AuthError = {
         code: "missing_code",
@@ -128,9 +128,9 @@ describe("Task 9: Security Requirements Verification", () => {
     });
 
     it("should log all defined error codes", () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* suppress console output */
+      });
 
       for (const code of AUTH_ERROR_CODES) {
         const error: AuthError = {

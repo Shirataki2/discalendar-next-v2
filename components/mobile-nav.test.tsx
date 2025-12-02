@@ -2,6 +2,16 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Regex constants for top-level performance
+const OPEN_MENU_REGEX = /メニューを開く/i;
+const CLOSE_MENU_REGEX = /メニューを閉じる/i;
+const LOGIN_REGEX = /ログイン/i;
+const LOGIN_EXACT_REGEX = /ログイン$/i;
+const SIGNUP_REGEX = /無料で始める/i;
+const LOGOUT_REGEX = /ログアウト/i;
+const DASHBOARD_REGEX = /ダッシュボード/i;
+const FEATURES_REGEX = /機能/i;
+
 // Mock the signOut server action
 vi.mock("@/app/auth/actions", () => ({
   signOut: vi.fn(),
@@ -40,11 +50,11 @@ describe("MobileNav", () => {
 
       // Open the menu
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
       await user.click(menuButton);
 
-      const loginLink = screen.getByRole("link", { name: /ログイン/i });
+      const loginLink = screen.getByRole("link", { name: LOGIN_REGEX });
       expect(loginLink).toBeInTheDocument();
       expect(loginLink).toHaveAttribute("href", "/auth/login");
     });
@@ -55,11 +65,11 @@ describe("MobileNav", () => {
 
       // Open the menu
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
       await user.click(menuButton);
 
-      const signupLink = screen.getByRole("link", { name: /無料で始める/i });
+      const signupLink = screen.getByRole("link", { name: SIGNUP_REGEX });
       expect(signupLink).toBeInTheDocument();
       expect(signupLink).toHaveAttribute("href", "/auth/login");
     });
@@ -70,12 +80,12 @@ describe("MobileNav", () => {
 
       // Open the menu
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
       await user.click(menuButton);
 
       const logoutButton = screen.queryByRole("button", {
-        name: /ログアウト/i,
+        name: LOGOUT_REGEX,
       });
       expect(logoutButton).not.toBeInTheDocument();
     });
@@ -88,11 +98,11 @@ describe("MobileNav", () => {
 
       // Open the menu
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
       await user.click(menuButton);
 
-      const logoutButton = screen.getByRole("button", { name: /ログアウト/i });
+      const logoutButton = screen.getByRole("button", { name: LOGOUT_REGEX });
       expect(logoutButton).toBeInTheDocument();
     });
 
@@ -102,12 +112,12 @@ describe("MobileNav", () => {
 
       // Open the menu
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
       await user.click(menuButton);
 
       const dashboardLink = screen.getByRole("link", {
-        name: /ダッシュボード/i,
+        name: DASHBOARD_REGEX,
       });
       expect(dashboardLink).toBeInTheDocument();
       expect(dashboardLink).toHaveAttribute("href", "/dashboard");
@@ -119,11 +129,11 @@ describe("MobileNav", () => {
 
       // Open the menu
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
       await user.click(menuButton);
 
-      const loginLink = screen.queryByRole("link", { name: /ログイン$/i });
+      const loginLink = screen.queryByRole("link", { name: LOGIN_EXACT_REGEX });
       expect(loginLink).not.toBeInTheDocument();
     });
 
@@ -133,11 +143,11 @@ describe("MobileNav", () => {
 
       // Open the menu
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
       await user.click(menuButton);
 
-      const signupLink = screen.queryByRole("link", { name: /無料で始める/i });
+      const signupLink = screen.queryByRole("link", { name: SIGNUP_REGEX });
       expect(signupLink).not.toBeInTheDocument();
     });
   });
@@ -148,24 +158,24 @@ describe("MobileNav", () => {
       render(<MobileNav isAuthenticated={false} links={mockLinks} />);
 
       const menuButton = screen.getByRole("button", {
-        name: /メニューを開く/i,
+        name: OPEN_MENU_REGEX,
       });
 
       // Initially closed
       expect(
-        screen.queryByRole("link", { name: /機能/i })
+        screen.queryByRole("link", { name: FEATURES_REGEX })
       ).not.toBeInTheDocument();
 
       // Open menu
       await user.click(menuButton);
-      expect(screen.getByRole("link", { name: /機能/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: FEATURES_REGEX })
+      ).toBeInTheDocument();
 
       // Close menu
-      await user.click(
-        screen.getByRole("button", { name: /メニューを閉じる/i })
-      );
+      await user.click(screen.getByRole("button", { name: CLOSE_MENU_REGEX }));
       expect(
-        screen.queryByRole("link", { name: /機能/i })
+        screen.queryByRole("link", { name: FEATURES_REGEX })
       ).not.toBeInTheDocument();
     });
   });

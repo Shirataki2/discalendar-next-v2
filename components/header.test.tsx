@@ -1,6 +1,16 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Regex constants for top-level performance
+const LOGIN_REGEX = /ログイン/i;
+const LOGIN_EXACT_REGEX = /ログイン$/i;
+const SIGNUP_REGEX = /無料で始める/i;
+const LOGOUT_REGEX = /ログアウト/i;
+const DASHBOARD_REGEX = /ダッシュボード/i;
+const FEATURES_REGEX = /機能/i;
+const HOW_TO_USE_REGEX = /使い方/i;
+const PRICING_REGEX = /料金/i;
+
 // Mock for Server Component patterns
 const mockGetUser = vi.fn();
 
@@ -45,7 +55,7 @@ describe("Header", () => {
       const header = await Header();
       render(header);
 
-      const loginLink = screen.getByRole("link", { name: /ログイン/i });
+      const loginLink = screen.getByRole("link", { name: LOGIN_REGEX });
       expect(loginLink).toBeInTheDocument();
       expect(loginLink).toHaveAttribute("href", "/auth/login");
     });
@@ -54,7 +64,7 @@ describe("Header", () => {
       const header = await Header();
       render(header);
 
-      const signupLink = screen.getByRole("link", { name: /無料で始める/i });
+      const signupLink = screen.getByRole("link", { name: SIGNUP_REGEX });
       expect(signupLink).toBeInTheDocument();
       expect(signupLink).toHaveAttribute("href", "/auth/login");
     });
@@ -64,7 +74,7 @@ describe("Header", () => {
       render(header);
 
       const logoutButton = screen.queryByRole("button", {
-        name: /ログアウト/i,
+        name: LOGOUT_REGEX,
       });
       expect(logoutButton).not.toBeInTheDocument();
     });
@@ -91,7 +101,7 @@ describe("Header", () => {
       const header = await Header();
       render(header);
 
-      const logoutButton = screen.getByRole("button", { name: /ログアウト/i });
+      const logoutButton = screen.getByRole("button", { name: LOGOUT_REGEX });
       expect(logoutButton).toBeInTheDocument();
     });
 
@@ -100,7 +110,7 @@ describe("Header", () => {
       render(header);
 
       const dashboardLink = screen.getByRole("link", {
-        name: /ダッシュボード/i,
+        name: DASHBOARD_REGEX,
       });
       expect(dashboardLink).toBeInTheDocument();
       expect(dashboardLink).toHaveAttribute("href", "/dashboard");
@@ -110,7 +120,7 @@ describe("Header", () => {
       const header = await Header();
       render(header);
 
-      const loginLink = screen.queryByRole("link", { name: /ログイン$/i });
+      const loginLink = screen.queryByRole("link", { name: LOGIN_EXACT_REGEX });
       expect(loginLink).not.toBeInTheDocument();
     });
 
@@ -118,7 +128,7 @@ describe("Header", () => {
       const header = await Header();
       render(header);
 
-      const signupLink = screen.queryByRole("link", { name: /無料で始める/i });
+      const signupLink = screen.queryByRole("link", { name: SIGNUP_REGEX });
       expect(signupLink).not.toBeInTheDocument();
     });
   });
@@ -140,9 +150,15 @@ describe("Header", () => {
       const header = await Header();
       render(header);
 
-      expect(screen.getByRole("link", { name: /機能/i })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /使い方/i })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /料金/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: FEATURES_REGEX })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: HOW_TO_USE_REGEX })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: PRICING_REGEX })
+      ).toBeInTheDocument();
     });
   });
 });
