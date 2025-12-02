@@ -28,6 +28,9 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 
+// Header内で認証状態を取得するため動的レンダリングを強制
+export const dynamic = "force-dynamic";
+
 /**
  * ページメタデータ
  * Requirement 1.2: メタデータの設定
@@ -45,8 +48,10 @@ export const metadata: Metadata = {
  * - main要素でページのメインコンテンツを定義
  * - セクション間のスペーシング（space-y-0）
  * - 論理的な順序: Header -> Hero -> Features -> CTA -> Footer
+ *
+ * Note: async Server Componentとして実装（Headerが認証状態を取得するため）
  */
-export default function Home() {
+export default async function Home() {
   return (
     <main className="space-y-0">
       <Header />

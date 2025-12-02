@@ -11,37 +11,67 @@
  * - 7.6: ARIA属性の適用
  */
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Mock the async Header component with a synchronous version for testing
+vi.mock("@/components/header", () => ({
+  Header: () => (
+    <header data-testid="landing-header">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <a href="/">Discalendar</a>
+        <nav className="hidden md:flex md:items-center md:gap-6">
+          <a href="#features">機能</a>
+          <a href="#how-to-use">使い方</a>
+          <a href="#pricing">料金</a>
+        </nav>
+        <div className="hidden items-center gap-3 md:flex">
+          <button type="button">ログイン</button>
+          <button type="button">無料で始める</button>
+        </div>
+      </div>
+    </header>
+  ),
+}));
+
 import Page from "@/app/page";
 
 describe("アクセシビリティ - セマンティックHTML", () => {
-  it("main要素がページに存在する", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("main要素がページに存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const mainElement = container.querySelector("main");
     expect(mainElement).toBeDefined();
   });
 
-  it("header要素がページに存在する", () => {
-    render(<Page />);
+  it("header要素がページに存在する", async () => {
+    const page = await Page();
+    render(page);
     const headerElements = screen.getAllByTestId("landing-header");
     expect(headerElements[0].tagName).toBe("HEADER");
   });
 
-  it("footer要素がページに存在する", () => {
-    render(<Page />);
+  it("footer要素がページに存在する", async () => {
+    const page = await Page();
+    render(page);
     const footerElements = screen.getAllByTestId("landing-footer");
     expect(footerElements[0].tagName).toBe("FOOTER");
   });
 
-  it("nav要素がheader内に存在する", () => {
-    const { container } = render(<Page />);
+  it("nav要素がheader内に存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const navElements = container.querySelectorAll("header nav");
     expect(navElements.length).toBeGreaterThan(0);
   });
 
-  it("section要素がページに複数存在する", () => {
-    const { container } = render(<Page />);
+  it("section要素がページに複数存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const sections = container.querySelectorAll("section");
     // Hero, Features, CTAの3つのsection
     expect(sections.length).toBeGreaterThanOrEqual(3);
@@ -49,27 +79,35 @@ describe("アクセシビリティ - セマンティックHTML", () => {
 });
 
 describe("アクセシビリティ - 見出し階層", () => {
-  it("h1見出しがページに1つ存在する", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("h1見出しがページに1つ存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const h1Elements = container.querySelectorAll("h1");
     expect(h1Elements.length).toBe(1);
   });
 
-  it("h1見出しに意味のあるテキストが含まれる", () => {
-    render(<Page />);
+  it("h1見出しに意味のあるテキストが含まれる", async () => {
+    const page = await Page();
+    render(page);
     const h1Elements = screen.getAllByRole("heading", { level: 1 });
     expect(h1Elements[0].textContent).toBeTruthy();
     expect(h1Elements[0].textContent?.length).toBeGreaterThan(5);
   });
 
-  it("h2見出しがページに存在する", () => {
-    const { container } = render(<Page />);
+  it("h2見出しがページに存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const h2Elements = container.querySelectorAll("h2");
     expect(h2Elements.length).toBeGreaterThan(0);
   });
 
-  it("h3見出しがh2の後に使用されている", () => {
-    const { container } = render(<Page />);
+  it("h3見出しがh2の後に使用されている", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const h2Elements = container.querySelectorAll("h2");
     const h3Elements = container.querySelectorAll("h3");
 
@@ -81,8 +119,13 @@ describe("アクセシビリティ - 見出し階層", () => {
 });
 
 describe("アクセシビリティ - 画像", () => {
-  it("すべてのimg要素にalt属性が設定されている", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("すべてのimg要素にalt属性が設定されている", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const images = container.querySelectorAll("img");
 
     for (const img of images) {
@@ -90,8 +133,9 @@ describe("アクセシビリティ - 画像", () => {
     }
   });
 
-  it("alt属性に意味のあるテキストが含まれる", () => {
-    const { container } = render(<Page />);
+  it("alt属性に意味のあるテキストが含まれる", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const images = container.querySelectorAll("img");
 
     for (const img of images) {
@@ -105,8 +149,13 @@ describe("アクセシビリティ - 画像", () => {
 });
 
 describe("アクセシビリティ - インタラクティブ要素", () => {
-  it("すべてのbutton要素にアクセス可能なテキストがある", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("すべてのbutton要素にアクセス可能なテキストがある", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const buttons = container.querySelectorAll("button");
 
     for (const button of buttons) {
@@ -118,8 +167,9 @@ describe("アクセシビリティ - インタラクティブ要素", () => {
     }
   });
 
-  it("リンク要素にアクセス可能なテキストがある", () => {
-    const { container } = render(<Page />);
+  it("リンク要素にアクセス可能なテキストがある", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const links = container.querySelectorAll("a");
 
     for (const link of links) {
@@ -132,8 +182,13 @@ describe("アクセシビリティ - インタラクティブ要素", () => {
 });
 
 describe("アクセシビリティ - ARIA属性", () => {
-  it("ソーシャルリンクにaria-label属性が設定されている", () => {
-    render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("ソーシャルリンクにaria-label属性が設定されている", async () => {
+    const page = await Page();
+    render(page);
     const footerElements = screen.getAllByTestId("landing-footer");
     const socialLinks = footerElements[0].querySelectorAll("a[aria-label]");
 

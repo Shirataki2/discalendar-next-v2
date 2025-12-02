@@ -47,13 +47,24 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  const pathname = request.nextUrl.pathname;
+
+  // Requirement 5.2: Authenticated user accessing login page should redirect to dashboard
+  if (user && pathname === "/auth/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  // Requirement 5.1: Unauthenticated user accessing protected routes should redirect to login
+  // Public routes: /, /auth/* (login, callback, etc.)
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/login");
+
+  if (!user && !isPublicRoute) {
+    // No user, redirect to login page
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);

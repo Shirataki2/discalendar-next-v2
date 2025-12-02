@@ -15,7 +15,12 @@
  * - リンククリック時にメニュー自動クローズ
  * - md:ブレークポイント以上で非表示
  *
+ * タスク8: 既存ヘッダーのログインリンクを更新する
+ * - ヘッダーのログインリンク先を新しいログインページに変更する
+ * - 認証状態に応じてログイン/ログアウトの表示を切り替える
+ *
  * Requirements:
+ * - 1.1: Discordログインボタンの表示
  * - 2.5: モバイル画面のハンバーガーメニュー
  * - 7.4, 7.5, 7.6: アクセシビリティ - インタラクション
  * - 8.4: Client Componentの適切な使用
@@ -24,6 +29,7 @@
 
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -38,7 +44,10 @@ type NavLink = {
  * MobileNavコンポーネントのProps型定義
  */
 type MobileNavProps = {
+  /** ナビゲーションリンクの配列 */
   links: NavLink[];
+  /** ユーザーが認証済みかどうか */
+  isAuthenticated: boolean;
 };
 
 /**
@@ -49,8 +58,9 @@ type MobileNavProps = {
  * - ハンバーガーアイコン（Menu）と閉じるアイコン（X）の切り替え
  * - ナビゲーションリンクのモーダル表示
  * - キーボードアクセシビリティの確保
+ * - 認証状態に応じたCTAボタン表示切り替え
  */
-export function MobileNav({ links }: MobileNavProps) {
+export function MobileNav({ links, isAuthenticated }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
   /**
@@ -100,14 +110,31 @@ export function MobileNav({ links }: MobileNavProps) {
               </a>
             ))}
 
-            {/* モバイルCTAボタン */}
+            {/* モバイルCTAボタン - Task 8 */}
             <div className="mt-4 flex flex-col gap-3">
-              <Button asChild variant="outline">
-                <a href="#login">ログイン</a>
-              </Button>
-              <Button asChild>
-                <a href="#signup">無料で始める</a>
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Button asChild variant="outline">
+                    <a href="/dashboard" onClick={handleLinkClick}>
+                      ダッシュボード
+                    </a>
+                  </Button>
+                  <LogoutButton variant="default" />
+                </>
+              ) : (
+                <>
+                  <Button asChild variant="outline">
+                    <a href="/auth/login" onClick={handleLinkClick}>
+                      ログイン
+                    </a>
+                  </Button>
+                  <Button asChild>
+                    <a href="/auth/login" onClick={handleLinkClick}>
+                      無料で始める
+                    </a>
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>

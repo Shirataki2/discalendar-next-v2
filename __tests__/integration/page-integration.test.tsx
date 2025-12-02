@@ -7,8 +7,29 @@
  * - 2.1, 3.1, 4.1, 5.1, 6.1: 各セクションコンポーネントの統合
  */
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Mock the async Header component with a synchronous version for testing
+vi.mock("@/components/header", () => ({
+  Header: () => (
+    <header data-testid="landing-header">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <a href="/">Discalendar</a>
+        <nav className="hidden md:flex md:items-center md:gap-6">
+          <a href="#features">機能</a>
+          <a href="#how-to-use">使い方</a>
+          <a href="#pricing">料金</a>
+        </nav>
+        <div className="hidden items-center gap-3 md:flex">
+          <a href="/auth/login">ログイン</a>
+          <a href="/auth/login">無料で始める</a>
+        </div>
+      </div>
+    </header>
+  ),
+}));
+
 import Page from "@/app/page";
 
 // Regex constants for performance
@@ -17,8 +38,13 @@ const LG_GRID_COLS_REGEX = /lg:grid-cols-/;
 const LG_FLEX_ROW_REGEX = /lg:flex-row/;
 
 describe("統合テスト - ランディングページ全体の構造", () => {
-  it("すべてのセクションコンポーネント (Header, Hero, Features, CTA, Footer) が正しく表示される", () => {
-    render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("すべてのセクションコンポーネント (Header, Hero, Features, CTA, Footer) が正しく表示される", async () => {
+    const page = await Page();
+    render(page);
 
     // Header
     const header = screen.getByTestId("landing-header");
@@ -46,8 +72,9 @@ describe("統合テスト - ランディングページ全体の構造", () => {
     expect(footer.tagName).toBe("FOOTER");
   });
 
-  it("ページ全体のレイアウトが正しいDOM順序で配置されている", () => {
-    const { container } = render(<Page />);
+  it("ページ全体のレイアウトが正しいDOM順序で配置されている", async () => {
+    const page = await Page();
+    const { container } = render(page);
 
     const main = container.querySelector("main");
     expect(main).toBeInTheDocument();
@@ -69,8 +96,9 @@ describe("統合テスト - ランディングページ全体の構造", () => {
     ]);
   });
 
-  it("ページ全体が1つのmain要素に含まれている", () => {
-    const { container } = render(<Page />);
+  it("ページ全体が1つのmain要素に含まれている", async () => {
+    const page = await Page();
+    const { container } = render(page);
 
     const mainElements = container.querySelectorAll("main");
     expect(mainElements.length).toBe(1);
@@ -86,8 +114,13 @@ describe("統合テスト - ランディングページ全体の構造", () => {
 });
 
 describe("統合テスト - スクロール動作とレイアウト", () => {
-  it("各セクションが画面に収まる高さを持つ", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("各セクションが画面に収まる高さを持つ", async () => {
+    const page = await Page();
+    const { container } = render(page);
 
     const sections = [
       container.querySelector('[data-testid="landing-header"]'),
@@ -104,8 +137,9 @@ describe("統合テスト - スクロール動作とレイアウト", () => {
     }
   });
 
-  it("セクション間のスペーシングが適切に設定されている", () => {
-    const { container } = render(<Page />);
+  it("セクション間のスペーシングが適切に設定されている", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const main = container.querySelector("main");
 
     // mainにspace-yクラスが設定されている
@@ -114,8 +148,13 @@ describe("統合テスト - スクロール動作とレイアウト", () => {
 });
 
 describe("統合テスト - コンテンツの完全性", () => {
-  it("h1見出しがHeroセクションに存在する", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("h1見出しがHeroセクションに存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const hero = container.querySelector('[data-testid="landing-hero"]');
     const h1 = hero?.querySelector("h1");
 
@@ -123,8 +162,9 @@ describe("統合テスト - コンテンツの完全性", () => {
     expect(h1?.textContent).toBeTruthy();
   });
 
-  it("機能カードが3つ存在する", () => {
-    const { container } = render(<Page />);
+  it("機能カードが3つ存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const features = container.querySelector(
       '[data-testid="landing-features"]'
     );
@@ -133,8 +173,9 @@ describe("統合テスト - コンテンツの完全性", () => {
     expect(cards?.length).toBe(3);
   });
 
-  it("CTAボタンがHeroとCTAセクションに存在する", () => {
-    const { container } = render(<Page />);
+  it("CTAボタンがHeroとCTAセクションに存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
 
     const hero = container.querySelector('[data-testid="landing-hero"]');
     const cta = container.querySelector('[data-testid="landing-cta"]');
@@ -147,8 +188,9 @@ describe("統合テスト - コンテンツの完全性", () => {
     expect(ctaCTAs && ctaCTAs.length > 0).toBe(true);
   });
 
-  it("ナビゲーションリンクがHeaderに存在する", () => {
-    const { container } = render(<Page />);
+  it("ナビゲーションリンクがHeaderに存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const header = container.querySelector('[data-testid="landing-header"]');
     const navLinks = header?.querySelectorAll("nav a");
 
@@ -156,8 +198,9 @@ describe("統合テスト - コンテンツの完全性", () => {
     expect(navLinks && navLinks.length >= 3).toBe(true);
   });
 
-  it("フッターにソーシャルリンクと補足リンクが存在する", () => {
-    const { container } = render(<Page />);
+  it("フッターにソーシャルリンクと補足リンクが存在する", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const footer = container.querySelector('[data-testid="landing-footer"]');
 
     const socialLinks = footer?.querySelectorAll(
@@ -171,8 +214,13 @@ describe("統合テスト - コンテンツの完全性", () => {
 });
 
 describe("統合テスト - アクセシビリティの総合確認", () => {
-  it("見出し階層が論理的に構成されている (h1 -> h2 -> h3)", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("見出し階層が論理的に構成されている (h1 -> h2 -> h3)", async () => {
+    const page = await Page();
+    const { container } = render(page);
 
     const h1 = container.querySelector("h1");
     const h2Elements = container.querySelectorAll("h2");
@@ -188,8 +236,9 @@ describe("統合テスト - アクセシビリティの総合確認", () => {
     expect(h3Elements.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("すべてのインタラクティブ要素がアクセシブルである", () => {
-    const { container } = render(<Page />);
+  it("すべてのインタラクティブ要素がアクセシブルである", async () => {
+    const page = await Page();
+    const { container } = render(page);
 
     const buttons = container.querySelectorAll("button");
     const links = container.querySelectorAll("a");
@@ -210,8 +259,9 @@ describe("統合テスト - アクセシビリティの総合確認", () => {
     }
   });
 
-  it("すべての画像にalt属性が設定されている", () => {
-    const { container } = render(<Page />);
+  it("すべての画像にalt属性が設定されている", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const images = container.querySelectorAll("img");
 
     for (const img of images) {
@@ -221,8 +271,13 @@ describe("統合テスト - アクセシビリティの総合確認", () => {
 });
 
 describe("統合テスト - レスポンシブデザイン", () => {
-  it("レスポンシブクラス (md:, lg:) が各セクションに適用されている", () => {
-    const { container } = render(<Page />);
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("レスポンシブクラス (md:, lg:) が各セクションに適用されている", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const htmlString = container.innerHTML;
 
     // md:ブレークポイント
@@ -232,24 +287,34 @@ describe("統合テスト - レスポンシブデザイン", () => {
     expect(htmlString).toContain("lg:");
   });
 
-  it("機能カードグリッドがレスポンシブである", () => {
-    const { container } = render(<Page />);
+  it("機能カードグリッドがレスポンシブである", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const features = container.querySelector(
       '[data-testid="landing-features"]'
     );
-    const grid = features?.querySelector(".grid");
+    // Find grid element by looking for element with class containing "grid"
+    const grid = features?.querySelector('[class*="grid"]');
 
-    expect(grid?.className).toContain("grid-cols-1");
-    expect(grid?.className).toMatch(MD_GRID_COLS_REGEX);
-    expect(grid?.className).toMatch(LG_GRID_COLS_REGEX);
+    expect(grid).toBeTruthy();
+    if (grid) {
+      expect(grid.className).toContain("grid-cols-1");
+      expect(grid.className).toMatch(MD_GRID_COLS_REGEX);
+      expect(grid.className).toMatch(LG_GRID_COLS_REGEX);
+    }
   });
 
-  it("Heroセクションがレスポンシブフレックスレイアウトである", () => {
-    const { container } = render(<Page />);
+  it("Heroセクションがレスポンシブフレックスレイアウトである", async () => {
+    const page = await Page();
+    const { container } = render(page);
     const hero = container.querySelector('[data-testid="landing-hero"]');
-    const flex = hero?.querySelector(".flex");
+    // Find flex element by looking for element with class containing "flex-col"
+    const flex = hero?.querySelector('[class*="flex-col"]');
 
-    expect(flex?.className).toContain("flex-col");
-    expect(flex?.className).toMatch(LG_FLEX_ROW_REGEX);
+    expect(flex).toBeTruthy();
+    if (flex) {
+      expect(flex.className).toContain("flex-col");
+      expect(flex.className).toMatch(LG_FLEX_ROW_REGEX);
+    }
   });
 });

@@ -16,18 +16,32 @@ DiscalendarはDiscordコミュニティ向けの予定管理サービスです�
 
 ### 現在の実装状況
 
+✅ **Discord OAuth認証完成** (2025-12-03)
+- Supabase Auth連携によるDiscord OAuth認証
+- セッション管理とルート保護
+- ログイン/ログアウト機能
+- 認証状態に応じたUI切り替え
+- セキュリティ要件（PKCE、CSRF対策）対応
+
 ✅ **ランディングページモックアップ完成** (2025-12-02)
 - レスポンシブデザイン対応
 - アクセシビリティ準拠
 - パフォーマンス最適化済み
-- 全テスト合格 (196/196)
 
 ## 🚀 主な機能
 
 ### 実装済み
 
+- **Discord OAuth認証**
+  - Discordアカウントでのログイン/ログアウト
+  - セッション管理（Cookie + Middleware）
+  - 保護ルートへのアクセス制御
+  - エラーハンドリング（ネットワークエラー、認証失敗等）
+  - ダッシュボードページ（ユーザー情報表示）
+
 - **ランディングページ**
   - ヘッダーナビゲーション (デスクトップ・モバイル対応)
+  - 認証状態に応じたログイン/ログアウトボタン表示
   - ヒーローセクション
   - 機能紹介セクション
   - CTAセクション
@@ -35,7 +49,6 @@ DiscalendarはDiscordコミュニティ向けの予定管理サービスです�
 
 ### 今後の実装予定
 
-- Discord OAuth認証
 - カレンダーUI
 - 予定の作成・編集・削除
 - Discord Bot連携
@@ -115,9 +128,9 @@ npm run test:e2e
 
 ### テストカバレッジ
 
-- **E2Eテスト (Playwright):** 6テスト
-- **ユニットテスト (Vitest):** 190テスト
-- **合計:** 196テスト ✅
+- **E2Eテスト (Playwright):** 48テスト（認証フロー含む）
+- **ユニットテスト (Vitest):** 330+テスト
+- **合計:** 380+テスト ✅
 
 ## 🎨 コード品質
 
@@ -159,17 +172,28 @@ npm start
 discalendar-next/
 ├── app/                    # Next.js App Router
 │   ├── page.tsx           # ランディングページ
-│   └── layout.tsx         # ルートレイアウト
+│   ├── layout.tsx         # ルートレイアウト
+│   ├── auth/              # 認証関連ページ
+│   │   ├── login/        # ログインページ
+│   │   └── callback/     # OAuthコールバック
+│   └── dashboard/         # ダッシュボード（認証後）
 ├── components/            # Reactコンポーネント
 │   ├── ui/               # shadcn/ui コンポーネント
+│   ├── auth/             # 認証関連コンポーネント
+│   │   ├── discord-login-button.tsx
+│   │   └── logout-button.tsx
 │   ├── header.tsx        # ヘッダー
 │   ├── mobile-nav.tsx    # モバイルナビゲーション
 │   ├── hero.tsx          # ヒーローセクション
 │   ├── features.tsx      # 機能紹介
 │   ├── cta.tsx           # CTA
 │   └── footer.tsx        # フッター
+├── lib/                   # ユーティリティ
+│   ├── auth/             # 認証ロジック
+│   └── supabase/         # Supabaseクライアント
 ├── types/                 # TypeScript型定義
 ├── __tests__/            # テストファイル
+├── e2e_tests/            # E2Eテスト（Playwright）
 ├── .kiro/                # 仕様・ドキュメント
 │   ├── specs/           # 機能仕様
 │   └── steering/        # プロジェクト方針
@@ -179,6 +203,12 @@ discalendar-next/
 ## 📚 ドキュメント
 
 仕様書やタスク詳細は `.kiro/specs/` ディレクトリを参照してください。
+
+- [Discord OAuth認証仕様](.kiro/specs/discord-login/)
+  - [要件定義](.kiro/specs/discord-login/requirements.md)
+  - [技術設計](.kiro/specs/discord-login/design.md)
+  - [タスク計画](.kiro/specs/discord-login/tasks.md)
+  - [手動検証チェックリスト](.kiro/specs/discord-login/manual-verification-checklist.md)
 
 - [ランディングページ仕様](.kiro/specs/landing-page-mockup/)
   - [要件定義](.kiro/specs/landing-page-mockup/requirements.md)

@@ -15,7 +15,12 @@
  * - ボタンvariant設定（ghost、default等）
  * - Flexboxレイアウト（space-between等）
  *
+ * タスク8: 既存ヘッダーのログインリンクを更新する
+ * - ヘッダーのログインリンク先を新しいログインページに変更する
+ * - 認証状態に応じてログイン/ログアウトの表示を切り替える
+ *
  * Requirements:
+ * - 1.1: Discordログインボタンの表示
  * - 2.1, 2.2, 2.3, 2.4: ヘッダー構造とナビゲーション
  * - 2.6: セマンティックHTML
  * - 7.1: セマンティックHTML要素の使用
@@ -23,8 +28,10 @@
  * - 10.1, 10.4, 10.5: レスポンシブデザインとスタイリング
  */
 
+import { LogoutButton } from "@/components/auth/logout-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * ナビゲーションリンクの型定義
@@ -51,9 +58,17 @@ const navLinks: NavLink[] = [
  * - サービス名/ロゴ表示
  * - デスクトップナビゲーションリンク（md:以上で表示）
  * - モバイルナビゲーション（MobileNavコンポーネント、md:未満で表示）
- * - CTAボタン（ログイン、無料で始める）
+ * - 認証状態に応じたCTAボタン表示切り替え
  */
-export function Header() {
+export async function Header() {
+  // 認証状態を取得
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isAuthenticated = user !== null;
+
   return (
     <header
       className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
@@ -80,19 +95,30 @@ export function Header() {
           ))}
         </nav>
 
-        {/* CTAボタン（デスクトップ） - Requirement 2.4, 10.5 */}
+        {/* CTAボタン（デスクトップ） - Requirement 2.4, 10.5, Task 8 */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button asChild variant="ghost">
-            <a href="#login">ログイン</a>
-          </Button>
-          <Button asChild>
-            <a href="#signup">無料で始める</a>
-          </Button>
+          {isAuthenticated ? (
+            <>
+              <Button asChild variant="ghost">
+                <a href="/dashboard">ダッシュボード</a>
+              </Button>
+              <LogoutButton />
+            </>
+          ) : (
+            <>
+              <Button asChild variant="ghost">
+                <a href="/auth/login">ログイン</a>
+              </Button>
+              <Button asChild>
+                <a href="/auth/login">無料で始める</a>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* モバイルナビゲーション - Requirement 2.5 */}
         <div className="md:hidden">
-          <MobileNav links={navLinks} />
+          <MobileNav isAuthenticated={isAuthenticated} links={navLinks} />
         </div>
       </div>
     </header>

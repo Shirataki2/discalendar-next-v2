@@ -28,7 +28,10 @@ describe("デプロイ準備 - TypeScript型チェック", () => {
     const componentsPath = path.join(process.cwd(), "components");
     const files = fs.readdirSync(componentsPath);
     const componentFiles = files.filter(
-      (file) => file.endsWith(".tsx") && !file.startsWith("ui")
+      (file) =>
+        file.endsWith(".tsx") &&
+        !file.startsWith("ui") &&
+        !file.includes(".test.")
     );
 
     for (const file of componentFiles) {
@@ -41,7 +44,8 @@ describe("デプロイ準備 - TypeScript型チェック", () => {
         content.includes("interface ") ||
         content.includes(": React.") ||
         content.includes("LucideIcon") ||
-        content.includes("export function"); // 関数コンポーネント（TypeScript strict modeで型推論）
+        content.includes("export function") || // 関数コンポーネント（TypeScript strict modeで型推論）
+        content.includes("export async function"); // async Server Component
 
       if (!hasTypeDefinition) {
         throw new Error(
@@ -59,7 +63,10 @@ describe("デプロイ準備 - TypeScript型チェック", () => {
     const componentsPath = path.join(process.cwd(), "components");
     const files = fs.readdirSync(componentsPath);
     const componentFiles = files.filter(
-      (file) => file.endsWith(".tsx") && !file.startsWith("ui")
+      (file) =>
+        file.endsWith(".tsx") &&
+        !file.startsWith("ui") &&
+        !file.includes(".test.")
     );
 
     const pagePath = path.join(process.cwd(), "app", "page.tsx");
@@ -109,7 +116,10 @@ describe("デプロイ準備 - コード品質", () => {
     const componentsPath = path.join(process.cwd(), "components");
     const files = fs.readdirSync(componentsPath);
     const componentFiles = files.filter(
-      (file) => file.endsWith(".tsx") && !file.startsWith("ui")
+      (file) =>
+        file.endsWith(".tsx") &&
+        !file.startsWith("ui") &&
+        !file.includes(".test.")
     );
 
     const pagePath = path.join(process.cwd(), "app", "page.tsx");
@@ -184,7 +194,10 @@ describe("デプロイ準備 - コード品質", () => {
     const componentsPath = path.join(process.cwd(), "components");
     const files = fs.readdirSync(componentsPath);
     const componentFiles = files.filter(
-      (file) => file.endsWith(".tsx") && !file.startsWith("ui")
+      (file) =>
+        file.endsWith(".tsx") &&
+        !file.startsWith("ui") &&
+        !file.includes(".test.")
     );
 
     for (const file of componentFiles) {
@@ -255,7 +268,10 @@ describe("デプロイ準備 - セキュリティチェック", () => {
     const componentsPath = path.join(process.cwd(), "components");
     const files = fs.readdirSync(componentsPath);
     const componentFiles = files.filter(
-      (file) => file.endsWith(".tsx") && !file.startsWith("ui")
+      (file) =>
+        file.endsWith(".tsx") &&
+        !file.startsWith("ui") &&
+        !file.includes(".test.")
     );
 
     const pagePath = path.join(process.cwd(), "app", "page.tsx");
@@ -278,7 +294,10 @@ describe("デプロイ準備 - セキュリティチェック", () => {
     const componentsPath = path.join(process.cwd(), "components");
     const files = fs.readdirSync(componentsPath);
     const componentFiles = files.filter(
-      (file) => file.endsWith(".tsx") && !file.startsWith("ui")
+      (file) =>
+        file.endsWith(".tsx") &&
+        !file.startsWith("ui") &&
+        !file.includes(".test.")
     );
 
     const pagePath = path.join(process.cwd(), "app", "page.tsx");
@@ -311,7 +330,10 @@ describe("デプロイ準備 - セキュリティチェック", () => {
     const componentsPath = path.join(process.cwd(), "components");
     const files = fs.readdirSync(componentsPath);
     const componentFiles = files.filter(
-      (file) => file.endsWith(".tsx") && !file.startsWith("ui")
+      (file) =>
+        file.endsWith(".tsx") &&
+        !file.startsWith("ui") &&
+        !file.includes(".test.")
     );
 
     const pagePath = path.join(process.cwd(), "app", "page.tsx");
