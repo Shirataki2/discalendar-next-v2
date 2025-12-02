@@ -7,58 +7,94 @@
  * - タスク2.2: セクションコンポーネントの統合とレイアウト構築
  */
 
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock for Server Component patterns
+const mockGetUser = vi.fn();
+
+// Mock Supabase server client
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(() =>
+    Promise.resolve({
+      auth: {
+        getUser: mockGetUser,
+      },
+    })
+  ),
+}));
+
+// Mock the signOut server action for LogoutButton
+vi.mock("@/app/auth/actions", () => ({
+  signOut: vi.fn(),
+}));
+
 import Home from "@/app/page";
 
 // スペーシングクラスの検証用正規表現
 const SPACING_CLASS_REGEX = /space-y-|gap-/;
 
 describe("app/page.tsx - ランディングページメインコンポーネント", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
   describe("タスク2.1: セマンティックHTML構造とServer Component実装", () => {
-    it("main要素でページ構造を定義している", () => {
-      const { container } = render(<Home />);
+    it("main要素でページ構造を定義している", async () => {
+      const page = await Home();
+      const { container } = render(page);
       const mainElement = container.querySelector("main");
       expect(mainElement).toBeInTheDocument();
     });
 
-    it("Headerセクションが含まれている", () => {
-      const { container } = render(<Home />);
+    it("Headerセクションが含まれている", async () => {
+      const page = await Home();
+      const { container } = render(page);
       // Headerコンポーネントのテストマーカーを探す
       const header = container.querySelector('[data-testid="landing-header"]');
       expect(header).toBeInTheDocument();
     });
 
-    it("Heroセクションが含まれている", () => {
-      const { container } = render(<Home />);
+    it("Heroセクションが含まれている", async () => {
+      const page = await Home();
+      const { container } = render(page);
       const hero = container.querySelector('[data-testid="landing-hero"]');
       expect(hero).toBeInTheDocument();
     });
 
-    it("Featuresセクションが含まれている", () => {
-      const { container } = render(<Home />);
+    it("Featuresセクションが含まれている", async () => {
+      const page = await Home();
+      const { container } = render(page);
       const features = container.querySelector(
         '[data-testid="landing-features"]'
       );
       expect(features).toBeInTheDocument();
     });
 
-    it("CTAセクションが含まれている", () => {
-      const { container } = render(<Home />);
+    it("CTAセクションが含まれている", async () => {
+      const page = await Home();
+      const { container } = render(page);
       const cta = container.querySelector('[data-testid="landing-cta"]');
       expect(cta).toBeInTheDocument();
     });
 
-    it("Footerセクションが含まれている", () => {
-      const { container } = render(<Home />);
+    it("Footerセクションが含まれている", async () => {
+      const page = await Home();
+      const { container } = render(page);
       const footer = container.querySelector('[data-testid="landing-footer"]');
       expect(footer).toBeInTheDocument();
     });
   });
 
   describe("タスク2.2: セクションコンポーネントの統合とレイアウト構築", () => {
-    it("セクションが論理的な順序で表示されている (Header -> Hero -> Features -> CTA -> Footer)", () => {
-      const { container } = render(<Home />);
+    it("セクションが論理的な順序で表示されている (Header -> Hero -> Features -> CTA -> Footer)", async () => {
+      const page = await Home();
+      const { container } = render(page);
 
       const sections = [
         container.querySelector('[data-testid="landing-header"]'),
@@ -85,8 +121,9 @@ describe("app/page.tsx - ランディングページメインコンポーネン�
       }
     });
 
-    it("各セクション間にスペーシングが設定されている", () => {
-      const { container } = render(<Home />);
+    it("各セクション間にスペーシングが設定されている", async () => {
+      const page = await Home();
+      const { container } = render(page);
       const mainElement = container.querySelector("main");
 
       // mainにスペーシングクラスが適用されているか確認
@@ -95,8 +132,9 @@ describe("app/page.tsx - ランディングページメインコンポーネン�
   });
 
   describe("Requirements: アクセシビリティとセマンティクス (7.1)", () => {
-    it("main要素がセマンティックHTMLとして正しく使用されている", () => {
-      const { container } = render(<Home />);
+    it("main要素がセマンティックHTMLとして正しく使用されている", async () => {
+      const page = await Home();
+      const { container } = render(page);
       const mainElements = container.querySelectorAll("main");
 
       // main要素が1つだけ存在することを確認

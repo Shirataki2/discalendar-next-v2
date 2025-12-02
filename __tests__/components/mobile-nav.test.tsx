@@ -1,13 +1,20 @@
 /**
  * @file MobileNav コンポーネントのテスト
- * @description タスク3.3の実装を検証
+ * @description タスク3.3, 8の実装を検証
  *
  * テスト対象:
  * - タスク3.3: MobileNavコンポーネントの実装とHeaderへの統合
+ * - タスク8: 既存ヘッダーのログインリンクを更新する
  */
 
 import { fireEvent, render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Mock the signOut server action for LogoutButton
+vi.mock("@/app/auth/actions", () => ({
+  signOut: vi.fn(),
+}));
+
 import { MobileNav } from "@/components/mobile-nav";
 
 // テスト用のナビゲーションリンク
@@ -42,7 +49,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("ハンバーガーメニューボタンが表示されている", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -50,7 +59,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("初期状態ではメニューが閉じている", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -58,14 +69,18 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("Menuアイコンが初期状態で表示されている", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       // lucide-reactのMenuアイコンがSVGとして表示されていることを確認
       const menuIcon = container.querySelector('svg[class*="lucide-menu"]');
       expect(menuIcon).toBeInTheDocument();
     });
 
     it("ハンバーガーボタンクリックでメニューが開く", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -78,7 +93,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("メニューが開くとXアイコンに切り替わる", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -99,7 +116,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("メニューが開くとナビゲーションリンクが表示される", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -117,7 +136,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("ナビゲーションリンククリックでメニューが自動的に閉じる", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -140,7 +161,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("閉じるボタン（X）クリックでメニューが閉じる", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -165,7 +188,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
 
   describe("Requirements: アクセシビリティ (7.4, 7.5, 7.6)", () => {
     it("ARIA属性 aria-label が適用されている", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -173,7 +198,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("ARIA属性 aria-expanded が適用されている", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -181,7 +208,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("aria-expanded の値がメニュー開閉状態と一致している", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -201,7 +230,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
     });
 
     it("キーボードでアクセス可能（button要素の使用）", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const menuButton = container.querySelector(
         'button[aria-label="メニューを開く"]'
       );
@@ -211,7 +242,9 @@ describe("MobileNav - モバイルナビゲーション", () => {
 
   describe("Requirements: レスポンシブデザイン (10.1, 10.4)", () => {
     it("md:ブレークポイント以上で非表示になるクラスが適用されている", () => {
-      const { container } = render(<MobileNav links={testNavLinks} />);
+      const { container } = render(
+        <MobileNav isAuthenticated={false} links={testNavLinks} />
+      );
       const mobileNavContainer = container.querySelector("div.md\\:hidden");
       expect(mobileNavContainer).toBeInTheDocument();
     });
