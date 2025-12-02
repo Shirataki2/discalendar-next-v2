@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
+  // cacheComponents: true, // 認証状態取得のため一時的に無効化
   images: {
     remotePatterns: [
       {
