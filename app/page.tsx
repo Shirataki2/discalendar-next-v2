@@ -28,6 +28,9 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 
+// Header内で認証状態を取得するため動的レンダリングを強制
+export const dynamic = "force-dynamic";
+
 /**
  * ページメタデータ
  * Requirement 1.2: メタデータの設定

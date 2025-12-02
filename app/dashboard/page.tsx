@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { createClient } from "@/lib/supabase/server";
 
+// 認証状態を取得するため動的レンダリングを強制
+export const dynamic = "force-dynamic";
+
 /**
  * Dashboard用ユーザー情報の型
  */
