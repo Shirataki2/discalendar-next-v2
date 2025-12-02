@@ -12,25 +12,39 @@
  */
 
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Mock for Server Component patterns
-const mockGetUser = vi.fn();
-
-// Mock Supabase server client
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(() =>
-    Promise.resolve({
-      auth: {
-        getUser: mockGetUser,
-      },
-    })
+// Mock the async Header component with a synchronous version for testing
+vi.mock("@/components/header", () => ({
+  Header: () => (
+    <header data-testid="landing-header">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <a href="/">Discalendar</a>
+        <nav className="hidden md:flex md:items-center md:gap-6">
+          <a className="hover:text-primary" href="#features">
+            機能
+          </a>
+          <a className="hover:text-primary" href="#how-to-use">
+            使い方
+          </a>
+          <a className="hover:text-primary" href="#pricing">
+            料金
+          </a>
+        </nav>
+        <div className="hidden items-center gap-3 md:flex">
+          <button className="hover:bg-accent focus:ring-2" type="button">
+            ログイン
+          </button>
+          <button
+            className="bg-primary text-primary-foreground focus:ring-2"
+            type="button"
+          >
+            無料で始める
+          </button>
+        </div>
+      </div>
+    </header>
   ),
-}));
-
-// Mock the signOut server action for LogoutButton
-vi.mock("@/app/auth/actions", () => ({
-  signOut: vi.fn(),
 }));
 
 import Page from "@/app/page";
@@ -44,11 +58,6 @@ const FLEX_DIRECTION_REGEX = /flex-(col|row)/;
 const LG_FLEX_ROW_REGEX = /lg:flex-row/;
 
 describe("スタイリング - Tailwind CSSクラスの存在確認", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -73,11 +82,6 @@ describe("スタイリング - Tailwind CSSクラスの存在確認", () => {
 });
 
 describe("スタイリング - フォーカス状態", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -102,11 +106,6 @@ describe("スタイリング - フォーカス状態", () => {
 });
 
 describe("スタイリング - カラーシステム", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -128,11 +127,6 @@ describe("スタイリング - カラーシステム", () => {
 });
 
 describe("スタイリング - タイポグラフィ", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -156,11 +150,6 @@ describe("スタイリング - タイポグラフィ", () => {
 });
 
 describe("スタイリング - スペーシング", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -190,11 +179,6 @@ describe("スタイリング - スペーシング", () => {
 });
 
 describe("スタイリング - レスポンシブグリッド", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });

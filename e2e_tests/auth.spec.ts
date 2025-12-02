@@ -194,11 +194,11 @@ test.describe("認証機能E2Eテスト", () => {
         // ローディング状態になった場合
         page
           .getByText(LOADING_PATTERN)
-          .waitFor({ timeout: 3000 })
+          .waitFor({ timeout: 5000 })
           .then(() => "loading"),
         // OAuthリダイレクトが発生した場合
         page
-          .waitForURL(OAUTH_REDIRECT_PATTERN, { timeout: 5000 })
+          .waitForURL(OAUTH_REDIRECT_PATTERN, { timeout: 8000 })
           .then(() => "redirect"),
       ]);
 

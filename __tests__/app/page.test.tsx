@@ -8,25 +8,26 @@
  */
 
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Mock for Server Component patterns
-const mockGetUser = vi.fn();
-
-// Mock Supabase server client
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(() =>
-    Promise.resolve({
-      auth: {
-        getUser: mockGetUser,
-      },
-    })
+// Mock the async Header component with a synchronous version for testing
+vi.mock("@/components/header", () => ({
+  Header: () => (
+    <header data-testid="landing-header">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <a href="/">Discalendar</a>
+        <nav className="hidden md:flex md:items-center md:gap-6">
+          <a href="#features">機能</a>
+          <a href="#how-to-use">使い方</a>
+          <a href="#pricing">料金</a>
+        </nav>
+        <div className="hidden items-center gap-3 md:flex">
+          <a href="/auth/login">ログイン</a>
+          <a href="/auth/login">無料で始める</a>
+        </div>
+      </div>
+    </header>
   ),
-}));
-
-// Mock the signOut server action for LogoutButton
-vi.mock("@/app/auth/actions", () => ({
-  signOut: vi.fn(),
 }));
 
 import Home from "@/app/page";
@@ -35,11 +36,6 @@ import Home from "@/app/page";
 const SPACING_CLASS_REGEX = /space-y-|gap-/;
 
 describe("app/page.tsx - ランディングページメインコンポーネント", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });

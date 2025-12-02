@@ -12,35 +12,31 @@
  */
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Mock for Server Component patterns
-const mockGetUser = vi.fn();
-
-// Mock Supabase server client
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(() =>
-    Promise.resolve({
-      auth: {
-        getUser: mockGetUser,
-      },
-    })
+// Mock the async Header component with a synchronous version for testing
+vi.mock("@/components/header", () => ({
+  Header: () => (
+    <header data-testid="landing-header">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <a href="/">Discalendar</a>
+        <nav className="hidden md:flex md:items-center md:gap-6">
+          <a href="#features">機能</a>
+          <a href="#how-to-use">使い方</a>
+          <a href="#pricing">料金</a>
+        </nav>
+        <div className="hidden items-center gap-3 md:flex">
+          <button type="button">ログイン</button>
+          <button type="button">無料で始める</button>
+        </div>
+      </div>
+    </header>
   ),
-}));
-
-// Mock the signOut server action for LogoutButton
-vi.mock("@/app/auth/actions", () => ({
-  signOut: vi.fn(),
 }));
 
 import Page from "@/app/page";
 
 describe("アクセシビリティ - セマンティックHTML", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -83,11 +79,6 @@ describe("アクセシビリティ - セマンティックHTML", () => {
 });
 
 describe("アクセシビリティ - 見出し階層", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -128,11 +119,6 @@ describe("アクセシビリティ - 見出し階層", () => {
 });
 
 describe("アクセシビリティ - 画像", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -163,11 +149,6 @@ describe("アクセシビリティ - 画像", () => {
 });
 
 describe("アクセシビリティ - インタラクティブ要素", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -201,11 +182,6 @@ describe("アクセシビリティ - インタラクティブ要素", () => {
 });
 
 describe("アクセシビリティ - ARIA属性", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
   afterEach(() => {
     cleanup();
   });
