@@ -4,6 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Top-level regex patterns for test matching
 const AVATAR_PATTERN = /アバター/i;
 const WELCOME_HEADING_PATTERN = /ようこそ.*さん/i;
+const SERVER_SECTION_PATTERN = /参加中のサーバー/i;
+const NO_SERVERS_PATTERN = /利用可能なサーバーがありません/;
+const SESSION_EXPIRED_PATTERN = /セッションの有効期限が切れました/;
+const DISCORD_DISABLED_PATTERN = /Discord連携が無効です/;
+const API_ERROR_PATTERN = /APIエラーが発生しました/;
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
@@ -75,6 +80,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -92,6 +98,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -108,6 +115,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -126,6 +134,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -142,6 +151,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -158,6 +168,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -179,6 +190,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -199,6 +211,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -217,6 +230,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       const { container } = render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -237,6 +251,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -255,6 +270,7 @@ describe("DashboardPage", () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
+          guilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -266,6 +282,131 @@ describe("DashboardPage", () => {
 
       const avatar = screen.getByRole("img");
       expect(avatar).toHaveAttribute("alt");
+    });
+  });
+
+  describe("Task 6.3: ギルド一覧統合", () => {
+    it("should render guild list section (Requirement 5.3)", async () => {
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guilds={[]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      expect(screen.getByText(SERVER_SECTION_PATTERN)).toBeInTheDocument();
+    });
+
+    it("should display guild cards when guilds are provided (Requirement 5.3)", async () => {
+      const mockGuilds = [
+        {
+          id: 1,
+          guildId: "123456789012345678",
+          name: "Test Server 1",
+          avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
+          locale: "ja",
+        },
+        {
+          id: 2,
+          guildId: "987654321098765432",
+          name: "Test Server 2",
+          avatarUrl: null,
+          locale: "ja",
+        },
+      ];
+
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guilds={mockGuilds}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      expect(screen.getByText("Test Server 1")).toBeInTheDocument();
+      expect(screen.getByText("Test Server 2")).toBeInTheDocument();
+    });
+
+    it("should display empty state when no guilds are available (Requirement 4.4)", async () => {
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guilds={[]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      expect(screen.getByText(NO_SERVERS_PATTERN)).toBeInTheDocument();
+    });
+
+    it("should display error message when token is expired (Requirement 2.4)", async () => {
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guildError={{ type: "token_expired" }}
+          guilds={[]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      expect(screen.getByText(SESSION_EXPIRED_PATTERN)).toBeInTheDocument();
+    });
+
+    it("should display error message when no token is available (Requirement 2.4)", async () => {
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guildError={{ type: "no_token" }}
+          guilds={[]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      expect(screen.getByText(DISCORD_DISABLED_PATTERN)).toBeInTheDocument();
+    });
+
+    it("should display API error message (Requirement 2.3)", async () => {
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guildError={{ type: "api_error", message: "APIエラーが発生しました" }}
+          guilds={[]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      expect(screen.getByText(API_ERROR_PATTERN)).toBeInTheDocument();
     });
   });
 });

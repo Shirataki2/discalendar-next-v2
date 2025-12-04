@@ -176,9 +176,9 @@ describe("DiscordLoginButton", () => {
     });
   });
 
-  // Requirement 2.2: 必要なスコープ（identify, email）をリクエストする
+  // Requirement 2.2: 必要なスコープ（identify, email, guilds）をリクエストする
   describe("OAuth スコープ (Req 2.2)", () => {
-    it("should request identify and email scopes", async () => {
+    it("should request identify, email, and guilds scopes", async () => {
       const user = userEvent.setup();
       render(<DiscordLoginButton />);
       const button = screen.getByRole("button", { name: DISCORD_NAME_PATTERN });
@@ -189,7 +189,7 @@ describe("DiscordLoginButton", () => {
         expect(mockSignInWithOAuth).toHaveBeenCalledWith(
           expect.objectContaining({
             options: expect.objectContaining({
-              scopes: "identify email",
+              scopes: "identify email guilds",
             }),
           })
         );

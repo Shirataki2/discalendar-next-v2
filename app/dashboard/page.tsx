@@ -1,6 +1,10 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { GuildListClient } from "@/components/guilds/guild-list-client";
+import { getUserGuilds } from "@/lib/discord/client";
+import { getJoinedGuilds } from "@/lib/guilds/service";
+import type { Guild, GuildListError } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
 
 // 認証状態を取得するため動的レンダリングを強制
@@ -22,10 +26,17 @@ export type DashboardUser = {
 
 /**
  * DashboardPageClientのProps
+ *
+ * Requirements:
+ * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
  */
 export type DashboardPageClientProps = {
   /** 認証済みユーザー情報 */
   user: DashboardUser;
+  /** ユーザーが所属するDiscalendar登録済みギルド一覧 */
+  guilds: Guild[];
+  /** ギルド取得時のエラー（オプション） */
+  guildError?: GuildListError;
 };
 
 /**
@@ -45,12 +56,17 @@ function getUserInitials(dashboardUser: DashboardUser): string {
  * ダッシュボードページのClient Component
  *
  * 認証後のランディングページとして基本構造を提供。
- * ログアウトボタンとユーザー情報を表示する。
+ * ログアウトボタン、ユーザー情報、ギルド一覧を表示する。
  *
  * 要件対応:
  * - 4.2: Server/Client双方でユーザー情報を参照可能
+ * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
  */
-export function DashboardPageClient({ user }: DashboardPageClientProps) {
+export function DashboardPageClient({
+  user,
+  guilds,
+  guildError,
+}: DashboardPageClientProps) {
   const displayName = user.fullName ?? user.email;
   const initials = getUserInitials(user);
 
@@ -90,15 +106,76 @@ export function DashboardPageClient({ user }: DashboardPageClientProps) {
               Discalendarへようこそ。ここからカレンダーを管理できます。
             </p>
           </div>
-          <div className="rounded-lg border p-6">
-            <p className="text-muted-foreground text-sm">
-              カレンダー機能は現在開発中です。しばらくお待ちください。
-            </p>
-          </div>
+
+          {/* ギルド一覧 */}
+          <GuildListClient error={guildError} guilds={guilds} />
         </div>
       </main>
     </>
   );
+}
+
+/**
+ * ギルド一覧を取得する
+ *
+ * Requirements:
+ * - 5.1: Server Componentとしてギルド一覧データを取得する
+ * - 5.2: Supabaseクライアント（Server用）を使用してDBクエリを実行する
+ * - 2.1: Supabase Authに保存されたDiscordアクセストークンを使用
+ * - 2.4: provider_token未取得時は再認証を促すメッセージを表示
+ *
+ * @param providerToken Discord OAuthアクセストークン
+ * @returns ギルド一覧またはエラー
+ */
+async function fetchGuilds(
+  providerToken: string | null | undefined
+): Promise<{ guilds: Guild[]; error?: GuildListError }> {
+  // provider_tokenが存在しない場合
+  if (!providerToken) {
+    return {
+      guilds: [],
+      error: { type: "no_token" },
+    };
+  }
+
+  // Discord APIからユーザー所属ギルドを取得
+  const discordResult = await getUserGuilds(providerToken);
+
+  if (!discordResult.success) {
+    // エラータイプに応じてGuildListErrorに変換
+    if (discordResult.error.code === "unauthorized") {
+      return {
+        guilds: [],
+        error: { type: "token_expired" },
+      };
+    }
+    return {
+      guilds: [],
+      error: { type: "api_error", message: discordResult.error.message },
+    };
+  }
+
+  // ギルドIDリストを抽出
+  const guildIds = discordResult.data.map((guild) => guild.id);
+
+  if (guildIds.length === 0) {
+    return { guilds: [] };
+  }
+
+  // DB照合を実行
+  try {
+    const joinedGuilds = await getJoinedGuilds(guildIds);
+    return { guilds: joinedGuilds };
+  } catch (dbError) {
+    console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
+    return {
+      guilds: [],
+      error: {
+        type: "api_error",
+        message: "ギルド情報の取得に失敗しました。",
+      },
+    };
+  }
 }
 
 /**
@@ -108,13 +185,18 @@ export function DashboardPageClient({ user }: DashboardPageClientProps) {
  * Supabaseからユーザー情報を取得し、Client Componentに渡す。
  *
  * 要件対応:
- * - 4.2: Server ComponentsとClient Componentsでユーザー情報を参照可能
+ * - 5.1: Server Componentとしてギルド一覧データを取得する
+ * - 5.2: Supabaseクライアント（Server用）を使用してDBクエリを実行する
+ * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
+ * - 5.4: 未認証ユーザーをログインページへリダイレクト
  *
  * Note: Middlewareで認証済みユーザーのみがアクセスできるよう保護されている。
  * 万が一未認証の場合はログインページへリダイレクト。
  */
 export default async function DashboardPage() {
   const supabase = await createClient();
+
+  // ユーザー情報とセッションを取得
   const {
     data: { user },
     error,
@@ -126,6 +208,12 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
+  // セッションからprovider_tokenを取得
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const providerToken = session?.provider_token;
+
   // ユーザー情報を整形
   const dashboardUser: DashboardUser = {
     id: user.id,
@@ -134,5 +222,14 @@ export default async function DashboardPage() {
     avatarUrl: (user.user_metadata?.avatar_url as string) ?? null,
   };
 
-  return <DashboardPageClient user={dashboardUser} />;
+  // ギルド一覧を取得
+  const { guilds, error: guildError } = await fetchGuilds(providerToken);
+
+  return (
+    <DashboardPageClient
+      guildError={guildError}
+      guilds={guilds}
+      user={dashboardUser}
+    />
+  );
 }
