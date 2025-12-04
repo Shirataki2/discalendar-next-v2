@@ -1,4 +1,6 @@
 /** biome-ignore-all lint/suspicious/noUnknownAtRules: tailwindcss */
+@import "react-big-calendar/lib/css/react-big-calendar.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -66,4 +68,153 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/**
+ * react-big-calendar Tailwind CSS オーバーライド
+ *
+ * タスク1: カレンダーライブラリのセットアップ
+ * - Tailwind CSSとの競合を確認し、必要なオーバーライドスタイルを準備する
+ *
+ * Requirements: 1.1, 1.2, 1.3
+ */
+@layer components {
+  /* カレンダー全体のコンテナ */
+  .rbc-calendar {
+    @apply font-sans;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* ヘッダー行のスタイル */
+  .rbc-header {
+    @apply py-2 text-sm font-medium;
+    color: hsl(var(--foreground));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  /* ボーダー色の統一 */
+  .rbc-month-view,
+  .rbc-time-view,
+  .rbc-agenda-view {
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+  }
+
+  .rbc-month-row,
+  .rbc-day-bg,
+  .rbc-time-header,
+  .rbc-time-content,
+  .rbc-time-slot,
+  .rbc-timeslot-group {
+    border-color: hsl(var(--border));
+  }
+
+  /* 日付セルの基本スタイル */
+  .rbc-date-cell {
+    @apply p-1 text-right text-sm;
+    color: hsl(var(--foreground));
+  }
+
+  /* 表示月外の日付セル */
+  .rbc-off-range {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .rbc-off-range-bg {
+    background-color: hsl(var(--muted));
+  }
+
+  /* 今日の日付ハイライト */
+  .rbc-today {
+    background-color: hsl(var(--accent));
+  }
+
+  .rbc-now {
+    @apply font-bold;
+    color: hsl(var(--primary));
+  }
+
+  /* イベントブロックの基本スタイル */
+  .rbc-event {
+    @apply rounded-sm px-1 py-0.5 text-xs;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border: none;
+  }
+
+  .rbc-event:focus {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .rbc-event.rbc-selected {
+    background-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--ring));
+  }
+
+  /* 終日イベントエリア */
+  .rbc-allday-cell {
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .rbc-row-segment .rbc-event {
+    @apply my-0.5;
+  }
+
+  /* 「+N件」表示 */
+  .rbc-show-more {
+    @apply text-xs font-medium;
+    color: hsl(var(--primary));
+    background: transparent;
+  }
+
+  .rbc-show-more:hover {
+    text-decoration: underline;
+  }
+
+  /* ツールバーエリア（カスタムToolbarを使用する場合の基礎スタイル） */
+  .rbc-toolbar {
+    @apply mb-4 flex flex-wrap items-center justify-between gap-2;
+  }
+
+  .rbc-toolbar button {
+    @apply rounded-md px-3 py-1.5 text-sm font-medium;
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    border: none;
+  }
+
+  .rbc-toolbar button:hover {
+    background-color: hsl(var(--accent));
+  }
+
+  .rbc-toolbar button.rbc-active {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* 時間軸のスタイル */
+  .rbc-time-gutter,
+  .rbc-label {
+    @apply text-xs;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .rbc-current-time-indicator {
+    background-color: hsl(var(--destructive));
+  }
+
+  /* アジェンダビューのスタイル */
+  .rbc-agenda-date-cell,
+  .rbc-agenda-time-cell {
+    @apply whitespace-nowrap px-3 py-2 text-sm;
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  .rbc-agenda-event-cell {
+    @apply px-3 py-2 text-sm;
+  }
+
+  /* ダークモード対応: 変数ベースのため自動適用 */
 }
