@@ -15,15 +15,15 @@
   - Tailwind CSSとの競合を確認し、必要なオーバーライドスタイルを準備する
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 2. イベントデータ取得サービスの実装
-- [ ] 2.1 イベント型定義とデータ変換ロジックの作成
+- [x] 2. イベントデータ取得サービスの実装
+- [x] 2.1 イベント型定義とデータ変換ロジックの作成
   - Supabaseから取得するEventRecordの型定義を作成する
   - カレンダー表示用のCalendarEvent型を定義する
   - EventRecordからCalendarEventへの変換関数を実装する
   - 終日イベントフラグ、場所情報、チャンネル情報のマッピングを含める
   - _Requirements: 3.1, 9.1_
 
-- [ ] 2.2 EventServiceの実装
+- [x] 2.2 EventServiceの実装
   - ギルドIDと日付範囲に基づくイベント取得クエリを実装する
   - 成功時はイベント配列、失敗時はエラー情報を返すResult型を使用する
   - エラーコード（FETCH_FAILED, NETWORK_ERROR, UNAUTHORIZED）を適切に分類する
