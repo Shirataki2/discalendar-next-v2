@@ -73,16 +73,16 @@
   - エラー発生時のメッセージ表示（API失敗、トークン期限切れなど）
   - _Requirements: 4.1, 4.4, 4.5_
 
-- [ ] 6. ダッシュボードページの統合
-- [ ] 6.1 OAuth scopeにguildsを追加
+- [x] 6. ダッシュボードページの統合
+- [x] 6.1 OAuth scopeにguildsを追加
   - Discord OAuth認証でguildsスコープを要求するよう設定を更新
   - _Requirements: 2.1_
 
-- [ ] 6.2 Next.js画像設定にDiscord CDNギルドアイコン用パターンを追加
+- [x] 6.2 Next.js画像設定にDiscord CDNギルドアイコン用パターンを追加
   - remotePatternにDiscord CDNのiconsパスを追加
   - _Requirements: 4.2_
 
-- [ ] 6.3 ダッシュボードServer Componentにギルド取得ロジックを統合
+- [x] 6.3 ダッシュボードServer Componentにギルド取得ロジックを統合
   - Supabase Authからprovider_tokenを取得
   - Discord APIクライアントを使用してユーザー所属ギルドを取得
   - ギルドサービスでDB照合を実行
@@ -91,8 +91,8 @@
   - provider_token未取得時は再認証を促すメッセージを表示
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 2.1, 2.4_
 
-- [ ] 7. テストの実装
-- [ ] 7.1 (P) Discord APIクライアントの単体テストを実装
+- [x] 7. テストの実装
+- [x] 7.1 (P) Discord APIクライアントの単体テストを実装
   - 正常レスポンス時のギルド一覧取得テスト
   - 認証エラー（401）時のエラーハンドリングテスト
   - レート制限（429）時のエラーハンドリングテスト

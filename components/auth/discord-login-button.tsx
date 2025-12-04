@@ -10,8 +10,9 @@ import { createClient } from "@/lib/supabase/client";
  * Discord OAuth認証のスコープ
  * - identify: ユーザーの基本情報（ID、ユーザー名、アバター）
  * - email: ユーザーのメールアドレス
+ * - guilds: ユーザーが所属するギルド一覧の取得
  */
-const DISCORD_SCOPES = "identify email";
+const DISCORD_SCOPES = "identify email guilds";
 
 /**
  * デフォルトのリダイレクト先パス
