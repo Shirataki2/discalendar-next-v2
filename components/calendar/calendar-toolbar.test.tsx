@@ -191,6 +191,87 @@ describe("CalendarToolbar", () => {
     });
   });
 
+  describe("Task 8.1: デスクトップとタブレット向けレイアウト (Req 6.1, 6.2, 6.5)", () => {
+    it("デスクトップ表示時に全てのビューモードボタンを表示する", () => {
+      render(<CalendarToolbar {...defaultProps} isMobile={false} />);
+
+      // 日/週/月すべてのビューボタンが表示される
+      expect(
+        screen.getByRole("button", { name: "日ビュー" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "週ビュー" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "月ビュー" })
+      ).toBeInTheDocument();
+    });
+
+    it("デスクトップ表示時にツールバーが横方向レイアウトを使用する", () => {
+      render(<CalendarToolbar {...defaultProps} isMobile={false} />);
+
+      const toolbar = screen.getByTestId("calendar-toolbar");
+      expect(toolbar).toHaveAttribute("data-mobile", "false");
+    });
+  });
+
+  describe("Task 8.2: モバイル向けレイアウトとデフォルトビュー (Req 6.3, 6.4)", () => {
+    it("モバイル表示時にツールバーがコンパクト化される", () => {
+      render(<CalendarToolbar {...defaultProps} isMobile={true} />);
+
+      const toolbar = screen.getByTestId("calendar-toolbar");
+      expect(toolbar).toHaveAttribute("data-mobile", "true");
+    });
+
+    it("モバイル表示時に全てのナビゲーションボタンがアクセス可能", async () => {
+      const user = userEvent.setup();
+      const onNavigate = vi.fn();
+
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          isMobile={true}
+          onNavigate={onNavigate}
+        />
+      );
+
+      // タップ操作のテスト（クリックで代替）
+      await user.click(screen.getByRole("button", { name: "前へ" }));
+      expect(onNavigate).toHaveBeenCalledWith("PREV");
+
+      await user.click(screen.getByRole("button", { name: "今日" }));
+      expect(onNavigate).toHaveBeenCalledWith("TODAY");
+
+      await user.click(screen.getByRole("button", { name: "次へ" }));
+      expect(onNavigate).toHaveBeenCalledWith("NEXT");
+    });
+
+    it("モバイル表示時にビューモードボタンがタップ可能", async () => {
+      const user = userEvent.setup();
+      const onViewChange = vi.fn();
+
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          isMobile={true}
+          onViewChange={onViewChange}
+        />
+      );
+
+      // 日ビューボタンをタップ
+      await user.click(screen.getByRole("button", { name: "日ビュー" }));
+      expect(onViewChange).toHaveBeenCalledWith("day");
+    });
+
+    it("モバイル表示時に縦方向レイアウトが適用される", () => {
+      render(<CalendarToolbar {...defaultProps} isMobile={true} />);
+
+      const toolbar = screen.getByTestId("calendar-toolbar");
+      // data-mobile属性でレイアウト方向を判定
+      expect(toolbar).toHaveAttribute("data-mobile", "true");
+    });
+  });
+
   describe("アクセシビリティ (Req 8.2)", () => {
     it("すべてのボタンに適切なARIAラベルを設定する", () => {
       render(<CalendarToolbar {...defaultProps} />);

@@ -230,7 +230,7 @@ export function CalendarGrid({
 
   return (
     <section
-      aria-label="calendar"
+      aria-label="カレンダー"
       className="h-full"
       data-testid="calendar-grid"
     >

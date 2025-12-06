@@ -21,7 +21,8 @@ afterEach(() => {
 });
 
 // トップレベルに正規表現を定義（パフォーマンス最適化）
-const CALENDAR_REGION_PATTERN = /calendar/i;
+// Task 9.2: aria-labelを日本語に変更したため、パターンも更新
+const CALENDAR_REGION_PATTERN = /カレンダー/;
 
 describe("CalendarGrid", () => {
   const mockEvents: CalendarEvent[] = [

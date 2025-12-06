@@ -4,8 +4,9 @@
  * タスク4.1: ビューモード切り替えUIの作成
  * タスク4.2: 日付ナビゲーションコントロールの作成
  * タスク4.3: CalendarToolbarコンポーネントの統合
+ * タスク9.2: ARIAラベルとセマンティクスの適用
  *
- * Requirements: 1.1, 1.2, 1.3, 1.5, 2.1, 2.2, 2.3, 2.4
+ * Requirements: 1.1, 1.2, 1.3, 1.5, 2.1, 2.2, 2.3, 2.4, 8.2, 8.3
  */
 "use client";
 
@@ -89,9 +90,11 @@ export function CalendarToolbar({
 
   return (
     <div
+      aria-label="カレンダー操作"
       className="border-b bg-background p-4"
       data-mobile={isMobile}
       data-testid="calendar-toolbar"
+      role="toolbar"
     >
       <div
         className={
@@ -133,8 +136,9 @@ export function CalendarToolbar({
           </Button>
         </div>
 
-        {/* 期間表示ラベル (Task 4.2, Req 2.4) */}
+        {/* 期間表示ラベル (Task 4.2, Req 2.4, Task 9.2) */}
         <div
+          aria-live="polite"
           className={
             isMobile
               ? "text-center font-semibold text-lg"

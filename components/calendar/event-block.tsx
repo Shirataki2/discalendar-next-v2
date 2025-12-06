@@ -13,7 +13,11 @@
  * - 週/日ビューで終日イベントを時間軸上部の専用エリアに表示する
  * - 同一日の複数終日イベントを縦に積み重ねて表示する
  *
- * Requirements: 3.7, 8.4, 9.1, 9.2, 9.3, 9.4, 9.6
+ * タスク9.2: ARIAラベルとセマンティクスの適用
+ * - イベントブロックにイベント情報を読み上げ可能にする
+ * - 終日イベントのaria-labelに「終日」を含める
+ *
+ * Requirements: 3.7, 8.2, 8.4, 9.1, 9.2, 9.3, 9.4, 9.6
  */
 "use client";
 
@@ -44,6 +48,17 @@ export type EventBlockProps = {
  */
 function formatTime(date: Date): string {
   return format(date, "HH:mm");
+}
+
+/**
+ * アクセシブルなラベルを生成する (Task 9.2)
+ * 終日イベントの場合は「終日」を含める
+ * @param title - イベントタイトル
+ * @param isAllDay - 終日イベントかどうか
+ * @returns スクリーンリーダー用のラベル
+ */
+function getAccessibleLabel(title: string, isAllDay: boolean): string {
+  return isAllDay ? `${title} (終日)` : title;
 }
 
 /**
@@ -106,9 +121,12 @@ export function EventBlock({
   // 時刻を表示するかどうか（終日イベント以外で showTime が true の場合）
   const shouldShowTime = showTime === true && !isAllDay;
 
+  // Task 9.2: アクセシブルなラベルを生成
+  const accessibleLabel = getAccessibleLabel(title, isAllDay);
+
   return (
     <button
-      aria-label={title}
+      aria-label={accessibleLabel}
       className={combinedClasses}
       data-all-day={isAllDay.toString()}
       data-testid="event-block"

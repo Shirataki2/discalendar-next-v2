@@ -46,12 +46,15 @@ vi.mock("./calendar-toolbar", () => ({
   CalendarToolbar: ({
     viewMode,
     selectedDate,
+    isMobile,
   }: {
     viewMode: string;
     selectedDate: Date;
+    isMobile: boolean;
   }) => (
-    <div data-testid="calendar-toolbar">
-      Toolbar: {viewMode} - {selectedDate.toISOString()}
+    <div data-mobile={isMobile} data-testid="calendar-toolbar">
+      Toolbar: {viewMode} - {selectedDate.toISOString()} - mobile:{" "}
+      {isMobile.toString()}
     </div>
   ),
 }));
@@ -74,9 +77,31 @@ import { createEventService } from "@/lib/calendar/event-service";
 // Import after mocks
 import { CalendarContainer } from "./calendar-container";
 
+// matchMediaのモック
+const createMatchMediaMock = (matches: boolean) =>
+  vi.fn().mockImplementation((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+
 describe("CalendarContainer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // デフォルトはデスクトップサイズ
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: createMatchMediaMock(true),
+    });
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      value: 1200,
+    });
   });
 
   describe("ギルド未選択時の動作 (Req 5.2)", () => {
@@ -164,6 +189,54 @@ describe("CalendarContainer", () => {
       // 再試行ボタンが表示されること
       const retryButton = screen.getByRole("button", { name: "再試行" });
       expect(retryButton).toBeInTheDocument();
+    });
+  });
+
+  describe("Task 8: レスポンシブデザイン", () => {
+    describe("Task 8.1: デスクトップとタブレット向けレイアウト (Req 6.1, 6.2, 6.5)", () => {
+      it("デスクトップ画面幅でisMobileがfalseとしてツールバーに渡される", () => {
+        Object.defineProperty(window, "innerWidth", {
+          writable: true,
+          value: 1200,
+        });
+
+        render(<CalendarContainer guildId={null} />);
+
+        const toolbar = screen.getByTestId("calendar-toolbar");
+        expect(toolbar).toHaveAttribute("data-mobile", "false");
+      });
+
+      it("タブレット画面幅でisMobileがfalseとしてツールバーに渡される", () => {
+        Object.defineProperty(window, "innerWidth", {
+          writable: true,
+          value: 800,
+        });
+
+        render(<CalendarContainer guildId={null} />);
+
+        const toolbar = screen.getByTestId("calendar-toolbar");
+        expect(toolbar).toHaveAttribute("data-mobile", "false");
+      });
+    });
+
+    describe("Task 8.2: モバイル向けレイアウトとデフォルトビュー (Req 6.3, 6.4)", () => {
+      it("モバイル画面幅でisMobileがtrueとしてツールバーに渡される", () => {
+        Object.defineProperty(window, "innerWidth", {
+          writable: true,
+          value: 600,
+        });
+
+        render(<CalendarContainer guildId={null} />);
+
+        const toolbar = screen.getByTestId("calendar-toolbar");
+        expect(toolbar).toHaveAttribute("data-mobile", "true");
+      });
+
+      it("カレンダーグリッドがレンダリングされる", () => {
+        render(<CalendarContainer guildId={null} />);
+
+        expect(screen.getByTestId("calendar-grid")).toBeInTheDocument();
+      });
     });
   });
 });
