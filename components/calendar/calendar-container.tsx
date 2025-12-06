@@ -327,7 +327,7 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
   const shouldShowEmpty = !guildId || guildId.trim() === "";
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-testid="calendar-container">
       {/* ツールバー */}
       <CalendarToolbar
         isMobile={isMobile}

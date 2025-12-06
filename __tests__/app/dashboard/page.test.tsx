@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Top-level regex patterns for test matching
 const AVATAR_PATTERN = /アバター/i;
 const WELCOME_HEADING_PATTERN = /ようこそ.*さん/i;
-const SERVER_SECTION_PATTERN = /参加中のサーバー/i;
+const SERVER_SECTION_PATTERN = /サーバー一覧/i;
 const NO_SERVERS_PATTERN = /利用可能なサーバーがありません/;
 const SESSION_EXPIRED_PATTERN = /セッションの有効期限が切れました/;
 const DISCORD_DISABLED_PATTERN = /Discord連携が無効です/;
@@ -37,6 +37,30 @@ vi.mock("@/components/auth/logout-button", () => ({
       Logout
     </button>
   ),
+}));
+
+// Mock CalendarContainer component (for DashboardWithCalendar)
+vi.mock("@/components/calendar/calendar-container", () => ({
+  CalendarContainer: ({ guildId }: { guildId: string | null }) => (
+    <div data-guild-id={guildId ?? "null"} data-testid="calendar-container">
+      Calendar for guild: {guildId ?? "none"}
+    </div>
+  ),
+}));
+
+// Mock Next.js navigation for DashboardWithCalendar
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => {
+    const params = new URLSearchParams();
+    params.set("view", "month");
+    params.set("date", "2025-12-05");
+    return params;
+  },
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+  usePathname: () => "/dashboard",
+  redirect: vi.fn(),
 }));
 
 // Mock Supabase server client
@@ -300,7 +324,12 @@ describe("DashboardPage", () => {
         />
       );
 
-      expect(screen.getByText(SERVER_SECTION_PATTERN)).toBeInTheDocument();
+      // サーバー一覧のヘッダーが存在すること（h3で特定）
+      const serverHeading = screen.getByRole("heading", {
+        level: 3,
+        name: SERVER_SECTION_PATTERN,
+      });
+      expect(serverHeading).toBeInTheDocument();
     });
 
     it("should display guild cards when guilds are provided (Requirement 5.3)", async () => {

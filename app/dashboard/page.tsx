@@ -1,11 +1,11 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { GuildListClient } from "@/components/guilds/guild-list-client";
 import { getUserGuilds } from "@/lib/discord/client";
 import { getJoinedGuilds } from "@/lib/guilds/service";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
+import { DashboardWithCalendar } from "./dashboard-with-calendar";
 
 // 認証状態を取得するため動的レンダリングを強制
 export const dynamic = "force-dynamic";
@@ -56,10 +56,11 @@ function getUserInitials(dashboardUser: DashboardUser): string {
  * ダッシュボードページのClient Component
  *
  * 認証後のランディングページとして基本構造を提供。
- * ログアウトボタン、ユーザー情報、ギルド一覧を表示する。
+ * ログアウトボタン、ユーザー情報、ギルド一覧、カレンダーを表示する。
  *
  * 要件対応:
  * - 4.2: Server/Client双方でユーザー情報を参照可能
+ * - 5.1, 5.2: ギルド選択とカレンダー連携
  * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
  */
 export function DashboardPageClient({
@@ -107,8 +108,8 @@ export function DashboardPageClient({
             </p>
           </div>
 
-          {/* ギルド一覧 */}
-          <GuildListClient error={guildError} guilds={guilds} />
+          {/* ギルド一覧とカレンダー統合 (Task 10.1) */}
+          <DashboardWithCalendar guildError={guildError} guilds={guilds} />
         </div>
       </main>
     </>
