@@ -57,11 +57,12 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Requirement 5.1: Unauthenticated user accessing protected routes should redirect to login
-  // Public routes: /, /auth/* (login, callback, etc.)
+  // Public routes: /, /auth/* (login, callback, etc.), /test/* (E2E test only, blocked in production)
   const isPublicRoute =
     pathname === "/" ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/login");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/test");
 
   if (!user && !isPublicRoute) {
     // No user, redirect to login page

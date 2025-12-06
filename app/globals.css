@@ -1,4 +1,6 @@
 /** biome-ignore-all lint/suspicious/noUnknownAtRules: tailwindcss */
+@import "react-big-calendar/lib/css/react-big-calendar.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -65,5 +67,373 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/**
+ * react-big-calendar Tailwind CSS オーバーライド
+ *
+ * タスク1: カレンダーライブラリのセットアップ
+ * - Tailwind CSSとの競合を確認し、必要なオーバーライドスタイルを準備する
+ *
+ * Requirements: 1.1, 1.2, 1.3
+ */
+@layer components {
+  /* カレンダー全体のコンテナ */
+  .rbc-calendar {
+    @apply font-sans;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* ヘッダー行のスタイル */
+  .rbc-header {
+    @apply py-2 text-sm font-medium;
+    color: hsl(var(--foreground));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  /* ボーダー色の統一 */
+  .rbc-month-view,
+  .rbc-time-view,
+  .rbc-agenda-view {
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+  }
+
+  .rbc-month-row,
+  .rbc-day-bg,
+  .rbc-time-header,
+  .rbc-time-content,
+  .rbc-time-slot,
+  .rbc-timeslot-group {
+    border-color: hsl(var(--border));
+  }
+
+  /* 日付セルの基本スタイル */
+  .rbc-date-cell {
+    @apply p-1 text-right text-sm;
+    color: hsl(var(--foreground));
+  }
+
+  /* 表示月外の日付セル */
+  .rbc-off-range {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .rbc-off-range-bg {
+    background-color: hsl(var(--muted));
+  }
+
+  /* 今日の日付ハイライト */
+  .rbc-today {
+    background-color: hsl(var(--accent));
+  }
+
+  .rbc-now {
+    @apply font-bold;
+    color: hsl(var(--primary));
+  }
+
+  /* イベントブロックの基本スタイル */
+  .rbc-event {
+    @apply rounded-sm px-1 py-0.5 text-xs;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border: none;
+  }
+
+  .rbc-event:focus {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .rbc-event.rbc-selected {
+    background-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--ring));
+  }
+
+  /* 終日イベントエリア */
+  .rbc-allday-cell {
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .rbc-row-segment .rbc-event {
+    @apply my-0.5;
+  }
+
+  /* 「+N件」表示 */
+  .rbc-show-more {
+    @apply text-xs font-medium;
+    color: hsl(var(--primary));
+    background: transparent;
+  }
+
+  .rbc-show-more:hover {
+    text-decoration: underline;
+  }
+
+  /* ツールバーエリア（カスタムToolbarを使用する場合の基礎スタイル） */
+  .rbc-toolbar {
+    @apply mb-4 flex flex-wrap items-center justify-between gap-2;
+  }
+
+  .rbc-toolbar button {
+    @apply rounded-md px-3 py-1.5 text-sm font-medium;
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    border: none;
+  }
+
+  .rbc-toolbar button:hover {
+    background-color: hsl(var(--accent));
+  }
+
+  .rbc-toolbar button.rbc-active {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* 時間軸のスタイル */
+  .rbc-time-gutter,
+  .rbc-label {
+    @apply text-xs;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .rbc-current-time-indicator {
+    background-color: hsl(var(--destructive));
+  }
+
+  /* アジェンダビューのスタイル */
+  .rbc-agenda-date-cell,
+  .rbc-agenda-time-cell {
+    @apply whitespace-nowrap px-3 py-2 text-sm;
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  .rbc-agenda-event-cell {
+    @apply px-3 py-2 text-sm;
+  }
+
+  /* ダークモード対応: 変数ベースのため自動適用 */
+
+  /**
+   * タスク8: レスポンシブデザインの実装
+   *
+   * Task 8.1: デスクトップとタブレット向けレイアウト
+   * - デスクトップ（1024px以上）で全ビューモードを完全表示する
+   * - タブレット（768px-1024px）で週ビューのカラム幅を調整する
+   * - 横スクロールなしで全コンテンツを閲覧可能にする
+   *
+   * Task 8.2: モバイル向けレイアウトとデフォルトビュー
+   * - モバイル（768px未満）でコンパクトなレイアウト
+   * - タッチデバイスでのタップ操作に対応する
+   *
+   * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+   */
+
+  /* デスクトップ向けスタイル（1024px以上） - Task 8.1 */
+  @media (min-width: 1024px) {
+    .rbc-calendar {
+      @apply text-base;
+    }
+
+    .rbc-header {
+      @apply py-3 text-sm;
+    }
+
+    .rbc-date-cell {
+      @apply p-2 text-sm;
+    }
+
+    .rbc-event {
+      @apply px-2 py-1 text-sm;
+    }
+
+    .rbc-time-gutter,
+    .rbc-label {
+      @apply text-sm;
+    }
+  }
+
+  /* タブレット向けスタイル（768px - 1024px未満） - Task 8.1 */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .rbc-calendar {
+      @apply text-sm;
+    }
+
+    /* 週ビューのカラム幅調整 */
+    .rbc-time-view .rbc-time-header-cell,
+    .rbc-time-view .rbc-day-slot {
+      min-width: 80px;
+    }
+
+    .rbc-header {
+      @apply py-2 text-xs;
+    }
+
+    .rbc-date-cell {
+      @apply p-1 text-xs;
+    }
+
+    .rbc-event {
+      @apply px-1 py-0.5 text-xs;
+    }
+  }
+
+  /* モバイル向けスタイル（768px未満） - Task 8.2 */
+  @media (max-width: 767px) {
+    .rbc-calendar {
+      @apply text-sm;
+    }
+
+    .rbc-header {
+      @apply py-1 text-xs;
+    }
+
+    .rbc-date-cell {
+      @apply p-0.5 text-xs;
+    }
+
+    /* イベントブロックのコンパクト化 */
+    .rbc-event {
+      @apply px-1 py-0.5 text-xs;
+    }
+
+    /* 週ビューの簡略化 */
+    .rbc-time-view .rbc-time-header-cell,
+    .rbc-time-view .rbc-day-slot {
+      min-width: 40px;
+    }
+
+    /* 時間軸のコンパクト化 */
+    .rbc-time-gutter,
+    .rbc-label {
+      @apply text-xs;
+      min-width: 45px;
+    }
+
+    /* タッチ操作対応: タップ領域の拡大 */
+    .rbc-event {
+      min-height: 24px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .rbc-day-slot .rbc-event {
+      min-height: 20px;
+    }
+
+    /* 「+N件」のタップ領域拡大 */
+    .rbc-show-more {
+      @apply py-1;
+      min-height: 24px;
+      touch-action: manipulation;
+    }
+
+    /* 日付セルのタップ領域拡大 */
+    .rbc-date-cell {
+      min-height: 24px;
+    }
+
+    /* 月ビューでのイベント表示制限（表示数を減らす） */
+    .rbc-month-view .rbc-row-content {
+      max-height: 80px;
+      overflow: hidden;
+    }
+  }
+
+  /* 横スクロール防止（全画面サイズ共通） - Task 8.1 */
+  .rbc-calendar {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .rbc-month-view,
+  .rbc-time-view {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  /**
+   * タスク9: アクセシビリティ対応の実装
+   *
+   * Task 9.1: キーボードナビゲーションの実装
+   * - フォーカス状態の視覚的インジケーターを表示する
+   *
+   * Task 9.3: カラーコントラストの検証と調整
+   * - イベントカラーと背景のコントラスト比を確保する
+   * - WCAG AA基準を満たすカラーパレットを適用する
+   * - ハイライト表示のコントラストを確保する
+   *
+   * Requirements: 8.1, 8.4, 8.5
+   */
+
+  /* Task 9.1: フォーカス状態の視覚的インジケーター */
+  .rbc-event:focus-visible {
+    outline: 3px solid hsl(217, 91%, 60%); /* blue-500 */
+    outline-offset: 2px;
+    z-index: 10;
+  }
+
+  .rbc-button-link:focus-visible {
+    outline: 2px solid hsl(217, 91%, 60%);
+    outline-offset: 1px;
+    border-radius: 2px;
+  }
+
+  .rbc-toolbar button:focus-visible {
+    outline: 2px solid hsl(217, 91%, 60%);
+    outline-offset: 2px;
+  }
+
+  /* Task 9.3: カラーコントラスト確保 */
+  /* 今日のハイライト - WCAG AA準拠のコントラスト */
+  .rbc-today-highlight {
+    background-color: rgba(59, 130, 246, 0.15); /* 青色の薄い背景 */
+  }
+
+  /* 今日の日付番号を強調 */
+  .rbc-today .rbc-date-cell,
+  .rbc-today .rbc-button-link {
+    font-weight: 700;
+    color: hsl(217, 91%, 45%); /* 十分なコントラスト比を持つ青色 */
+  }
+
+  /* 終日イベントバーのスタイル */
+  .event-block-bar {
+    @apply w-full;
+  }
+
+  /* 終日イベントと時間指定イベントの区別 */
+  .event-block-all-day {
+    @apply font-medium;
+  }
+
+  .event-block-timed {
+    @apply font-normal;
+  }
+
+  /* カスタムイベントブロックのフォーカスリング */
+  .event-block:focus-visible {
+    outline: 3px solid hsl(217, 91%, 60%);
+    outline-offset: 2px;
+    z-index: 10;
+  }
+
+  /* スキップリンク（スクリーンリーダー用） */
+  .sr-only:focus {
+    position: absolute;
+    width: auto;
+    height: auto;
+    padding: 1rem;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    z-index: 9999;
   }
 }
