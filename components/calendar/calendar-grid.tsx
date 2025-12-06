@@ -24,7 +24,18 @@
  * - 週ビューで今日の列ヘッダーを強調表示する
  * - 日ビューで今日表示時にヘッダーを強調する
  *
- * Requirements: 1.1, 1.2, 1.3, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 7.1, 7.2, 7.3, 7.4
+ * タスク6.1: EventBlockカスタムレンダラーの作成
+ * - react-big-calendarのcomponents.eventでカスタムレンダラーを設定する
+ * - イベント名を表示し、長いテキストは省略する
+ * - イベントカラーを背景色として適用する
+ * - クリックとキーボード操作でのイベント選択に対応する
+ *
+ * タスク6.2: 終日イベントの視覚的区別
+ * - 終日イベントと時間指定イベントを異なるスタイルで表示する
+ * - 月ビューで終日イベントを日付セル上部にバー形式で配置する
+ * - 週/日ビューで終日イベントを時間軸上部の専用エリアに表示する
+ *
+ * Requirements: 1.1, 1.2, 1.3, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 7.1, 7.2, 7.3, 7.4, 8.4, 9.1, 9.2, 9.3, 9.4, 9.6
  */
 "use client";
 
@@ -43,6 +54,15 @@ import {
   calendarMessages,
 } from "@/lib/calendar/localizer";
 import type { CalendarEvent } from "@/lib/calendar/types";
+import { EventBlockWrapper } from "./event-block";
+
+/**
+ * react-big-calendarのカスタムコンポーネント設定
+ * Task 6.1, 6.2: EventBlockカスタムレンダラーを使用
+ */
+const calendarComponents = {
+  event: EventBlockWrapper,
+};
 
 export type CalendarGridProps = {
   /** 表示するイベント一覧 */
@@ -215,6 +235,7 @@ export function CalendarGrid({
       data-testid="calendar-grid"
     >
       <Calendar
+        components={calendarComponents}
         date={selectedDate}
         dayPropGetter={dayPropGetter}
         eventPropGetter={eventStyleGetter}

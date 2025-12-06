@@ -7,7 +7,11 @@
  * - ギルド未選択時は空のカレンダーグリッドを表示する
  * - 子コンポーネント（Toolbar, Grid）にデータとハンドラーを配布する
  *
- * Requirements: 5.1, 5.2
+ * タスク7: イベント詳細ポップオーバーの統合
+ * - イベントクリック時にEventPopoverを表示する
+ * - ポップオーバーの開閉状態を管理する
+ *
+ * Requirements: 4.1, 5.1, 5.2
  */
 "use client";
 
@@ -17,9 +21,11 @@ import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
 import { useCalendarState } from "@/hooks/calendar/use-calendar-state";
 import { useCalendarUrlSync } from "@/hooks/calendar/use-calendar-url-sync";
 import { createEventService } from "@/lib/calendar/event-service";
+import type { CalendarEvent } from "@/lib/calendar/types";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarGrid } from "./calendar-grid";
 import { CalendarToolbar } from "./calendar-toolbar";
+import { EventPopover } from "./event-popover";
 
 /**
  * CalendarContainerのProps
@@ -109,6 +115,34 @@ function getDateRange(
 }
 
 /**
+ * ポップオーバー状態管理のカスタムフック
+ */
+function useEventPopover() {
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null
+  );
+  const [isOpen, setIsOpen] = useState(false);
+
+  const openPopover = useCallback((event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setIsOpen(true);
+  }, []);
+
+  const closePopover = useCallback(() => {
+    setIsOpen(false);
+    // ポップオーバーが閉じた後に選択イベントをクリア
+    setTimeout(() => setSelectedEvent(null), 150);
+  }, []);
+
+  return {
+    selectedEvent,
+    isOpen,
+    openPopover,
+    closePopover,
+  };
+}
+
+/**
  * CalendarContainer コンポーネント
  *
  * カレンダー全体の状態管理、データフェッチ、子コンポーネントへのデータ配布を担当する。
@@ -140,6 +174,14 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
 
   // AbortController for cancelling requests
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Task 7: ポップオーバーの状態管理
+  const {
+    selectedEvent,
+    isOpen: isPopoverOpen,
+    openPopover,
+    closePopover,
+  } = useEventPopover();
 
   /**
    * イベントデータを取得する
@@ -257,14 +299,13 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
   );
 
   /**
-   * イベントクリックハンドラー（将来の拡張用）
+   * イベントクリックハンドラー (Task 7: EventPopoverを表示)
    */
   const handleEventClick = useCallback(
-    (event: unknown, element: HTMLElement) => {
-      // TODO: Task 7.1 - EventPopoverを表示
-      console.log("Event clicked:", event, element);
+    (event: CalendarEvent, _element: HTMLElement) => {
+      openPopover(event);
     },
-    []
+    [openPopover]
   );
 
   /**
@@ -328,6 +369,13 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
           />
         </div>
       )}
+
+      {/* Task 7: イベント詳細ポップオーバー */}
+      <EventPopover
+        event={selectedEvent}
+        onClose={closePopover}
+        open={isPopoverOpen}
+      />
     </div>
   );
 }
