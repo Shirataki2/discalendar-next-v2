@@ -1,5 +1,5 @@
 /**
- * EventService - イベントデータ取得サービス
+ * EventService - イベントデータ取得・作成サービス
  *
  * タスク2.2: EventServiceの実装
  * - ギルドIDと日付範囲に基づくイベント取得クエリ
@@ -7,19 +7,31 @@
  * - エラーコードの分類 (FETCH_FAILED, NETWORK_ERROR, UNAUTHORIZED)
  * - AbortController対応
  *
- * Requirements: 5.1, 5.3, 5.4
+ * タスク2.1: EventServiceにイベント作成機能を追加
+ * - 予定の新規作成ロジックをSupabaseへのINSERT操作として実装
+ * - 必須フィールドとオプションフィールドを処理
+ * - Result型パターンに従ったエラーハンドリング
+ *
+ * Requirements: 1.4, 5.1, 5.3, 5.4
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { type CalendarEvent, type EventRecord, toCalendarEvents } from "./types";
+import {
+  type CalendarEvent,
+  type EventRecord,
+  toCalendarEvent,
+  toCalendarEvents,
+} from "./types";
 
 /**
  * カレンダーエラーコードの定義
- * 各エラーコードはイベント取得時に発生する特定のエラー状況を表す
+ * 各エラーコードはイベント操作時に発生する特定のエラー状況を表す
  */
 export const CALENDAR_ERROR_CODES = [
   "FETCH_FAILED",
   "NETWORK_ERROR",
   "UNAUTHORIZED",
+  "CREATE_FAILED",
+  "VALIDATION_ERROR",
 ] as const;
 
 /**
@@ -46,6 +58,8 @@ export const CALENDAR_ERROR_MESSAGES: Record<CalendarErrorCode, string> = {
   FETCH_FAILED: "イベントの取得に失敗しました。",
   NETWORK_ERROR: "ネットワークエラーが発生しました。接続を確認してください。",
   UNAUTHORIZED: "このギルドのイベントを表示する権限がありません。",
+  CREATE_FAILED: "イベントの作成に失敗しました。",
+  VALIDATION_ERROR: "入力データが不正です。",
 };
 
 /**
@@ -81,6 +95,40 @@ export type FetchEventsResult =
   | { success: false; error: CalendarError };
 
 /**
+ * イベント作成入力パラメータ
+ */
+export interface CreateEventInput {
+  /** ギルドID */
+  guildId: string;
+  /** イベントタイトル */
+  title: string;
+  /** 開始日時 */
+  startAt: Date;
+  /** 終了日時 */
+  endAt: Date;
+  /** イベントの説明 */
+  description?: string;
+  /** 終日フラグ */
+  isAllDay?: boolean;
+  /** イベントカラー (HEXコード) */
+  color?: string;
+  /** 場所情報 */
+  location?: string;
+  /** DiscordチャンネルID */
+  channelId?: string;
+  /** Discordチャンネル名 */
+  channelName?: string;
+}
+
+/**
+ * ミューテーション結果 (Result型)
+ * 成功時はデータ、失敗時はエラー情報を返す
+ */
+export type MutationResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: CalendarError };
+
+/**
  * EventServiceインターフェース
  */
 export interface EventServiceInterface {
@@ -90,18 +138,45 @@ export interface EventServiceInterface {
    * @returns イベント一覧または エラー
    */
   fetchEvents(params: FetchEventsParams): Promise<FetchEventsResult>;
+
+  /**
+   * 新しいイベントを作成
+   * @param input - 作成パラメータ
+   * @returns 作成されたイベントまたは エラー
+   */
+  createEvent(input: CreateEventInput): Promise<MutationResult<CalendarEvent>>;
 }
 
 /**
  * Supabaseエラーをカレンダーエラーコードに分類する
  *
  * @param error - Supabaseから返されたエラー
+ * @param operation - 操作タイプ（fetch/create/update/delete）
  * @returns 適切なカレンダーエラーコード
  */
-function classifySupabaseError(error: { message: string; code?: string }): CalendarErrorCode {
+function classifySupabaseError(
+  error: { message: string; code?: string },
+  operation: "fetch" | "create" | "update" | "delete" = "fetch"
+): CalendarErrorCode {
   // PostgreSQL permission denied error
   if (error.code === "42501" || error.message.toLowerCase().includes("permission denied")) {
     return "UNAUTHORIZED";
+  }
+
+  // Validation errors (constraint violations, check violations)
+  if (
+    error.code === "23505" || // unique_violation
+    error.code === "23514" || // check_violation
+    error.code === "23502" || // not_null_violation
+    error.message.toLowerCase().includes("violates") ||
+    error.message.toLowerCase().includes("constraint")
+  ) {
+    return "VALIDATION_ERROR";
+  }
+
+  // Operation-specific error codes
+  if (operation === "create") {
+    return "CREATE_FAILED";
   }
 
   // Default to FETCH_FAILED for database errors
@@ -159,7 +234,7 @@ export function createEventService(
 
         // Supabaseエラーの処理
         if (error) {
-          const errorCode = classifySupabaseError(error);
+          const errorCode = classifySupabaseError(error, "fetch");
           return {
             success: false,
             error: {
@@ -179,6 +254,112 @@ export function createEventService(
         };
       } catch (error) {
         // 例外の処理 (ネットワークエラー、AbortErrorなど)
+        const errorCode = classifyException(error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async createEvent(input: CreateEventInput): Promise<MutationResult<CalendarEvent>> {
+      const {
+        guildId,
+        title,
+        startAt,
+        endAt,
+        description,
+        isAllDay = false,
+        color = "#3B82F6",
+        location,
+        channelId,
+        channelName,
+      } = input;
+
+      try {
+        // バリデーション: 必須フィールドのチェック
+        if (!title || title.trim().length === 0) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: getCalendarErrorMessage("VALIDATION_ERROR"),
+              details: "タイトルは必須です。",
+            },
+          };
+        }
+
+        if (title.length > 255) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: getCalendarErrorMessage("VALIDATION_ERROR"),
+              details: "タイトルは255文字以内で入力してください。",
+            },
+          };
+        }
+
+        // バリデーション: 日時のチェック
+        if (startAt >= endAt) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: getCalendarErrorMessage("VALIDATION_ERROR"),
+              details: "終了日時は開始日時より後である必要があります。",
+            },
+          };
+        }
+
+        // SupabaseへのINSERT操作
+        const insertData: Omit<EventRecord, "id" | "created_at" | "updated_at"> = {
+          guild_id: guildId,
+          name: title.trim(),
+          description: description?.trim() || null,
+          color,
+          is_all_day: isAllDay,
+          start_at: startAt.toISOString(),
+          end_at: endAt.toISOString(),
+          location: location?.trim() || null,
+          channel_id: channelId || null,
+          channel_name: channelName || null,
+        };
+
+        const { data, error } = await supabase
+          .from("events")
+          .insert(insertData)
+          .select()
+          .single();
+
+        // Supabaseエラーの処理
+        if (error) {
+          const errorCode = classifySupabaseError(error, "create");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: error.message,
+            },
+          };
+        }
+
+        // EventRecordからCalendarEventへ変換
+        const event = toCalendarEvent(data as EventRecord);
+
+        return {
+          success: true,
+          data: event,
+        };
+      } catch (error) {
+        // 例外の処理 (ネットワークエラーなど)
         const errorCode = classifyException(error);
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 

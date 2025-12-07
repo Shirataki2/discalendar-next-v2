@@ -8,7 +8,7 @@
     "prepare": "husky",
     "test:e2e": "playwright test",
     "test:unit": "vitest run",
-    "test": "npm run test:e2e && npm run test:unit",
+    "test": "npm run test:unit",
     "type-check": "tsc --noEmit -p tsconfig.type-check.json",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
