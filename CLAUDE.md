@@ -39,6 +39,13 @@ Kiro-style Spec Driven Development implementation on AI-DLC (AI Development Life
 - Keep steering current and verify alignment with `/kiro:spec-status`
 - Follow the user's instructions precisely, and within that scope act autonomously: gather the necessary context and complete the requested work end-to-end in this run, asking questions only when essential information is missing or the instructions are critically ambiguous.
 
+## Component Development Rules
+- **Storybook必須**: 新規コンポーネント作成時は、必ず対応するStorybookストーリーファイル（`*.stories.tsx`）も作成すること
+  - ストーリーファイルはコンポーネントと同じディレクトリに配置（Co-located）
+  - CSF3形式で記述し、`tags: ["autodocs"]`を設定
+  - 主要なバリアント・状態をストーリーとして定義
+  - 参考: `.storybook/`の設定、既存ストーリーファイル（`components/**/*.stories.tsx`）
+
 ## Steering Configuration
 - Load entire `.kiro/steering/` as project memory
 - Default files: `product.md`, `tech.md`, `structure.md`

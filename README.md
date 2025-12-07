@@ -28,6 +28,12 @@ DiscalendarはDiscordコミュニティ向けの予定管理サービスです�
 - アクセシビリティ準拠
 - パフォーマンス最適化済み
 
+✅ **Storybook統合完成** (2025-12-07)
+- コンポーネント駆動開発環境の構築
+- shadcn/ui・カスタムコンポーネントのストーリー作成
+- アクセシビリティ検証（addon-a11y）
+- ダークモード対応（addon-themes）
+
 ## 🚀 主な機能
 
 ### 実装済み
@@ -63,6 +69,7 @@ DiscalendarはDiscordコミュニティ向けの予定管理サービスです�
 - **データベース:** [Supabase](https://supabase.com)
 - **テスト:** Vitest + Playwright
 - **リンター:** Biome ([Ultracite](https://github.com/terrazzoapp/ultracite))
+- **コンポーネント開発:** [Storybook](https://storybook.js.org) 8.x
 
 ## 📦 セットアップ
 
@@ -132,6 +139,30 @@ npm run test:e2e
 - **ユニットテスト (Vitest):** 330+テスト
 - **合計:** 380+テスト ✅
 
+## 📖 Storybook
+
+コンポーネントの開発・ドキュメント化にStorybookを使用しています。
+
+### Storybook開発サーバー起動
+
+```bash
+npm run storybook
+```
+
+ブラウザで [http://localhost:6006](http://localhost:6006) を開いてください。
+
+### Storybookビルド
+
+```bash
+npm run build-storybook
+```
+
+### 含まれるストーリー
+
+- **UI Components:** Button, Badge, Card, Checkbox, Input, Label, Popover, DropdownMenu
+- **Landing Page:** Header, MobileNav, Hero, Features, CTA, Footer
+- **Calendar:** CalendarGrid, CalendarToolbar, EventBlock, EventPopover
+
 ## 🎨 コード品質
 
 ### リンティング
@@ -197,6 +228,7 @@ discalendar-next/
 ├── .kiro/                # 仕様・ドキュメント
 │   ├── specs/           # 機能仕様
 │   └── steering/        # プロジェクト方針
+├── .storybook/           # Storybook設定
 └── public/               # 静的ファイル
 ```
 
@@ -214,6 +246,11 @@ discalendar-next/
   - [要件定義](.kiro/specs/landing-page-mockup/requirements.md)
   - [技術設計](.kiro/specs/landing-page-mockup/design.md)
   - [タスク計画](.kiro/specs/landing-page-mockup/tasks.md)
+
+- [Storybook統合仕様](.kiro/specs/storybook-integration/)
+  - [要件定義](.kiro/specs/storybook-integration/requirements.md)
+  - [技術設計](.kiro/specs/storybook-integration/design.md)
+  - [タスク計画](.kiro/specs/storybook-integration/tasks.md)
 
 ## 🚢 デプロイ
 
@@ -239,3 +276,4 @@ TBD
 - [Supabase Documentation](https://supabase.com/docs)
 - [shadcn/ui Documentation](https://ui.shadcn.com)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [Storybook Documentation](https://storybook.js.org/docs)
