@@ -23,10 +23,9 @@ export const Default: Story = {};
  * モバイルビューポート表示
  */
 export const Mobile: Story = {
-  globals: {
+  parameters: {
     viewport: {
-      value: "mobile",
-      isRotated: false,
+      defaultViewport: "mobile",
     },
   },
 };
@@ -35,10 +34,9 @@ export const Mobile: Story = {
  * タブレットビューポート表示
  */
 export const Tablet: Story = {
-  globals: {
+  parameters: {
     viewport: {
-      value: "tablet",
-      isRotated: false,
+      defaultViewport: "tablet",
     },
   },
 };
@@ -47,10 +45,9 @@ export const Tablet: Story = {
  * デスクトップビューポート表示
  */
 export const Desktop: Story = {
-  globals: {
+  parameters: {
     viewport: {
-      value: "desktop",
-      isRotated: false,
+      defaultViewport: "desktop",
     },
   },
 };

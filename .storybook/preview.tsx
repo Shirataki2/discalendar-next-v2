@@ -11,17 +11,20 @@ const preview: Preview = {
       },
     },
     viewport: {
-      options: {
+      viewports: {
         mobile: {
           name: "Mobile",
+          type: "mobile",
           styles: { width: "375px", height: "667px" },
         },
         tablet: {
           name: "Tablet",
+          type: "tablet",
           styles: { width: "768px", height: "1024px" },
         },
         desktop: {
           name: "Desktop",
+          type: "desktop",
           styles: { width: "1280px", height: "800px" },
         },
       },

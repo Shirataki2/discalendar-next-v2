@@ -24,10 +24,9 @@ export const Default: Story = {};
  * 1カラムレイアウトで表示されます
  */
 export const Mobile: Story = {
-  globals: {
+  parameters: {
     viewport: {
-      value: "mobile",
-      isRotated: false,
+      defaultViewport: "mobile",
     },
   },
 };
@@ -37,10 +36,9 @@ export const Mobile: Story = {
  * 2カラムレイアウトで表示されます
  */
 export const Tablet: Story = {
-  globals: {
+  parameters: {
     viewport: {
-      value: "tablet",
-      isRotated: false,
+      defaultViewport: "tablet",
     },
   },
 };
@@ -50,10 +48,9 @@ export const Tablet: Story = {
  * 3カラムレイアウトで表示されます
  */
 export const Desktop: Story = {
-  globals: {
+  parameters: {
     viewport: {
-      value: "desktop",
-      isRotated: false,
+      defaultViewport: "desktop",
     },
   },
 };

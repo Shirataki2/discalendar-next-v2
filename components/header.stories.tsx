@@ -124,10 +124,9 @@ export const Mobile: Story = {
   args: {
     isAuthenticated: false,
   },
-  globals: {
+  parameters: {
     viewport: {
-      value: "mobile",
-      isRotated: false,
+      defaultViewport: "mobile",
     },
   },
 };
@@ -139,10 +138,9 @@ export const MobileAuthenticated: Story = {
   args: {
     isAuthenticated: true,
   },
-  globals: {
+  parameters: {
     viewport: {
-      value: "mobile",
-      isRotated: false,
+      defaultViewport: "mobile",
     },
   },
 };
@@ -154,10 +152,9 @@ export const Tablet: Story = {
   args: {
     isAuthenticated: false,
   },
-  globals: {
+  parameters: {
     viewport: {
-      value: "tablet",
-      isRotated: false,
+      defaultViewport: "tablet",
     },
   },
 };
