@@ -50,3 +50,6 @@ node_modules/
 /playwright/.auth/
 
 refs/DisCalendarV2/
+
+*storybook.log
+storybook-static
