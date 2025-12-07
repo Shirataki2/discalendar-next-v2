@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 
 // Regex constants for performance
-const KEBAB_CASE_REGEX = /^[a-z]+(-[a-z]+)*\.tsx$/;
+const KEBAB_CASE_REGEX = /^[a-z]+(-[a-z]+)*(\.stories)?\.tsx$/;
 const IMPORT_IDENTIFIER_REGEX = /import\s+(?:type\s+)?{?\s*(\w+)/;
 const API_KEY_REGEX = /api[_-]?key\s*=\s*["'][^"']+["']/i;
 const SECRET_REGEX = /secret\s*=\s*["'][^"']+["']/i;
