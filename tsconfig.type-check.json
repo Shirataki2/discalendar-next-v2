@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "app/**/*",
+    "components/**/*",
+    "hooks/**/*",
+    "lib/**/*",
+    "types/**/*",
+    "postcss.config.mjs",
+    "tailwind.config.ts",
+    "playwright.config.ts",
+    "vitest.config.mts",
+    "proxy.ts",
+    "next-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "e2e_tests",
+    "refs",
+    ".next",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
+}
