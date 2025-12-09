@@ -5,6 +5,11 @@
       {
         "command": "npx ultracite fix"
       }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "./hooks/block-git.sh"
+      }
     ]
   }
 }
