@@ -272,6 +272,52 @@ describe("CalendarToolbar", () => {
     });
   });
 
+  describe("Task 6.2: 新規追加ボタン (Req 1.2)", () => {
+    it("onAddClickが提供されている場合、新規追加ボタンを表示する", () => {
+      const onAddClick = vi.fn();
+      render(<CalendarToolbar {...defaultProps} onAddClick={onAddClick} />);
+
+      const addButton = screen.getByTestId("add-event-button");
+      expect(addButton).toBeInTheDocument();
+      expect(addButton).toHaveAccessibleName("予定を追加");
+    });
+
+    it("onAddClickが提供されていない場合、新規追加ボタンを表示しない", () => {
+      render(<CalendarToolbar {...defaultProps} />);
+
+      const addButton = screen.queryByTestId("add-event-button");
+      expect(addButton).not.toBeInTheDocument();
+    });
+
+    it("新規追加ボタンをクリックすると onAddClick が呼ばれる", async () => {
+      const user = userEvent.setup();
+      const onAddClick = vi.fn();
+      render(<CalendarToolbar {...defaultProps} onAddClick={onAddClick} />);
+
+      const addButton = screen.getByTestId("add-event-button");
+      await user.click(addButton);
+
+      expect(onAddClick).toHaveBeenCalledTimes(1);
+    });
+
+    it("モバイル表示時も新規追加ボタンが機能する", async () => {
+      const user = userEvent.setup();
+      const onAddClick = vi.fn();
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          isMobile={true}
+          onAddClick={onAddClick}
+        />
+      );
+
+      const addButton = screen.getByTestId("add-event-button");
+      await user.click(addButton);
+
+      expect(onAddClick).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("アクセシビリティ (Req 8.2)", () => {
     it("すべてのボタンに適切なARIAラベルを設定する", () => {
       render(<CalendarToolbar {...defaultProps} />);

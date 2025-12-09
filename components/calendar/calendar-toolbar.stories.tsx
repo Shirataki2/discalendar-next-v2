@@ -34,6 +34,10 @@ const meta: Meta<typeof CalendarToolbar> = {
       control: "boolean",
       description: "モバイル表示かどうか",
     },
+    onAddClick: {
+      action: "addClicked",
+      description: "新規追加ボタンクリックハンドラー",
+    },
   },
 };
 
@@ -186,4 +190,51 @@ export const AllViewModes: Story = {
       </div>
     </div>
   ),
+};
+
+/**
+ * 新規追加ボタン付き（デスクトップ）
+ * Task 6.2: 新規追加ボタンの表示
+ */
+export const WithAddButton: Story = {
+  args: {
+    viewMode: "month",
+    selectedDate: new Date(2025, 0, 15),
+    onViewChange: fn(),
+    onNavigate: fn(),
+    onAddClick: fn(),
+    isMobile: false,
+  },
+};
+
+/**
+ * 新規追加ボタン付き（モバイル）
+ * モバイル表示での新規追加ボタン
+ */
+export const WithAddButtonMobile: Story = {
+  args: {
+    viewMode: "month",
+    selectedDate: new Date(2025, 0, 15),
+    onViewChange: fn(),
+    onNavigate: fn(),
+    onAddClick: fn(),
+    isMobile: true,
+  },
+  parameters: {
+    viewport: { defaultViewport: "mobile" },
+  },
+};
+
+/**
+ * 新規追加ボタンなし
+ * onAddClickが提供されていない場合、追加ボタンは表示されない
+ */
+export const WithoutAddButton: Story = {
+  args: {
+    viewMode: "month",
+    selectedDate: new Date(2025, 0, 15),
+    onViewChange: fn(),
+    onNavigate: fn(),
+    isMobile: false,
+  },
 };
