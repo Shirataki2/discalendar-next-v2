@@ -272,3 +272,43 @@ export const ColorVariations: Story = {
     </div>
   ),
 };
+
+/**
+ * 編集・削除ボタン付き (Task 6.1)
+ * onEdit と onDelete コールバックを持つイベント
+ */
+export const WithEditDeleteButtons: Story = {
+  args: {
+    event: basicEvent,
+    open: true,
+    onClose: fn(),
+    onEdit: fn(),
+    onDelete: fn(),
+  },
+};
+
+/**
+ * 編集ボタンのみ (Task 6.1)
+ * onEdit のみ提供されている場合
+ */
+export const WithEditButtonOnly: Story = {
+  args: {
+    event: fullEvent,
+    open: true,
+    onClose: fn(),
+    onEdit: fn(),
+  },
+};
+
+/**
+ * 削除ボタンのみ (Task 6.1)
+ * onDelete のみ提供されている場合
+ */
+export const WithDeleteButtonOnly: Story = {
+  args: {
+    event: eventWithLocation,
+    open: true,
+    onClose: fn(),
+    onDelete: fn(),
+  },
+};

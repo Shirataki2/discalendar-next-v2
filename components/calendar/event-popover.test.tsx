@@ -35,6 +35,8 @@ const CHANNEL_PATTERN = /general/;
 const CHANNEL_LABEL_PATTERN = /チャンネル/;
 const DESCRIPTION_LABEL_PATTERN = /説明/;
 const CLOSE_BUTTON_PATTERN = /閉じる/;
+const EDIT_BUTTON_PATTERN = /編集/;
+const DELETE_BUTTON_PATTERN = /削除/;
 
 describe("EventPopover", () => {
   // 通常のイベント（時間指定）
@@ -257,6 +259,94 @@ describe("EventPopover", () => {
 
       // onCloseが呼ばれない
       expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  // Task 6.1: 編集・削除ボタンの追加
+  describe("Task 6.1: 編集・削除ボタンの追加", () => {
+    it("onEditが提供されている場合、編集ボタンを表示する (Req 2.3)", () => {
+      const onEdit = vi.fn();
+      render(<EventPopover {...defaultProps} onEdit={onEdit} />);
+
+      const editButton = screen.getByTestId("event-edit-button");
+      expect(editButton).toBeInTheDocument();
+      expect(editButton).toHaveTextContent(EDIT_BUTTON_PATTERN);
+    });
+
+    it("onDeleteが提供されている場合、削除ボタンを表示する (Req 2.3)", () => {
+      const onDelete = vi.fn();
+      render(<EventPopover {...defaultProps} onDelete={onDelete} />);
+
+      const deleteButton = screen.getByTestId("event-delete-button");
+      expect(deleteButton).toBeInTheDocument();
+      expect(deleteButton).toHaveTextContent(DELETE_BUTTON_PATTERN);
+    });
+
+    it("編集ボタンクリック時にonEditコールバックを呼び出す (Req 2.3)", async () => {
+      const user = userEvent.setup();
+      const onEdit = vi.fn();
+      render(<EventPopover {...defaultProps} onEdit={onEdit} />);
+
+      const editButton = screen.getByTestId("event-edit-button");
+      await user.click(editButton);
+
+      expect(onEdit).toHaveBeenCalledWith(timedEvent);
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+
+    it("削除ボタンクリック時にonDeleteコールバックを呼び出す (Req 2.3)", async () => {
+      const user = userEvent.setup();
+      const onDelete = vi.fn();
+      render(<EventPopover {...defaultProps} onDelete={onDelete} />);
+
+      const deleteButton = screen.getByTestId("event-delete-button");
+      await user.click(deleteButton);
+
+      expect(onDelete).toHaveBeenCalledWith(timedEvent);
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("onEditもonDeleteも提供されていない場合、ボタンを表示しない", () => {
+      render(<EventPopover {...defaultProps} />);
+
+      expect(screen.queryByTestId("event-edit-button")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("event-delete-button")
+      ).not.toBeInTheDocument();
+    });
+
+    it("onEditのみ提供されている場合、編集ボタンのみを表示する", () => {
+      const onEdit = vi.fn();
+      render(<EventPopover {...defaultProps} onEdit={onEdit} />);
+
+      expect(screen.getByTestId("event-edit-button")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("event-delete-button")
+      ).not.toBeInTheDocument();
+    });
+
+    it("onDeleteのみ提供されている場合、削除ボタンのみを表示する", () => {
+      const onDelete = vi.fn();
+      render(<EventPopover {...defaultProps} onDelete={onDelete} />);
+
+      expect(screen.queryByTestId("event-edit-button")).not.toBeInTheDocument();
+      expect(screen.getByTestId("event-delete-button")).toBeInTheDocument();
+    });
+
+    it("既存のプレビュー表示機能を維持する", () => {
+      const onEdit = vi.fn();
+      const onDelete = vi.fn();
+      render(
+        <EventPopover {...defaultProps} onDelete={onDelete} onEdit={onEdit} />
+      );
+
+      // タイトル、日時、説明が正しく表示される
+      expect(screen.getByText("定例ミーティング")).toBeInTheDocument();
+      expect(screen.getByText(DATE_2025_12_5_PATTERN)).toBeInTheDocument();
+      expect(screen.getByText(TIME_1400_PATTERN)).toBeInTheDocument();
+      expect(
+        screen.getByText("チームの週次定例ミーティングです。")
+      ).toBeInTheDocument();
     });
   });
 
