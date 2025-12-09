@@ -31,6 +31,8 @@ export const CALENDAR_ERROR_CODES = [
   "NETWORK_ERROR",
   "UNAUTHORIZED",
   "CREATE_FAILED",
+  "UPDATE_FAILED",
+  "DELETE_FAILED",
   "VALIDATION_ERROR",
 ] as const;
 
@@ -59,6 +61,8 @@ export const CALENDAR_ERROR_MESSAGES: Record<CalendarErrorCode, string> = {
   NETWORK_ERROR: "ネットワークエラーが発生しました。接続を確認してください。",
   UNAUTHORIZED: "このギルドのイベントを表示する権限がありません。",
   CREATE_FAILED: "イベントの作成に失敗しました。",
+  UPDATE_FAILED: "イベントの更新に失敗しました。",
+  DELETE_FAILED: "イベントの削除に失敗しました。",
   VALIDATION_ERROR: "入力データが不正です。",
 };
 
@@ -121,6 +125,27 @@ export interface CreateEventInput {
 }
 
 /**
+ * イベント更新入力パラメータ
+ * すべてのフィールドがオプショナルで部分更新に対応
+ */
+export interface UpdateEventInput {
+  /** イベントタイトル */
+  title?: string;
+  /** 開始日時 */
+  startAt?: Date;
+  /** 終了日時 */
+  endAt?: Date;
+  /** イベントの説明 */
+  description?: string;
+  /** 終日フラグ */
+  isAllDay?: boolean;
+  /** イベントカラー (HEXコード) */
+  color?: string;
+  /** 場所情報 */
+  location?: string;
+}
+
+/**
  * ミューテーション結果 (Result型)
  * 成功時はデータ、失敗時はエラー情報を返す
  */
@@ -145,6 +170,21 @@ export interface EventServiceInterface {
    * @returns 作成されたイベントまたは エラー
    */
   createEvent(input: CreateEventInput): Promise<MutationResult<CalendarEvent>>;
+
+  /**
+   * 既存のイベントを更新
+   * @param id - イベントID
+   * @param input - 更新パラメータ（部分更新に対応）
+   * @returns 更新されたイベントまたは エラー
+   */
+  updateEvent(id: string, input: UpdateEventInput): Promise<MutationResult<CalendarEvent>>;
+
+  /**
+   * イベントを完全に削除
+   * @param id - 削除するイベントのID
+   * @returns 成功時はvoid、失敗時はエラー
+   */
+  deleteEvent(id: string): Promise<MutationResult<void>>;
 }
 
 /**
@@ -177,6 +217,12 @@ function classifySupabaseError(
   // Operation-specific error codes
   if (operation === "create") {
     return "CREATE_FAILED";
+  }
+  if (operation === "update") {
+    return "UPDATE_FAILED";
+  }
+  if (operation === "delete") {
+    return "DELETE_FAILED";
   }
 
   // Default to FETCH_FAILED for database errors
@@ -357,6 +403,168 @@ export function createEventService(
         return {
           success: true,
           data: event,
+        };
+      } catch (error) {
+        // 例外の処理 (ネットワークエラーなど)
+        const errorCode = classifyException(error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async updateEvent(id: string, input: UpdateEventInput): Promise<MutationResult<CalendarEvent>> {
+      const {
+        title,
+        startAt,
+        endAt,
+        description,
+        isAllDay,
+        color,
+        location,
+      } = input;
+
+      try {
+        // バリデーション: タイトルが指定されている場合のチェック
+        if (title !== undefined) {
+          if (!title || title.trim().length === 0) {
+            return {
+              success: false,
+              error: {
+                code: "VALIDATION_ERROR",
+                message: getCalendarErrorMessage("VALIDATION_ERROR"),
+                details: "タイトルは必須です。",
+              },
+            };
+          }
+
+          if (title.length > 255) {
+            return {
+              success: false,
+              error: {
+                code: "VALIDATION_ERROR",
+                message: getCalendarErrorMessage("VALIDATION_ERROR"),
+                details: "タイトルは255文字以内で入力してください。",
+              },
+            };
+          }
+        }
+
+        // バリデーション: 両方の日時が指定されている場合のチェック
+        if (startAt !== undefined && endAt !== undefined) {
+          if (startAt >= endAt) {
+            return {
+              success: false,
+              error: {
+                code: "VALIDATION_ERROR",
+                message: getCalendarErrorMessage("VALIDATION_ERROR"),
+                details: "終了日時は開始日時より後である必要があります。",
+              },
+            };
+          }
+        }
+
+        // SupabaseへのUPDATE操作用のデータを構築（指定されたフィールドのみ）
+        const updateData: Partial<Omit<EventRecord, "id" | "guild_id" | "created_at" | "updated_at" | "channel_id" | "channel_name">> = {};
+
+        if (title !== undefined) {
+          updateData.name = title.trim();
+        }
+        if (startAt !== undefined) {
+          updateData.start_at = startAt.toISOString();
+        }
+        if (endAt !== undefined) {
+          updateData.end_at = endAt.toISOString();
+        }
+        if (description !== undefined) {
+          updateData.description = description.trim() || null;
+        }
+        if (isAllDay !== undefined) {
+          updateData.is_all_day = isAllDay;
+        }
+        if (color !== undefined) {
+          updateData.color = color;
+        }
+        if (location !== undefined) {
+          updateData.location = location.trim() || null;
+        }
+
+        // SupabaseへのUPDATE操作
+        const { data, error } = await supabase
+          .from("events")
+          .update(updateData)
+          .eq("id", id)
+          .select()
+          .single();
+
+        // Supabaseエラーの処理
+        if (error) {
+          const errorCode = classifySupabaseError(error, "update");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: error.message,
+            },
+          };
+        }
+
+        // EventRecordからCalendarEventへ変換
+        const event = toCalendarEvent(data as EventRecord);
+
+        return {
+          success: true,
+          data: event,
+        };
+      } catch (error) {
+        // 例外の処理 (ネットワークエラーなど)
+        const errorCode = classifyException(error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async deleteEvent(id: string): Promise<MutationResult<void>> {
+      try {
+        // SupabaseへのDELETE操作
+        const { error } = await supabase
+          .from("events")
+          .delete()
+          .eq("id", id);
+
+        // Supabaseエラーの処理
+        if (error) {
+          const errorCode = classifySupabaseError(error, "delete");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: error.message,
+            },
+          };
+        }
+
+        // 削除成功（復元不可能な完全削除）
+        return {
+          success: true,
+          data: undefined,
         };
       } catch (error) {
         // 例外の処理 (ネットワークエラーなど)
