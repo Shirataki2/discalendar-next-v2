@@ -436,4 +436,65 @@
     color: hsl(var(--foreground));
     z-index: 9999;
   }
+
+  /**
+   * Task 6.3: ドラッグ選択時のハイライト表示
+   *
+   * 期間選択中の視覚的フィードバックを強化する
+   * Requirements: 1.1, 5.3
+   */
+
+  /* ドラッグ選択可能なスロットのベーススタイル */
+  .rbc-slot-selectable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  /* ドラッグ選択中のスロットハイライト */
+  .rbc-slot-selecting,
+  .rbc-selecting {
+    background-color: rgba(
+      59,
+      130,
+      246,
+      0.2
+    ) !important; /* 青色の選択ハイライト */
+  }
+
+  /* ドラッグ選択中の領域ボックス */
+  .rbc-time-view .rbc-slot-selection {
+    background-color: rgba(59, 130, 246, 0.3);
+    border: 2px solid hsl(217, 91%, 60%);
+    border-radius: 4px;
+    z-index: 5;
+  }
+
+  /* 月ビューでの日付セル選択状態 */
+  .rbc-day-bg.rbc-selected-cell {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+  }
+
+  /* 週/日ビューでの時間スロット選択ハイライト */
+  .rbc-time-slot:hover {
+    background-color: rgba(59, 130, 246, 0.08);
+  }
+
+  /* ドラッグ中のアクティブスロット */
+  .rbc-time-content .rbc-selecting {
+    background-color: rgba(59, 130, 246, 0.25);
+  }
+
+  /* ドラッグ選択の境界線 */
+  .rbc-addons-dnd .rbc-addons-dnd-drag-preview {
+    border: 2px dashed hsl(217, 91%, 60%);
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+  }
+
+  /* 選択可能なスロットのホバー効果（アクセシビリティ向上） */
+  .rbc-day-slot .rbc-time-slot:hover,
+  .rbc-day-bg:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+    cursor: pointer;
+  }
 }
