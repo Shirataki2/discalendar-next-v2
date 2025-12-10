@@ -106,7 +106,7 @@
 
 ## Task 7: カレンダーコンテナ統合
 
-- [ ] 7.1 CalendarContainerに予定作成フローを統合する
+- [x] 7.1 CalendarContainerに予定作成フローを統合する
   - 新規追加ボタンクリック時にEventDialogを表示する状態管理を追加する
   - CalendarGridのonSelectSlotハンドラーで期間選択時に選択期間を初期値としてEventDialogを表示する
   - useEventMutationフックを使用して予定作成を実行する
@@ -114,7 +114,7 @@
   - Task 4.1（useEventMutation）、Task 5.2（EventDialog）、Task 6.2（Toolbar）に依存
   - _Requirements: 1.1, 1.2, 1.4, 1.5_
 
-- [ ] 7.2 CalendarContainerに予定編集・削除フローを統合する
+- [x] 7.2 CalendarContainerに予定編集・削除フローを統合する
   - EventPopoverにonEditとonDeleteコールバックを追加する
   - 編集ボタンクリック時に既存データを設定してEventDialogを表示する
   - 予定更新成功時にダイアログを閉じてfetchEvents()でカレンダー表示を更新する
@@ -125,7 +125,7 @@
 
 ## Task 8: UI操作性向上
 
-- [ ] 8.1 (P) カレンダー上の予定にホバー時のツールチップを追加する
+- [x] 8.1 (P) カレンダー上の予定にホバー時のツールチップを追加する
   - EventBlockコンポーネントにtitle属性を追加してブラウザネイティブのツールチップを表示する
   - ツールチップには予定タイトルと時間を含める
   - _Requirements: 5.4_

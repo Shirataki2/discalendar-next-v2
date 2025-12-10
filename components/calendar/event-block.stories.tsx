@@ -214,3 +214,37 @@ export const FocusState: Story = {
     pseudo: { focus: true },
   },
 };
+
+/**
+ * ツールチップ表示 (Task 8.1)
+ * ホバー時にネイティブツールチップを表示
+ * - 時間指定イベント: タイトルと時間
+ * - 終日イベント: タイトルと「終日」
+ */
+export const WithTooltip: Story = {
+  render: () => (
+    <div className="space-y-4">
+      <div>
+        <p className="mb-2 text-muted-foreground text-sm">
+          時間指定イベント（ホバーで「チームミーティング (10:00 -
+          11:00)」と表示）:
+        </p>
+        <EventBlock
+          event={timedEvent}
+          onClick={fn()}
+          title={timedEvent.title}
+        />
+      </div>
+      <div>
+        <p className="mb-2 text-muted-foreground text-sm">
+          終日イベント（ホバーで「祝日 (終日)」と表示）:
+        </p>
+        <EventBlock
+          event={allDayEvent}
+          onClick={fn()}
+          title={allDayEvent.title}
+        />
+      </div>
+    </div>
+  ),
+};
