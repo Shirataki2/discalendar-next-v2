@@ -270,10 +270,18 @@ export function useEventForm(
         // タッチ済みのフィールドで、エラーがある場合は再バリデーション
         if (touched[field]) {
           const newErrors = validateForm(newValues);
-          setErrors((prev) => ({
-            ...prev,
-            [field]: newErrors[field],
-          }));
+          setErrors((prev) => {
+            const updated = { ...prev };
+            // ValidationErrors に存在するフィールドのみ更新
+            if (field in newErrors) {
+              // エラーがある場合：設定
+              updated[field as keyof ValidationErrors] = newErrors[field as keyof ValidationErrors];
+            } else if (field in prev) {
+              // エラーがない場合：削除
+              delete updated[field as keyof ValidationErrors];
+            }
+            return updated;
+          });
         }
 
         return newValues;
@@ -291,10 +299,18 @@ export function useEventForm(
 
       // バリデーション実行
       const newErrors = validateForm(values);
-      setErrors((prev) => ({
-        ...prev,
-        [field]: newErrors[field],
-      }));
+      setErrors((prev) => {
+        const updated = { ...prev };
+        // ValidationErrors に存在するフィールドのみ更新
+        if (field in newErrors) {
+          // エラーがある場合：設定
+          updated[field as keyof ValidationErrors] = newErrors[field as keyof ValidationErrors];
+        } else if (field in prev) {
+          // エラーがない場合：削除
+          delete updated[field as keyof ValidationErrors];
+        }
+        return updated;
+      });
     },
     [values]
   );
