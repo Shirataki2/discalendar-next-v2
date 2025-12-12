@@ -64,6 +64,17 @@ const calendarComponents = {
   event: EventBlockWrapper,
 };
 
+/**
+ * スロット選択情報
+ * Task 6.3: ドラッグ選択時の期間情報を親に通知
+ */
+export type SlotSelectInfo = {
+  /** 選択開始日時 */
+  start: Date;
+  /** 選択終了日時 */
+  end: Date;
+};
+
 export type CalendarGridProps = {
   /** 表示するイベント一覧 */
   events: CalendarEvent[];
@@ -77,6 +88,11 @@ export type CalendarGridProps = {
   onDateChange: (date: Date) => void;
   /** 今日の日付 */
   today: Date;
+  /**
+   * スロット選択ハンドラー
+   * Task 6.3: ドラッグ選択完了時に選択期間を通知
+   */
+  onSlotSelect?: (slotInfo: SlotSelectInfo) => void;
 };
 
 /**
@@ -142,6 +158,7 @@ export function CalendarGrid({
   onEventClick,
   onDateChange,
   today,
+  onSlotSelect,
 }: CalendarGridProps) {
   // ViewModeをreact-big-calendarのView型に変換
   const rbcView = useMemo(() => viewModeToRBCView(viewMode), [viewMode]);
@@ -162,13 +179,22 @@ export function CalendarGrid({
   /**
    * 日付セル選択ハンドラー
    * react-big-calendarのスロット情報から日付を抽出して呼び出す
+   * Task 6.3: ドラッグ選択時に選択期間を親に通知
    */
   const handleSelectSlot = useCallback(
     (slotInfo: SlotInfo) => {
       // スロット情報から開始日を取得
       onDateChange(slotInfo.start);
+
+      // Task 6.3: 選択期間を親に通知
+      if (onSlotSelect) {
+        onSlotSelect({
+          start: slotInfo.start,
+          end: slotInfo.end,
+        });
+      }
     },
-    [onDateChange]
+    [onDateChange, onSlotSelect]
   );
 
   /**
@@ -228,6 +254,20 @@ export function CalendarGrid({
     [today, selectedDate]
   );
 
+  /**
+   * 時間スロットのスタイルをカスタマイズ
+   * Task 6.3: ドラッグ選択時のハイライト表示を強化 (Req 1.1, 5.3)
+   */
+  const slotPropGetter = useCallback(
+    () => ({
+      className: "rbc-slot-selectable",
+      style: {
+        cursor: "pointer",
+      } as React.CSSProperties,
+    }),
+    []
+  );
+
   return (
     <section
       aria-label="カレンダー"
@@ -251,6 +291,7 @@ export function CalendarGrid({
         }}
         popup
         selectable
+        slotPropGetter={slotPropGetter}
         style={{ height: "100%" }}
         view={rbcView}
       />

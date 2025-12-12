@@ -19,8 +19,9 @@
 
 import { format, isSameDay } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Calendar, Clock, Hash, MapPin, X } from "lucide-react";
+import { Calendar, Clock, Hash, MapPin, Pencil, Trash2, X } from "lucide-react";
 import { useCallback, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import type { CalendarEvent } from "@/lib/calendar/types";
 
@@ -36,6 +37,10 @@ export type EventPopoverProps = {
   onClose: () => void;
   /** アンカー要素（オプション） */
   anchorElement?: HTMLElement | null;
+  /** 編集ハンドラー（オプション） */
+  onEdit?: (event: CalendarEvent) => void;
+  /** 削除ハンドラー（オプション） */
+  onDelete?: (event: CalendarEvent) => void;
 };
 
 /**
@@ -128,7 +133,13 @@ function formatEventDateTime(event: CalendarEvent): React.ReactNode {
  * />
  * ```
  */
-export function EventPopover({ event, open, onClose }: EventPopoverProps) {
+export function EventPopover({
+  event,
+  open,
+  onClose,
+  onEdit,
+  onDelete,
+}: EventPopoverProps) {
   /**
    * Escキー押下時のハンドラー
    * 注: hooksはコンポーネントのトップレベルで呼び出す必要がある
@@ -141,6 +152,24 @@ export function EventPopover({ event, open, onClose }: EventPopoverProps) {
     },
     [onClose, open]
   );
+
+  /**
+   * 編集ボタンクリック時のハンドラー
+   */
+  const handleEdit = useCallback(() => {
+    if (event && onEdit) {
+      onEdit(event);
+    }
+  }, [event, onEdit]);
+
+  /**
+   * 削除ボタンクリック時のハンドラー
+   */
+  const handleDelete = useCallback(() => {
+    if (event && onDelete) {
+      onDelete(event);
+    }
+  }, [event, onDelete]);
 
   // Escキーイベントのリスナーを設定
   useEffect(() => {
@@ -224,6 +253,36 @@ export function EventPopover({ event, open, onClose }: EventPopoverProps) {
             <div className="border-t pt-3">
               <p className="text-muted-foreground text-sm">説明:</p>
               <p className="mt-1 text-sm">{event.description}</p>
+            </div>
+          ) : null}
+
+          {/* 編集・削除ボタン (Task 6.1) */}
+          {onEdit || onDelete ? (
+            <div className="flex gap-2 border-t pt-3">
+              {onEdit ? (
+                <Button
+                  className="flex-1"
+                  data-testid="event-edit-button"
+                  onClick={handleEdit}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Pencil className="mr-1 h-4 w-4" />
+                  編集
+                </Button>
+              ) : null}
+              {onDelete ? (
+                <Button
+                  className="flex-1"
+                  data-testid="event-delete-button"
+                  onClick={handleDelete}
+                  size="sm"
+                  variant="destructive"
+                >
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  削除
+                </Button>
+              ) : null}
             </div>
           ) : null}
         </div>

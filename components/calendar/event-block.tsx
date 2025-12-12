@@ -13,11 +13,16 @@
  * - 週/日ビューで終日イベントを時間軸上部の専用エリアに表示する
  * - 同一日の複数終日イベントを縦に積み重ねて表示する
  *
+ * タスク8.1: ホバー時のツールチップ表示
+ * - title属性を追加してブラウザネイティブのツールチップを表示する
+ * - 時間指定イベントはタイトルと時間を表示
+ * - 終日イベントはタイトルと「終日」を表示
+ *
  * タスク9.2: ARIAラベルとセマンティクスの適用
  * - イベントブロックにイベント情報を読み上げ可能にする
  * - 終日イベントのaria-labelに「終日」を含める
  *
- * Requirements: 3.7, 8.2, 8.4, 9.1, 9.2, 9.3, 9.4, 9.6
+ * Requirements: 3.7, 5.4, 8.2, 8.4, 9.1, 9.2, 9.3, 9.4, 9.6
  */
 "use client";
 
@@ -59,6 +64,27 @@ function formatTime(date: Date): string {
  */
 function getAccessibleLabel(title: string, isAllDay: boolean): string {
   return isAllDay ? `${title} (終日)` : title;
+}
+
+/**
+ * ツールチップ用のテキストを生成する (Task 8.1)
+ * 時間指定イベントの場合はタイトルと時間、終日イベントの場合はタイトルと「終日」を含める
+ * @param title - イベントタイトル
+ * @param start - 開始日時
+ * @param end - 終了日時
+ * @param isAllDay - 終日イベントかどうか
+ * @returns ブラウザネイティブツールチップ用のテキスト
+ */
+function getTooltipText(
+  title: string,
+  start: Date,
+  end: Date,
+  isAllDay: boolean
+): string {
+  if (isAllDay) {
+    return `${title} (終日)`;
+  }
+  return `${title} (${formatTime(start)} - ${formatTime(end)})`;
 }
 
 /**
@@ -124,6 +150,9 @@ export function EventBlock({
   // Task 9.2: アクセシブルなラベルを生成
   const accessibleLabel = getAccessibleLabel(title, isAllDay);
 
+  // Task 8.1: ツールチップ用のテキストを生成
+  const tooltipText = getTooltipText(title, event.start, event.end, isAllDay);
+
   return (
     <button
       aria-label={accessibleLabel}
@@ -138,6 +167,7 @@ export function EventBlock({
         color: "#ffffff",
       }}
       tabIndex={0}
+      title={tooltipText}
       type="button"
     >
       {/* 時刻表示 */}

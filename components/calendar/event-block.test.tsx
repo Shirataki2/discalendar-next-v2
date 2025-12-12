@@ -237,6 +237,61 @@ describe("EventBlock", () => {
     });
   });
 
+  // Task 8.1: ホバー時のツールチップ表示
+  describe("Task 8.1: ホバー時のツールチップ表示", () => {
+    const timedEventForTooltip: CalendarEvent = {
+      id: "tooltip-1",
+      title: "会議",
+      start: new Date(2025, 11, 6, 14, 0),
+      end: new Date(2025, 11, 6, 15, 30),
+      allDay: false,
+      color: "#3b82f6",
+    };
+
+    const allDayEventForTooltip: CalendarEvent = {
+      id: "tooltip-2",
+      title: "祝日",
+      start: new Date(2025, 11, 6),
+      end: new Date(2025, 11, 6),
+      allDay: true,
+      color: "#ef4444",
+    };
+
+    it("時間指定イベントにはタイトルと時間を含むツールチップが表示される (Req 5.4)", () => {
+      render(
+        <EventBlock
+          event={timedEventForTooltip}
+          title={timedEventForTooltip.title}
+        />
+      );
+
+      const eventElement = screen.getByTestId("event-block");
+      // ツールチップにはイベント名と時間が含まれる
+      expect(eventElement).toHaveAttribute("title", "会議 (14:00 - 15:30)");
+    });
+
+    it("終日イベントにはタイトルと終日を含むツールチップが表示される (Req 5.4)", () => {
+      render(
+        <EventBlock
+          event={allDayEventForTooltip}
+          title={allDayEventForTooltip.title}
+        />
+      );
+
+      const eventElement = screen.getByTestId("event-block");
+      // 終日イベントのツールチップには「終日」が含まれる
+      expect(eventElement).toHaveAttribute("title", "祝日 (終日)");
+    });
+
+    it("ブラウザネイティブのtitle属性が設定されている (Req 5.4)", () => {
+      render(<EventBlock {...defaultProps} />);
+
+      const eventElement = screen.getByTestId("event-block");
+      // title属性が存在する
+      expect(eventElement).toHaveAttribute("title");
+    });
+  });
+
   // エッジケース
   describe("エッジケース", () => {
     it("説明文が設定されている場合もイベント名のみ表示する", () => {

@@ -7,13 +7,20 @@
  * - エラーコードの分類
  * - AbortController対応
  *
- * Requirements: 5.1, 5.3, 5.4
+ * タスク2.1: EventServiceにイベント作成機能を追加
+ * - 予定の新規作成ロジックをSupabaseへのINSERT操作として実装
+ * - 必須フィールドとオプションフィールドを処理
+ * - Result型パターンに従ったエラーハンドリング
+ *
+ * Requirements: 1.4, 5.1, 5.3, 5.4
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CALENDAR_ERROR_CODES,
   type CalendarError,
   type CalendarErrorCode,
+  type CreateEventInput,
+  type UpdateEventInput,
   type FetchEventsParams,
   type FetchEventsResult,
   createEventService,
@@ -74,12 +81,88 @@ const createMockQueryBuilder = (options: {
   return queryBuilder;
 };
 
+// INSERT操作用のモッククエリビルダー
+const createMockInsertBuilder = (options: {
+  data?: EventRecord;
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: options.data ?? null,
+    error: options.error ?? null,
+  };
+
+  const mockInsert = vi.fn();
+  const mockSelect = vi.fn();
+  const mockSingle = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    insert: mockInsert,
+    select: mockSelect,
+    single: mockSingle,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { insert: mockInsert, select: mockSelect, single: mockSingle },
+  };
+
+  mockInsert.mockReturnValue(queryBuilder);
+  mockSelect.mockReturnValue(queryBuilder);
+  mockSingle.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+// UPDATE操作用のモッククエリビルダー
+const createMockUpdateBuilder = (options: {
+  data?: EventRecord;
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: options.data ?? null,
+    error: options.error ?? null,
+  };
+
+  const mockUpdate = vi.fn();
+  const mockEq = vi.fn();
+  const mockSelect = vi.fn();
+  const mockSingle = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    update: mockUpdate,
+    eq: mockEq,
+    select: mockSelect,
+    single: mockSingle,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { update: mockUpdate, eq: mockEq, select: mockSelect, single: mockSingle },
+  };
+
+  mockUpdate.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+  mockSelect.mockReturnValue(queryBuilder);
+  mockSingle.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
 describe("CalendarErrorCode", () => {
   it("should have all expected error codes defined", () => {
     const expectedCodes: CalendarErrorCode[] = [
       "FETCH_FAILED",
       "NETWORK_ERROR",
       "UNAUTHORIZED",
+      "CREATE_FAILED",
+      "UPDATE_FAILED",
+      "VALIDATION_ERROR",
     ];
 
     for (const code of expectedCodes) {
@@ -102,6 +185,21 @@ describe("getCalendarErrorMessage", () => {
   it("should return correct message for UNAUTHORIZED", () => {
     const message = getCalendarErrorMessage("UNAUTHORIZED");
     expect(message).toBe("このギルドのイベントを表示する権限がありません。");
+  });
+
+  it("should return correct message for CREATE_FAILED", () => {
+    const message = getCalendarErrorMessage("CREATE_FAILED");
+    expect(message).toBe("イベントの作成に失敗しました。");
+  });
+
+  it("should return correct message for UPDATE_FAILED", () => {
+    const message = getCalendarErrorMessage("UPDATE_FAILED");
+    expect(message).toBe("イベントの更新に失敗しました。");
+  });
+
+  it("should return correct message for VALIDATION_ERROR", () => {
+    const message = getCalendarErrorMessage("VALIDATION_ERROR");
+    expect(message).toBe("入力データが不正です。");
   });
 });
 
@@ -398,5 +496,803 @@ describe("CalendarError type", () => {
     };
 
     expect(error.details).toBe("Database timeout after 30 seconds");
+  });
+});
+
+describe("createEventService - createEvent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should create event successfully with required fields (Req 1.4)", async () => {
+    const mockRecord: EventRecord = {
+      id: "new-event-1",
+      guild_id: "guild-123",
+      name: "新しいイベント",
+      description: null,
+      color: "#3B82F6",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T09:00:00Z",
+    };
+
+    const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "新しいイベント",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("新しいイベント");
+      expect(result.data.id).toBe("new-event-1");
+      expect(result.data.allDay).toBe(false);
+    }
+
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
+    expect(insertBuilder._mocks.insert).toHaveBeenCalled();
+    expect(insertBuilder._mocks.select).toHaveBeenCalled();
+    expect(insertBuilder._mocks.single).toHaveBeenCalled();
+  });
+
+  it("should create event with all optional fields", async () => {
+    const mockRecord: EventRecord = {
+      id: "new-event-2",
+      guild_id: "guild-123",
+      name: "詳細なイベント",
+      description: "イベントの説明",
+      color: "#FF5733",
+      is_all_day: true,
+      start_at: "2025-12-16T00:00:00Z",
+      end_at: "2025-12-17T00:00:00Z",
+      location: "東京",
+      channel_id: "ch-123",
+      channel_name: "general",
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T09:00:00Z",
+    };
+
+    const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "詳細なイベント",
+      startAt: new Date("2025-12-16T00:00:00Z"),
+      endAt: new Date("2025-12-17T00:00:00Z"),
+      description: "イベントの説明",
+      isAllDay: true,
+      color: "#FF5733",
+      location: "東京",
+      channelId: "ch-123",
+      channelName: "general",
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("詳細なイベント");
+      expect(result.data.allDay).toBe(true);
+      expect(result.data.description).toBe("イベントの説明");
+      expect(result.data.location).toBe("東京");
+      expect(result.data.color).toBe("#FF5733");
+      expect(result.data.channel).toEqual({ id: "ch-123", name: "general" });
+    }
+  });
+
+  it("should return VALIDATION_ERROR when title is empty", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("タイトルは必須です");
+    }
+
+    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+  });
+
+  it("should return VALIDATION_ERROR when title is only whitespace", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "   ",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when title exceeds 255 characters", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "a".repeat(256),
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("255文字以内");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when endAt is before startAt", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "テストイベント",
+      startAt: new Date("2025-12-15T12:00:00Z"),
+      endAt: new Date("2025-12-15T10:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("終了日時は開始日時より後");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when endAt equals startAt", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const sameDate = new Date("2025-12-15T10:00:00Z");
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "テストイベント",
+      startAt: sameDate,
+      endAt: sameDate,
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("should return CREATE_FAILED error on database error", async () => {
+    const insertBuilder = createMockInsertBuilder({
+      error: { message: "Database connection failed" },
+    });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "テストイベント",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("CREATE_FAILED");
+    }
+  });
+
+  it("should return UNAUTHORIZED error for permission denied", async () => {
+    const insertBuilder = createMockInsertBuilder({
+      error: { message: "permission denied", code: "42501" },
+    });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "テストイベント",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+  });
+
+  it("should return VALIDATION_ERROR for constraint violation", async () => {
+    const insertBuilder = createMockInsertBuilder({
+      error: { message: "violates unique constraint", code: "23505" },
+    });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "テストイベント",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("should trim title and description", async () => {
+    const mockRecord: EventRecord = {
+      id: "new-event-3",
+      guild_id: "guild-123",
+      name: "トリムされたタイトル",
+      description: "トリムされた説明",
+      color: "#3B82F6",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T09:00:00Z",
+    };
+
+    const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "  トリムされたタイトル  ",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+      description: "  トリムされた説明  ",
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("トリムされたタイトル");
+      expect(result.data.description).toBe("トリムされた説明");
+    }
+
+    // insertが呼ばれた際の引数を確認
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.name).toBe("トリムされたタイトル");
+      expect(insertCall.description).toBe("トリムされた説明");
+    }
+  });
+
+  it("should use default values for optional fields", async () => {
+    const mockRecord: EventRecord = {
+      id: "new-event-4",
+      guild_id: "guild-123",
+      name: "デフォルト値テスト",
+      description: null,
+      color: "#3B82F6",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T09:00:00Z",
+    };
+
+    const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "デフォルト値テスト",
+      startAt: new Date("2025-12-15T10:00:00Z"),
+      endAt: new Date("2025-12-15T12:00:00Z"),
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(true);
+
+    // insertが呼ばれた際の引数を確認
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.is_all_day).toBe(false);
+      expect(insertCall.color).toBe("#3B82F6");
+      expect(insertCall.description).toBeNull();
+      expect(insertCall.location).toBeNull();
+    }
+  });
+});
+
+// DELETE操作用のモッククエリビルダー
+const createMockDeleteBuilder = (options: {
+  data?: null;
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: options.data ?? null,
+    error: options.error ?? null,
+    count: options.error ? 0 : 1,
+  };
+
+  const mockDelete = vi.fn();
+  const mockEq = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    delete: mockDelete,
+    eq: mockEq,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { delete: mockDelete, eq: mockEq },
+  };
+
+  mockDelete.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+describe("createEventService - updateEvent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should update event successfully with all fields (Req 3.3)", async () => {
+    const mockRecord: EventRecord = {
+      id: "event-1",
+      guild_id: "guild-123",
+      name: "更新されたイベント",
+      description: "更新された説明",
+      color: "#FF5733",
+      is_all_day: true,
+      start_at: "2025-12-16T00:00:00Z",
+      end_at: "2025-12-17T00:00:00Z",
+      location: "大阪",
+      channel_id: "ch-1",
+      channel_name: "general",
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T10:00:00Z",
+    };
+
+    const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      title: "更新されたイベント",
+      startAt: new Date("2025-12-16T00:00:00Z"),
+      endAt: new Date("2025-12-17T00:00:00Z"),
+      description: "更新された説明",
+      isAllDay: true,
+      color: "#FF5733",
+      location: "大阪",
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("更新されたイベント");
+      expect(result.data.description).toBe("更新された説明");
+      expect(result.data.allDay).toBe(true);
+      expect(result.data.color).toBe("#FF5733");
+      expect(result.data.location).toBe("大阪");
+    }
+
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
+    expect(updateBuilder._mocks.update).toHaveBeenCalled();
+    expect(updateBuilder._mocks.eq).toHaveBeenCalledWith("id", "event-1");
+    expect(updateBuilder._mocks.select).toHaveBeenCalled();
+    expect(updateBuilder._mocks.single).toHaveBeenCalled();
+  });
+
+  it("should support partial update with only title", async () => {
+    const mockRecord: EventRecord = {
+      id: "event-1",
+      guild_id: "guild-123",
+      name: "部分更新されたタイトル",
+      description: "元の説明",
+      color: "#3B82F6",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T10:00:00Z",
+    };
+
+    const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      title: "部分更新されたタイトル",
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("部分更新されたタイトル");
+    }
+
+    // updateが呼ばれた際の引数を確認（titleのみ更新）
+    const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+    expect(updateCall).toBeDefined();
+    if (updateCall) {
+      expect(updateCall.name).toBe("部分更新されたタイトル");
+      // 他のフィールドは含まれていないこと
+      expect(Object.keys(updateCall)).toHaveLength(1);
+    }
+  });
+
+  it("should support partial update with only dates", async () => {
+    const mockRecord: EventRecord = {
+      id: "event-1",
+      guild_id: "guild-123",
+      name: "元のイベント",
+      description: null,
+      color: "#3B82F6",
+      is_all_day: false,
+      start_at: "2025-12-20T10:00:00Z",
+      end_at: "2025-12-20T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T10:00:00Z",
+    };
+
+    const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      startAt: new Date("2025-12-20T10:00:00Z"),
+      endAt: new Date("2025-12-20T12:00:00Z"),
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(true);
+
+    // updateが呼ばれた際の引数を確認
+    const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+    expect(updateCall).toBeDefined();
+    if (updateCall) {
+      expect(updateCall.start_at).toBe("2025-12-20T10:00:00.000Z");
+      expect(updateCall.end_at).toBe("2025-12-20T12:00:00.000Z");
+      expect(Object.keys(updateCall)).toHaveLength(2);
+    }
+  });
+
+  it("should return VALIDATION_ERROR when title is empty", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      title: "",
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("タイトルは必須です");
+    }
+
+    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+  });
+
+  it("should return VALIDATION_ERROR when title exceeds 255 characters", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      title: "a".repeat(256),
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("255文字以内");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when endAt is before startAt", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      startAt: new Date("2025-12-15T12:00:00Z"),
+      endAt: new Date("2025-12-15T10:00:00Z"),
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("終了日時は開始日時より後");
+    }
+  });
+
+  it("should return UPDATE_FAILED error on database error", async () => {
+    const updateBuilder = createMockUpdateBuilder({
+      error: { message: "Database connection failed" },
+    });
+    mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      title: "更新テスト",
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UPDATE_FAILED");
+    }
+  });
+
+  it("should return UNAUTHORIZED error for permission denied", async () => {
+    const updateBuilder = createMockUpdateBuilder({
+      error: { message: "permission denied", code: "42501" },
+    });
+    mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      title: "更新テスト",
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+  });
+
+  it("should trim title and description", async () => {
+    const mockRecord: EventRecord = {
+      id: "event-1",
+      guild_id: "guild-123",
+      name: "トリムされたタイトル",
+      description: "トリムされた説明",
+      color: "#3B82F6",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T10:00:00Z",
+    };
+
+    const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {
+      title: "  トリムされたタイトル  ",
+      description: "  トリムされた説明  ",
+    };
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(true);
+
+    // updateが呼ばれた際の引数を確認
+    const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+    expect(updateCall).toBeDefined();
+    if (updateCall) {
+      expect(updateCall.name).toBe("トリムされたタイトル");
+      expect(updateCall.description).toBe("トリムされた説明");
+    }
+  });
+
+  it("should handle empty update input (no fields to update)", async () => {
+    const mockRecord: EventRecord = {
+      id: "event-1",
+      guild_id: "guild-123",
+      name: "元のイベント",
+      description: null,
+      color: "#3B82F6",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      created_at: "2025-12-15T09:00:00Z",
+      updated_at: "2025-12-15T10:00:00Z",
+    };
+
+    const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+    mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: UpdateEventInput = {};
+
+    const result = await service.updateEvent("event-1", input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("元のイベント");
+    }
+  });
+});
+
+describe("createEventService - deleteEvent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should delete event successfully (Req 4.2)", async () => {
+    const deleteBuilder = createMockDeleteBuilder({});
+    mockSupabaseClient.from.mockReturnValue(deleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.deleteEvent("event-1");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBeUndefined();
+    }
+
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
+    expect(deleteBuilder._mocks.delete).toHaveBeenCalled();
+    expect(deleteBuilder._mocks.eq).toHaveBeenCalledWith("id", "event-1");
+  });
+
+  it("should permanently delete the event (Req 4.5)", async () => {
+    const deleteBuilder = createMockDeleteBuilder({});
+    mockSupabaseClient.from.mockReturnValue(deleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.deleteEvent("event-to-delete");
+
+    expect(result.success).toBe(true);
+    // 削除操作はDELETEメソッドを使用し、復元不可能な完全削除を保証
+    expect(deleteBuilder._mocks.delete).toHaveBeenCalledTimes(1);
+    expect(deleteBuilder._mocks.eq).toHaveBeenCalledWith("id", "event-to-delete");
+  });
+
+  it("should return DELETE_FAILED error on database error", async () => {
+    const deleteBuilder = createMockDeleteBuilder({
+      error: { message: "Database connection failed" },
+    });
+    mockSupabaseClient.from.mockReturnValue(deleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.deleteEvent("event-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("DELETE_FAILED");
+      expect(result.error.message).toBe("イベントの削除に失敗しました。");
+    }
+  });
+
+  it("should return UNAUTHORIZED error for permission denied", async () => {
+    const deleteBuilder = createMockDeleteBuilder({
+      error: { message: "permission denied", code: "42501" },
+    });
+    mockSupabaseClient.from.mockReturnValue(deleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.deleteEvent("event-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+  });
+
+  it("should handle network errors gracefully", async () => {
+    // ネットワークエラーをシミュレートするためのカスタムビルダー
+    const mockDelete = vi.fn();
+    const mockEq = vi.fn();
+
+    const networkError = new TypeError("Failed to fetch");
+    const internalPromise = Promise.reject(networkError);
+
+    const queryBuilder = {
+      delete: mockDelete,
+      eq: mockEq,
+      then: (
+        onFulfilled?: (value: unknown) => unknown,
+        onRejected?: (reason: unknown) => unknown
+      ) => internalPromise.then(onFulfilled, onRejected),
+      catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    };
+
+    mockDelete.mockReturnValue(queryBuilder);
+    mockEq.mockReturnValue(queryBuilder);
+    mockSupabaseClient.from.mockReturnValue(queryBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.deleteEvent("event-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("NETWORK_ERROR");
+    }
+  });
+
+  it("should include error details from Supabase error", async () => {
+    const deleteBuilder = createMockDeleteBuilder({
+      error: { message: "Row not found", code: "PGRST116" },
+    });
+    mockSupabaseClient.from.mockReturnValue(deleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.deleteEvent("non-existent-event");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.details).toBe("Row not found");
+    }
+  });
+});
+
+describe("CalendarErrorCode - DELETE_FAILED", () => {
+  it("should have DELETE_FAILED error code defined", () => {
+    expect(CALENDAR_ERROR_CODES).toContain("DELETE_FAILED");
+  });
+
+  it("should return correct message for DELETE_FAILED", () => {
+    const message = getCalendarErrorMessage("DELETE_FAILED");
+    expect(message).toBe("イベントの削除に失敗しました。");
   });
 });

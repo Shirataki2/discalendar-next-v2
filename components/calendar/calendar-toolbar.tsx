@@ -12,7 +12,7 @@
 
 import { endOfWeek, format, startOfWeek } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
 
@@ -27,6 +27,8 @@ export type CalendarToolbarProps = {
   onNavigate: (action: "PREV" | "NEXT" | "TODAY") => void;
   /** モバイル表示かどうか */
   isMobile: boolean;
+  /** 新規追加ボタンクリックハンドラー */
+  onAddClick?: () => void;
 };
 
 /**
@@ -85,6 +87,7 @@ export function CalendarToolbar({
   onViewChange,
   onNavigate,
   isMobile,
+  onAddClick,
 }: CalendarToolbarProps) {
   const dateRangeLabel = getDateRangeLabel(viewMode, selectedDate);
 
@@ -103,8 +106,24 @@ export function CalendarToolbar({
             : "flex items-center justify-between gap-4"
         }
       >
-        {/* 日付ナビゲーション (Task 4.2) */}
+        {/* 新規追加と日付ナビゲーション */}
         <div className="flex items-center gap-2">
+          {/* 新規追加ボタン (Task 6.2) */}
+          {onAddClick ? (
+            <Button
+              aria-label="予定を追加"
+              data-testid="add-event-button"
+              onClick={onAddClick}
+              size={isMobile ? "sm" : "default"}
+              type="button"
+              variant="default"
+            >
+              <Plus className="mr-1 size-4" />
+              追加
+            </Button>
+          ) : null}
+
+          {/* 日付ナビゲーション (Task 4.2) */}
           <Button
             aria-label="前へ"
             onClick={() => onNavigate("PREV")}

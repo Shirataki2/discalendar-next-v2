@@ -1,17 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
+  "extends": ["config:recommended"],
   "timezone": "Asia/Tokyo",
   "schedule": [
     "after 10pm every weekday",
     "before 5am every weekday",
     "every weekend"
   ],
-  "labels": [
-    "dependencies"
-  ],
+  "labels": ["dependencies"],
   "rangeStrategy": "bump",
   "semanticCommits": "enabled",
   "commitMessagePrefix": "chore(deps):",
@@ -20,90 +16,58 @@
     {
       "description": "Next.js関連パッケージをグループ化",
       "groupName": "Next.js",
-      "matchPackagePatterns": [
-        "^next$",
-        "^@next/"
-      ]
+      "matchPackagePatterns": ["^next$", "^@next/"]
     },
     {
       "description": "React関連パッケージをグループ化",
       "groupName": "React",
-      "matchPackagePatterns": [
-        "^react",
-        "^@types/react"
-      ]
+      "matchPackagePatterns": ["^react", "^@types/react"]
     },
     {
       "description": "Supabase関連パッケージをグループ化",
       "groupName": "Supabase",
-      "matchPackagePatterns": [
-        "^@supabase/",
-        "^supabase$"
-      ]
+      "matchPackagePatterns": ["^@supabase/", "^supabase$"]
     },
     {
       "description": "Biome関連パッケージをグループ化",
       "groupName": "Biome",
-      "matchPackagePatterns": [
-        "^@biomejs/",
-        "^ultracite$"
-      ]
+      "matchPackagePatterns": ["^@biomejs/", "^ultracite$"]
     },
     {
       "description": "Testing関連パッケージをグループ化",
       "groupName": "Testing",
-      "matchPackagePatterns": [
-        "^vitest",
-        "^@playwright/",
-        "^@testing-library/"
-      ]
+      "matchPackagePatterns": ["^vitest", "^@playwright/", "^@testing-library/"]
     },
     {
       "description": "Storybook関連パッケージをグループ化",
       "groupName": "Storybook",
-      "matchPackagePatterns": [
-        "^storybook$",
-        "^@storybook/"
-      ]
+      "matchPackagePatterns": ["^storybook$", "^@storybook/"]
     },
     {
       "description": "Radix UI関連パッケージをグループ化",
       "groupName": "Radix UI",
-      "matchPackagePatterns": [
-        "^@radix-ui/"
-      ]
+      "matchPackagePatterns": ["^@radix-ui/"]
     },
     {
       "description": "Tailwind関連パッケージをグループ化",
       "groupName": "Tailwind CSS",
-      "matchPackagePatterns": [
-        "^tailwind",
-        "^postcss",
-        "^autoprefixer"
-      ]
+      "matchPackagePatterns": ["^tailwind", "^postcss", "^autoprefixer"]
     },
     {
       "description": "TypeScript関連パッケージをグループ化",
       "groupName": "TypeScript",
-      "matchPackagePatterns": [
-        "^typescript$",
-        "^@types/"
-      ]
+      "matchPackagePatterns": ["^typescript$", "^@types/"]
     },
     {
       "description": "GitHub Actionsの自動更新",
-      "matchManagers": [
-        "github-actions"
-      ],
+      "matchManagers": ["github-actions"],
       "automerge": true,
       "automergeType": "pr",
       "ignoreTests": true
     },
     {
       "description": "パッチバージョンの自動マージ",
-      "matchUpdateTypes": [
-        "patch"
-      ],
+      "matchUpdateTypes": ["patch"],
       "automerge": true,
       "automergeType": "pr"
     }
