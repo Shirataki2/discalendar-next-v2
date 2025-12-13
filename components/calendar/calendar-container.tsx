@@ -325,6 +325,20 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
     // ローディング開始
     actions.startFetching();
 
+    // 認証状態を確認し、必要に応じてセッションを再取得
+    const {
+      data: { session },
+    } = await supabaseRef.current.auth.getSession();
+    if (!session) {
+      // セッションがない場合は、ユーザーに再ログインを促す
+      actions.completeFetchingError({
+        code: "UNAUTHORIZED",
+        message: "セッションが無効です。再度ログインしてください。",
+        details: "No active session found",
+      });
+      return;
+    }
+
     // 取得期間を計算
     const { startDate, endDate } = getDateRange(viewMode, selectedDate);
 
@@ -556,7 +570,15 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
       {/* biome-ignore lint/nursery/noLeakedRender: error is CalendarError | null */}
       {state.error && !state.isLoading && (
         <div className="flex flex-col items-center justify-center gap-4 p-8">
-          <div className="text-destructive">{state.error.message}</div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="text-destructive">{state.error.message}</div>
+            {/* 開発環境ではエラー詳細を表示 */}
+            {process.env.NODE_ENV === "development" && state.error.details && (
+              <div className="text-muted-foreground text-xs">
+                詳細: {state.error.details}
+              </div>
+            )}
+          </div>
           <button
             className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
             onClick={fetchEvents}

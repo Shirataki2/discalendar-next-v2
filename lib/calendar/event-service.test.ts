@@ -31,6 +31,32 @@ import type { CalendarEvent, EventRecord } from "./types";
 // Supabaseクライアントのモック
 const mockSupabaseClient = {
   from: vi.fn(),
+  auth: {
+    getSession: vi.fn().mockResolvedValue({
+      data: {
+        session: {
+          user: { id: "test-user-id" },
+          expires_at: Date.now() + 3600000,
+        },
+      },
+      error: null,
+    }),
+    getUser: vi.fn().mockResolvedValue({
+      data: {
+        user: { id: "test-user-id" },
+      },
+      error: null,
+    }),
+    refreshSession: vi.fn().mockResolvedValue({
+      data: {
+        session: {
+          user: { id: "test-user-id" },
+          expires_at: Date.now() + 3600000,
+        },
+      },
+      error: null,
+    }),
+  },
 };
 
 // Supabaseクエリビルダーのモック
@@ -184,7 +210,7 @@ describe("getCalendarErrorMessage", () => {
 
   it("should return correct message for UNAUTHORIZED", () => {
     const message = getCalendarErrorMessage("UNAUTHORIZED");
-    expect(message).toBe("このギルドのイベントを表示する権限がありません。");
+    expect(message).toBe("認証が必要です。再度ログインしてください。");
   });
 
   it("should return correct message for CREATE_FAILED", () => {
