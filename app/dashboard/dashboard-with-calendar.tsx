@@ -114,14 +114,17 @@ export function DashboardWithCalendar({
       </aside>
 
       {/* カレンダーエリア */}
-      <section aria-label="カレンダー" className="min-h-[600px] flex-1">
+      <section
+        aria-label="カレンダー"
+        className="flex min-h-[600px] flex-1 flex-col"
+      >
         {/* ギルド未選択時のプロンプト */}
         {selectedGuildId ? (
-          <div className="h-full rounded-lg border">
+          <div className="flex flex-1 flex-col rounded-lg border">
             <CalendarContainer guildId={selectedGuildId} />
           </div>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed p-8">
+          <div className="flex min-h-[500px] flex-col items-center justify-center rounded-lg border border-dashed p-8 lg:min-h-[600px]">
             <div className="text-center">
               <p className="text-muted-foreground">
                 サーバーを選択してカレンダーを表示
