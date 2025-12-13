@@ -59,7 +59,7 @@ export interface CalendarError {
 export const CALENDAR_ERROR_MESSAGES: Record<CalendarErrorCode, string> = {
   FETCH_FAILED: "イベントの取得に失敗しました。",
   NETWORK_ERROR: "ネットワークエラーが発生しました。接続を確認してください。",
-  UNAUTHORIZED: "このギルドのイベントを表示する権限がありません。",
+  UNAUTHORIZED: "認証が必要です。再度ログインしてください。",
   CREATE_FAILED: "イベントの作成に失敗しました。",
   UPDATE_FAILED: "イベントの更新に失敗しました。",
   DELETE_FAILED: "イベントの削除に失敗しました。",
@@ -195,11 +195,31 @@ export interface EventServiceInterface {
  * @returns 適切なカレンダーエラーコード
  */
 function classifySupabaseError(
-  error: { message: string; code?: string },
+  error: { message: string; code?: string; details?: string; hint?: string },
   operation: "fetch" | "create" | "update" | "delete" = "fetch"
 ): CalendarErrorCode {
-  // PostgreSQL permission denied error
-  if (error.code === "42501" || error.message.toLowerCase().includes("permission denied")) {
+  // デバッグ用: エラー情報をログに出力
+  if (typeof window !== "undefined") {
+    console.error("[EventService] Supabase error:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      operation,
+    });
+  }
+
+  // PostgreSQL permission denied error (42501)
+  // PostgREST RLS policy violation (PGRST116)
+  // PostgREST schema cache error (PGRST301) - 認証関連の可能性
+  if (
+    error.code === "42501" ||
+    error.code === "PGRST116" ||
+    error.code === "PGRST301" ||
+    error.message.toLowerCase().includes("permission denied") ||
+    error.message.toLowerCase().includes("new row violates row-level security policy") ||
+    error.message.toLowerCase().includes("row-level security policy violation")
+  ) {
     return "UNAUTHORIZED";
   }
 
@@ -233,9 +253,13 @@ function classifySupabaseError(
  * 例外をカレンダーエラーコードに分類する
  *
  * @param error - 発生した例外
+ * @param operation - 操作タイプ（fetch/create/update/delete）
  * @returns 適切なカレンダーエラーコード
  */
-function classifyException(error: unknown): CalendarErrorCode {
+function classifyException(
+  error: unknown,
+  operation: "fetch" | "create" | "update" | "delete" = "fetch"
+): CalendarErrorCode {
   // AbortError or network-related errors
   if (error instanceof DOMException && error.name === "AbortError") {
     return "NETWORK_ERROR";
@@ -245,7 +269,18 @@ function classifyException(error: unknown): CalendarErrorCode {
     return "NETWORK_ERROR";
   }
 
-  // Default to FETCH_FAILED
+  // Operation-specific error codes
+  if (operation === "create") {
+    return "CREATE_FAILED";
+  }
+  if (operation === "update") {
+    return "UPDATE_FAILED";
+  }
+  if (operation === "delete") {
+    return "DELETE_FAILED";
+  }
+
+  // Default to FETCH_FAILED for fetch operations
   return "FETCH_FAILED";
 }
 
@@ -329,6 +364,48 @@ export function createEventService(
       } = input;
 
       try {
+        // 認証状態を確認し、必要に応じてセッションを再取得
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          // セッションがない場合は、ユーザーに再取得を試みる
+          const {
+            data: { session: refreshedSession },
+            error: refreshError,
+          } = await supabase.auth.refreshSession();
+
+          if (!refreshedSession) {
+            console.error(
+              "[EventService] No active session found for createEvent",
+              sessionError || refreshError,
+            );
+            return {
+              success: false,
+              error: {
+                code: "UNAUTHORIZED",
+                message: "セッションが無効です。再度ログインしてください。",
+                details:
+                  sessionError?.message ||
+                  refreshError?.message ||
+                  "No active session found",
+              },
+            };
+          }
+
+          console.log("[EventService] Session refreshed for createEvent:", {
+            userId: refreshedSession.user.id,
+            expiresAt: refreshedSession.expires_at,
+          });
+        } else {
+          console.log("[EventService] Session found for createEvent:", {
+            userId: session.user.id,
+            expiresAt: session.expires_at,
+          });
+        }
+
         // バリデーション: 必須フィールドのチェック
         if (!title || title.trim().length === 0) {
           return {
@@ -377,6 +454,21 @@ export function createEventService(
           channel_id: channelId || null,
           channel_name: channelName || null,
         };
+
+        // 認証状態を確認するために、ユーザー情報を取得
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        // ユーザーが認証されていない場合はエラーを返す
+        if (!user) {
+          return {
+            success: false,
+            error: {
+              code: "UNAUTHORIZED",
+              message: "認証が必要です。再度ログインしてください。",
+              details: userError?.message || "User not authenticated",
+            },
+          };
+        }
 
         const { data, error } = await supabase
           .from("events")
@@ -526,7 +618,7 @@ export function createEventService(
         };
       } catch (error) {
         // 例外の処理 (ネットワークエラーなど)
-        const errorCode = classifyException(error);
+        const errorCode = classifyException(error, "update");
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
         return {
@@ -568,7 +660,7 @@ export function createEventService(
         };
       } catch (error) {
         // 例外の処理 (ネットワークエラーなど)
-        const errorCode = classifyException(error);
+        const errorCode = classifyException(error, "delete");
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
         return {

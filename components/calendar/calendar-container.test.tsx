@@ -42,7 +42,19 @@ vi.mock("@/lib/calendar/event-service", () => ({
 
 // Supabaseクライアントのモック
 vi.mock("@/lib/supabase/client", () => ({
-  createClient: vi.fn(() => ({})),
+  createClient: vi.fn(() => ({
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: {
+          session: {
+            user: { id: "test-user-id" },
+            expires_at: Date.now() + 3_600_000,
+          },
+        },
+        error: null,
+      }),
+    },
+  })),
 }));
 
 // Next.js navigationのモック
