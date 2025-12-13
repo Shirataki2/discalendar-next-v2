@@ -39,7 +39,7 @@
  */
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Calendar,
   type Event as RBCEvent,
@@ -160,6 +160,53 @@ export function CalendarGrid({
   today,
   onSlotSelect,
 }: CalendarGridProps) {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    // 月ビューが画面外にある場合は、スクロールして表示
+    const getMonthView = (): HTMLElement | null => {
+      if (!sectionRef.current) {
+        return null;
+      }
+      const sectionEl = sectionRef.current;
+      const rbcCalendar = sectionEl.querySelector(".rbc-calendar");
+      if (!rbcCalendar) {
+        return null;
+      }
+      return rbcCalendar.querySelector(".rbc-month-view") as HTMLElement | null;
+    };
+
+    const isFirstCellVisible = (
+      monthView: HTMLElement,
+      viewportHeight: number
+    ): boolean => {
+      const firstDateCell = monthView.querySelector(
+        ".rbc-date-cell"
+      ) as HTMLElement | null;
+      if (!firstDateCell) {
+        return false;
+      }
+      const firstCellRect = firstDateCell.getBoundingClientRect();
+      return firstCellRect.top >= 0 && firstCellRect.top < viewportHeight;
+    };
+
+    const scrollToMonthViewIfNeeded = () => {
+      const monthView = getMonthView();
+      if (!monthView) {
+        return;
+      }
+
+      const viewportHeight = window.innerHeight;
+      if (!isFirstCellVisible(monthView, viewportHeight)) {
+        monthView.scrollIntoView({ behavior: "auto", block: "start" });
+      }
+    };
+
+    const timeoutId = setTimeout(scrollToMonthViewIfNeeded, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   // ViewModeをreact-big-calendarのView型に変換
   const rbcView = useMemo(() => viewModeToRBCView(viewMode), [viewMode]);
 
@@ -271,30 +318,33 @@ export function CalendarGrid({
   return (
     <section
       aria-label="カレンダー"
-      className="h-full"
+      className="flex h-full flex-1 flex-col"
       data-testid="calendar-grid"
+      ref={sectionRef}
     >
-      <Calendar
-        components={calendarComponents}
-        date={selectedDate}
-        dayPropGetter={dayPropGetter}
-        eventPropGetter={eventStyleGetter}
-        events={events}
-        formats={calendarFormats}
-        localizer={calendarLocalizer}
-        messages={calendarMessages}
-        onNavigate={handleNavigate}
-        onSelectEvent={handleSelectEvent}
-        onSelectSlot={handleSelectSlot}
-        onView={() => {
-          // ビュー変更は親コンポーネントで管理
-        }}
-        popup
-        selectable
-        slotPropGetter={slotPropGetter}
-        style={{ height: "100%" }}
-        view={rbcView}
-      />
+      <div className="flex h-full flex-1 flex-col">
+        <Calendar
+          components={calendarComponents}
+          date={selectedDate}
+          dayPropGetter={dayPropGetter}
+          eventPropGetter={eventStyleGetter}
+          events={events}
+          formats={calendarFormats}
+          localizer={calendarLocalizer}
+          messages={calendarMessages}
+          onNavigate={handleNavigate}
+          onSelectEvent={handleSelectEvent}
+          onSelectSlot={handleSelectSlot}
+          onView={() => {
+            // ビュー変更は親コンポーネントで管理
+          }}
+          popup
+          selectable
+          slotPropGetter={slotPropGetter}
+          style={{ flex: "1 1 0%", height: "100%", width: "100%" }}
+          view={rbcView}
+        />
+      </div>
     </section>
   );
 }

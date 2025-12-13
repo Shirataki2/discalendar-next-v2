@@ -547,7 +547,7 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
   const popoverDeleteHandler = shouldShowEmpty ? undefined : handleDeleteEvent;
 
   return (
-    <div className="flex h-full flex-col" data-testid="calendar-container">
+    <div className="flex flex-1 flex-col" data-testid="calendar-container">
       {/* ツールバー */}
       <CalendarToolbar
         isMobile={isMobile}
@@ -591,7 +591,7 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
 
       {/* カレンダーグリッド */}
       {state.isLoading || state.error ? null : (
-        <div className="flex-1">
+        <div className="flex flex-1 flex-col">
           <CalendarGrid
             events={shouldShowEmpty ? [] : state.events}
             onDateChange={handleDateChange}
