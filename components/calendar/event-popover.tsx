@@ -2,15 +2,14 @@
  * EventPopover - イベント詳細ポップオーバーコンポーネント
  *
  * タスク7.1: EventPopoverコンポーネントの作成
- * - shadcn/ui Popoverをベースにイベント詳細表示を実装する
+ * - shadcn/ui Dialogをベースにイベント詳細表示を実装する
  * - イベント名、開始/終了日時、説明文を表示する
  * - 終日イベントの場合は時刻ではなく「終日」と表示する
  * - 場所情報とDiscordチャンネル情報を条件付きで表示する
  *
- * タスク7.2: ポップオーバーの表示位置と閉じ動作
- * - クリックしたイベント要素の近くにポップオーバーを表示する
- * - 画面端での表示位置を自動調整し、はみ出しを防止する
- * - ポップオーバー外クリックで閉じる動作を実装する
+ * タスク7.2: ダイアログの表示位置と閉じ動作
+ * - ダイアログを画面中央に表示する
+ * - ダイアログ外クリックで閉じる動作を実装する
  * - Escキー押下で閉じる動作を実装する
  *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 9.5
@@ -20,9 +19,14 @@
 import { format, isSameDay } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Calendar, Clock, Hash, MapPin, Pencil, Trash2, X } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { CalendarEvent } from "@/lib/calendar/types";
 
 /**
@@ -31,11 +35,11 @@ import type { CalendarEvent } from "@/lib/calendar/types";
 export type EventPopoverProps = {
   /** 表示対象のイベント */
   event: CalendarEvent | null;
-  /** ポップオーバーの開閉状態 */
+  /** ダイアログの開閉状態 */
   open: boolean;
   /** 閉じるハンドラー */
   onClose: () => void;
-  /** アンカー要素（オプション） */
+  /** アンカー要素（オプション） - 今回は使用しない */
   anchorElement?: HTMLElement | null;
   /** 編集ハンドラー（オプション） */
   onEdit?: (event: CalendarEvent) => void;
@@ -120,7 +124,7 @@ function formatEventDateTime(event: CalendarEvent): React.ReactNode {
 /**
  * EventPopover コンポーネント
  *
- * イベント詳細情報をポップオーバーで表示する。
+ * イベント詳細情報をダイアログで表示する。
  *
  * @param props - コンポーネントのProps
  *
@@ -141,19 +145,6 @@ export function EventPopover({
   onDelete,
 }: EventPopoverProps) {
   /**
-   * Escキー押下時のハンドラー
-   * 注: hooksはコンポーネントのトップレベルで呼び出す必要がある
-   */
-  const handleEscapeKey = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
-        onClose();
-      }
-    },
-    [onClose, open]
-  );
-
-  /**
    * 編集ボタンクリック時のハンドラー
    */
   const handleEdit = useCallback(() => {
@@ -171,55 +162,45 @@ export function EventPopover({
     }
   }, [event, onDelete]);
 
-  // Escキーイベントのリスナーを設定
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    document.addEventListener("keydown", handleEscapeKey);
-    return () => {
-      document.removeEventListener("keydown", handleEscapeKey);
-    };
-  }, [handleEscapeKey, open]);
-
-  // イベントがない場合、またはopenがfalseの場合は何も表示しない
-  if (!(event && open)) {
+  // イベントがない場合は何も表示しない
+  if (!event) {
     return null;
   }
 
   return (
-    <Popover onOpenChange={(isOpen) => !isOpen && onClose()} open={open}>
-      <PopoverContent
+    <Dialog onOpenChange={(isOpen) => !isOpen && onClose()} open={open}>
+      <DialogContent
+        aria-describedby={undefined}
         aria-label={`${event.title}の詳細`}
-        className="w-80"
+        className="max-w-md [&[data-state=closed]]:animate-none [&[data-state=open]]:animate-none"
         data-testid="event-popover"
-        onInteractOutside={onClose}
-        role="dialog"
+        showCloseButton={false}
       >
-        {/* ヘッダー: イベント名と閉じるボタン */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2">
-            {/* カラーインジケーター */}
-            <div
-              className="mt-1 h-4 w-4 shrink-0 rounded"
-              data-testid="event-color-indicator"
-              style={{ backgroundColor: event.color }}
-            />
-            <h3 className="font-semibold leading-tight">{event.title}</h3>
+        <DialogHeader>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2">
+              {/* カラーインジケーター */}
+              <div
+                className="mt-1 h-4 w-4 shrink-0 rounded"
+                data-testid="event-color-indicator"
+                style={{ backgroundColor: event.color }}
+              />
+              <DialogTitle className="flex-1">{event.title}</DialogTitle>
+            </div>
+            {/* カスタム閉じるボタン */}
+            <button
+              aria-label="閉じる"
+              className="shrink-0 rounded-sm p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              onClick={onClose}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            aria-label="閉じる"
-            className="shrink-0 rounded-sm p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            onClick={onClose}
-            type="button"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         {/* コンテンツ */}
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           {/* 日時 */}
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             {event.allDay ? (
@@ -286,7 +267,7 @@ export function EventPopover({
             </div>
           ) : null}
         </div>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }

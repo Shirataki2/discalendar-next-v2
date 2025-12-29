@@ -197,8 +197,12 @@ describe("EventPopover", () => {
       // ポップオーバーが表示される
       expect(screen.getByRole("dialog")).toBeInTheDocument();
 
-      // ポップオーバー外をクリック（body要素をクリック）
-      await user.click(document.body);
+      // ダイアログのオーバーレイをクリック（外側クリック）
+      const overlay = document.querySelector('[data-slot="dialog-overlay"]');
+      expect(overlay).toBeInTheDocument();
+      if (overlay) {
+        await user.click(overlay);
+      }
 
       // onCloseが呼ばれる
       await waitFor(() => {
