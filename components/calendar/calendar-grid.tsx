@@ -59,9 +59,11 @@ import { EventBlockWrapper } from "./event-block";
 /**
  * react-big-calendarのカスタムコンポーネント設定
  * Task 6.1, 6.2: EventBlockカスタムレンダラーを使用
+ * ツールバーは非表示（手動で作成したCalendarToolbarを使用するため）
  */
 const calendarComponents = {
   event: EventBlockWrapper,
+  toolbar: () => null, // Big Calendarのツールバーを非表示
 };
 
 /**
