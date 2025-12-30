@@ -45,6 +45,20 @@ export type DiscordApiResult<T> =
   | { success: false; error: DiscordApiError };
 
 /**
+ * Discord認証エラー
+ *
+ * Discord API呼び出し時の認証エラーを表現するクラス
+ */
+export class DiscordAuthError extends Error {
+  code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.code = code;
+    this.name = "DiscordAuthError";
+  }
+}
+
+/**
  * Discord CDNからギルドアイコンURLを構築する
  *
  * @param guildId ギルドID

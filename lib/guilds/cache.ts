@@ -2,6 +2,13 @@
  * ギルド取得のメモリキャッシュ
  *
  * 同じユーザーからの連続リクエストを防ぎ、タイムアウトを回避するためのキャッシュ実装
+ *
+ * ⚠️ 制限事項:
+ * - この実装はグローバルメモリキャッシュ（Map）を使用しています
+ * - 本番環境では複数のサーバーインスタンスが動作し、各インスタンスが独自のメモリ空間を持つため、
+ *   キャッシュが共有されません
+ * - 開発環境でも、Next.jsの高速リフレッシュによりモジュールが再読み込みされ、キャッシュが消失する可能性があります
+ * - 将来的には、Next.jsの`unstable_cache`やReact Cacheへの移行を検討してください
  */
 
 import type { Guild } from "./types";
@@ -24,6 +31,8 @@ interface PendingRequest {
   promise: Promise<{ guilds: Guild[] }>;
   /** リクエスト開始時刻 */
   startedAt: number;
+  /** リクエストID（一意の識別子） */
+  requestId: string;
 }
 
 /**
@@ -39,12 +48,17 @@ const pendingRequests = new Map<string, PendingRequest>();
 /**
  * キャッシュの有効期限（デフォルト: 5分）
  */
-const CACHE_TTL_MS = 5 * 60 * 1000;
+export const CACHE_TTL_MS = 5 * 60 * 1000;
 
 /**
  * 進行中リクエストのタイムアウト（デフォルト: 30秒）
  */
-const PENDING_REQUEST_TIMEOUT_MS = 30 * 1000;
+export const PENDING_REQUEST_TIMEOUT_MS = 30 * 1000;
+
+/**
+ * キャッシュの最大エントリ数（メモリリーク防止）
+ */
+const MAX_CACHE_ENTRIES = 1000;
 
 /**
  * キャッシュを取得
@@ -73,8 +87,40 @@ export function getCachedGuilds(userId: string): Guild[] | null {
  *
  * @param userId ユーザーID
  * @param guilds ギルド一覧
+ * @param requestId リクエストID（指定した場合、現在のpending requestのIDと一致する場合のみキャッシュ）
  */
-export function setCachedGuilds(userId: string, guilds: Guild[]): void {
+export function setCachedGuilds(
+  userId: string,
+  guilds: Guild[],
+  requestId?: string
+): void {
+  // リクエストIDが指定されている場合、現在のpending requestのIDと照合
+  if (requestId !== undefined) {
+    const currentRequest = pendingRequests.get(userId);
+    // 現在のpending requestが存在しない場合はキャッシュしない（タイムアウト後に新しいリクエストが開始された可能性）
+    if (!currentRequest) {
+      return;
+    }
+    // 現在のpending requestが存在し、IDが一致しない場合はキャッシュしない（古いリクエストの結果）
+    if (currentRequest.requestId !== requestId) {
+      return;
+    }
+    // タイムアウトチェック: リクエスト開始時刻から30秒以上経過している場合は、古いリクエストの可能性があるためキャッシュしない
+    const requestAge = Date.now() - currentRequest.startedAt;
+    if (requestAge > PENDING_REQUEST_TIMEOUT_MS) {
+      return;
+    }
+  }
+
+  // キャッシュサイズ制限: 最大エントリ数に達している場合は最も古いエントリを削除
+  if (cache.size >= MAX_CACHE_ENTRIES && !cache.has(userId)) {
+    // 最も古いエントリを削除（Mapは挿入順を保持するため、最初のエントリが最も古い）
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+
   const expiresAt = Date.now() + CACHE_TTL_MS;
   cache.set(userId, { guilds, expiresAt });
 }
@@ -123,14 +169,20 @@ export function getPendingRequest(
  *
  * @param userId ユーザーID
  * @param promise リクエストのPromise
+ * @param requestId リクエストID（指定しない場合は自動生成）
+ * @returns リクエストID
  */
 export function setPendingRequest(
   userId: string,
-  promise: Promise<{ guilds: Guild[] }>
-): void {
+  promise: Promise<{ guilds: Guild[] }>,
+  requestId?: string
+): string {
+  const finalRequestId =
+    requestId ?? `${userId}-${Date.now()}-${Math.random()}`;
   pendingRequests.set(userId, {
     promise,
     startedAt: Date.now(),
+    requestId: finalRequestId,
   });
 
   // リクエスト完了後にpendingRequestsから削除
@@ -141,6 +193,37 @@ export function setPendingRequest(
     .catch(() => {
       pendingRequests.delete(userId);
     });
+
+  return finalRequestId;
+}
+
+/**
+ * 進行中のリクエストを取得、または新しいリクエストを設定（Atomic操作）
+ *
+ * 競合状態を防ぐため、チェックとセットを原子操作として実行します。
+ * 既存のpending requestがある場合はそれを返し、ない場合は新しいリクエストを設定して返します。
+ *
+ * @param userId ユーザーID
+ * @param factory 新しいリクエストを作成するファクトリ関数（requestIdを受け取る）
+ * @returns 進行中のリクエストのPromise
+ */
+export function getOrSetPendingRequest(
+  userId: string,
+  factory: (requestId: string) => Promise<{ guilds: Guild[] }>
+): Promise<{ guilds: Guild[] }> {
+  // 既存のpending requestをチェック
+  const existing = getPendingRequest(userId);
+  if (existing) {
+    return existing;
+  }
+
+  // リクエストIDを事前に生成
+  const requestId = `${userId}-${Date.now()}-${Math.random()}`;
+
+  // 新しいリクエストを作成して設定
+  const promise = factory(requestId);
+  setPendingRequest(userId, promise, requestId);
+  return promise;
 }
 
 /**
@@ -163,9 +246,33 @@ export function cleanupExpiredCache(): void {
 }
 
 /**
- * 定期的にキャッシュをクリーンアップ（5分ごと）
+ * クリーンアップ用のinterval ID
+ */
+let cleanupInterval: NodeJS.Timeout | null = null;
+
+/**
+ * 定期的なクリーンアップを開始
  * サーバーサイドでのみ実行される（クライアントサイドでは実行されない）
  */
-if (typeof setInterval !== "undefined" && typeof window === "undefined") {
-  setInterval(cleanupExpiredCache, 5 * 60 * 1000);
+export function startPeriodicCleanup(): void {
+  if (
+    cleanupInterval === null &&
+    typeof setInterval !== "undefined" &&
+    typeof window === "undefined"
+  ) {
+    cleanupInterval = setInterval(cleanupExpiredCache, 5 * 60 * 1000);
+  }
 }
+
+/**
+ * 定期的なクリーンアップを停止
+ */
+export function stopPeriodicCleanup(): void {
+  if (cleanupInterval !== null) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
+  }
+}
+
+// 自動的にクリーンアップを開始
+startPeriodicCleanup();

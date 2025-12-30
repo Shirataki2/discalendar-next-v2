@@ -2,11 +2,11 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { getUserGuilds } from "@/lib/discord/client";
+import { DiscordAuthError } from "@/lib/discord/types";
 import {
   getCachedGuilds,
-  getPendingRequest,
+  getOrSetPendingRequest,
   setCachedGuilds,
-  setPendingRequest,
 } from "@/lib/guilds/cache";
 import { getJoinedGuilds } from "@/lib/guilds/service";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
@@ -135,7 +135,7 @@ export function DashboardPageClient({
  * @param providerToken Discord OAuthアクセストークン
  * @returns ギルド一覧またはエラー
  */
-async function fetchGuilds(
+export async function fetchGuilds(
   userId: string,
   providerToken: string | null | undefined
 ): Promise<{ guilds: Guild[]; error?: GuildListError }> {
@@ -153,68 +153,50 @@ async function fetchGuilds(
     return { guilds: cachedGuilds };
   }
 
-  // 進行中のリクエストをチェック（重複リクエストを防ぐ）
-  const pendingRequest = getPendingRequest(userId);
-  if (pendingRequest) {
-    try {
-      const result = await pendingRequest;
-      return { guilds: result.guilds };
-    } catch {
-      // 進行中のリクエストが失敗した場合は続行
-    }
-  }
-
-  // 実際の取得処理をPromiseでラップ
-  const fetchPromise = (async (): Promise<{ guilds: Guild[] }> => {
-    // Discord APIからユーザー所属ギルドを取得
-    const discordResult = await getUserGuilds(providerToken);
-
-    if (!discordResult.success) {
-      // エラー時はキャッシュせずにエラーを返す
-      const error = new Error(
-        discordResult.error.code === "unauthorized"
-          ? "UNAUTHORIZED"
-          : discordResult.error.message
-      ) as Error & { code?: string };
-      error.code = discordResult.error.code;
-      throw error;
-    }
-
-    // ギルドIDリストを抽出
-    const guildIds = discordResult.data.map((guild) => guild.id);
-
-    if (guildIds.length === 0) {
-      const emptyGuilds: Guild[] = [];
-      // 空配列もキャッシュする
-      setCachedGuilds(userId, emptyGuilds);
-      return { guilds: emptyGuilds };
-    }
-
-    // DB照合を実行
-    try {
-      const joinedGuilds = await getJoinedGuilds(guildIds);
-      // 成功時のみキャッシュに保存
-      setCachedGuilds(userId, joinedGuilds);
-      return { guilds: joinedGuilds };
-    } catch (dbError) {
-      console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
-      throw new Error("ギルド情報の取得に失敗しました。");
-    }
-  })();
-
-  // 進行中のリクエストとして登録
-  setPendingRequest(userId, fetchPromise);
-
+  // 進行中のリクエストを取得、または新しいリクエストを設定（Atomic操作で競合状態を防ぐ）
   try {
-    const result = await fetchPromise;
+    const result = await getOrSetPendingRequest(userId, async (requestId) => {
+      // 実際の取得処理をPromiseでラップ
+      // Discord APIからユーザー所属ギルドを取得
+      const discordResult = await getUserGuilds(providerToken);
+
+      if (!discordResult.success) {
+        // エラー時はキャッシュせずにエラーを返す
+        throw new DiscordAuthError(
+          discordResult.error.code === "unauthorized"
+            ? "UNAUTHORIZED"
+            : discordResult.error.message,
+          discordResult.error.code
+        );
+      }
+
+      // ギルドIDリストを抽出
+      const guildIds = discordResult.data.map((guild) => guild.id);
+
+      if (guildIds.length === 0) {
+        const emptyGuilds: Guild[] = [];
+        // 空配列もキャッシュする（リクエストIDを渡して一貫性を保つ）
+        setCachedGuilds(userId, emptyGuilds, requestId);
+        return { guilds: emptyGuilds };
+      }
+
+      // DB照合を実行
+      try {
+        const joinedGuilds = await getJoinedGuilds(guildIds);
+        // 成功時のみキャッシュに保存（リクエストIDを渡して古いリクエストの結果で上書きされないようにする）
+        setCachedGuilds(userId, joinedGuilds, requestId);
+        return { guilds: joinedGuilds };
+      } catch (dbError) {
+        console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
+        throw new Error("ギルド情報の取得に失敗しました。");
+      }
+    });
+
+    // リクエストが成功した場合、キャッシュは既にfetchPromise内で設定されている
     return result;
   } catch (error) {
     // エラータイプに応じてGuildListErrorに変換
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      error.code === "unauthorized"
-    ) {
+    if (error instanceof DiscordAuthError && error.code === "unauthorized") {
       return {
         guilds: [],
         error: { type: "token_expired" },

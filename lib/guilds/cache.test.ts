@@ -7,12 +7,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Guild } from "./types";
 import {
+  CACHE_TTL_MS,
   clearCache,
   cleanupExpiredCache,
   getCachedGuilds,
   getPendingRequest,
+  PENDING_REQUEST_TIMEOUT_MS,
   setCachedGuilds,
   setPendingRequest,
+  stopPeriodicCleanup,
 } from "./cache";
 
 describe("ギルドキャッシュ", () => {
@@ -42,6 +45,7 @@ describe("ギルドキャッシュ", () => {
   afterEach(() => {
     vi.useRealTimers();
     clearCache();
+    stopPeriodicCleanup();
   });
 
   describe("getCachedGuilds / setCachedGuilds", () => {
@@ -70,8 +74,8 @@ describe("ギルドキャッシュ", () => {
     it("期限切れのキャッシュはnullを返す", () => {
       setCachedGuilds("user-1", mockGuilds);
 
-      // 5分 + 1秒経過
-      vi.advanceTimersByTime(5 * 60 * 1000 + 1000);
+      // CACHE_TTL_MS + 1秒経過
+      vi.advanceTimersByTime(CACHE_TTL_MS + 1000);
 
       const result = getCachedGuilds("user-1");
       expect(result).toBeNull();
@@ -80,8 +84,8 @@ describe("ギルドキャッシュ", () => {
     it("期限切れ前のキャッシュは有効", () => {
       setCachedGuilds("user-1", mockGuilds);
 
-      // 5分 - 1秒経過
-      vi.advanceTimersByTime(5 * 60 * 1000 - 1000);
+      // CACHE_TTL_MS - 1秒経過
+      vi.advanceTimersByTime(CACHE_TTL_MS - 1000);
 
       const result = getCachedGuilds("user-1");
       expect(result).toEqual(mockGuilds);
@@ -164,8 +168,8 @@ describe("ギルドキャッシュ", () => {
       const promise = Promise.resolve({ guilds: mockGuilds });
       setPendingRequest("user-1", promise);
 
-      // 30秒 + 1秒経過
-      vi.advanceTimersByTime(30 * 1000 + 1000);
+      // PENDING_REQUEST_TIMEOUT_MS + 1秒経過
+      vi.advanceTimersByTime(PENDING_REQUEST_TIMEOUT_MS + 1000);
 
       const result = getPendingRequest("user-1");
       expect(result).toBeNull();
@@ -175,8 +179,8 @@ describe("ギルドキャッシュ", () => {
       const promise = Promise.resolve({ guilds: mockGuilds });
       setPendingRequest("user-1", promise);
 
-      // 30秒 - 1秒経過
-      vi.advanceTimersByTime(30 * 1000 - 1000);
+      // PENDING_REQUEST_TIMEOUT_MS - 1秒経過
+      vi.advanceTimersByTime(PENDING_REQUEST_TIMEOUT_MS - 1000);
 
       const result = getPendingRequest("user-1");
       expect(result).toBe(promise);
@@ -203,7 +207,7 @@ describe("ギルドキャッシュ", () => {
       setCachedGuilds("user-1", mockGuilds);
 
       // user-1のキャッシュを期限切れにする
-      vi.advanceTimersByTime(5 * 60 * 1000 + 1000);
+      vi.advanceTimersByTime(CACHE_TTL_MS + 1000);
 
       cleanupExpiredCache();
 
@@ -222,7 +226,7 @@ describe("ギルドキャッシュ", () => {
       setPendingRequest("user-1", promise);
 
       // タイムアウトさせる
-      vi.advanceTimersByTime(30 * 1000 + 1000);
+      vi.advanceTimersByTime(PENDING_REQUEST_TIMEOUT_MS + 1000);
 
       cleanupExpiredCache();
 
