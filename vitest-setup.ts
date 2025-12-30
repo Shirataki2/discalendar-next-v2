@@ -17,6 +17,30 @@ class ResizeObserverMock {
 
 globalThis.ResizeObserver = ResizeObserverMock;
 
+// matchMediaのモック（next-themesで必要）
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    // deprecated methods (no-op for testing)
+    addListener: () => {
+      /* no-op */
+    },
+    removeListener: () => {
+      /* no-op */
+    },
+    addEventListener: () => {
+      /* no-op */
+    },
+    removeEventListener: () => {
+      /* no-op */
+    },
+    dispatchEvent: () => true,
+  }),
+});
+
 // 各テスト後に自動的にDOMをクリーンアップ
 afterEach(() => {
   cleanup();
