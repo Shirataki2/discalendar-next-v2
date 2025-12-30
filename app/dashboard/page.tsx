@@ -2,6 +2,12 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { getUserGuilds } from "@/lib/discord/client";
+import {
+  getCachedGuilds,
+  getPendingRequest,
+  setCachedGuilds,
+  setPendingRequest,
+} from "@/lib/guilds/cache";
 import { getJoinedGuilds } from "@/lib/guilds/service";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
@@ -117,7 +123,7 @@ export function DashboardPageClient({
 }
 
 /**
- * ギルド一覧を取得する
+ * ギルド一覧を取得する（キャッシュ対応）
  *
  * Requirements:
  * - 5.1: Server Componentとしてギルド一覧データを取得する
@@ -125,10 +131,12 @@ export function DashboardPageClient({
  * - 2.1: Supabase Authに保存されたDiscordアクセストークンを使用
  * - 2.4: provider_token未取得時は再認証を促すメッセージを表示
  *
+ * @param userId ユーザーID（キャッシュキーとして使用）
  * @param providerToken Discord OAuthアクセストークン
  * @returns ギルド一覧またはエラー
  */
 async function fetchGuilds(
+  userId: string,
   providerToken: string | null | undefined
 ): Promise<{ guilds: Guild[]; error?: GuildListError }> {
   // provider_tokenが存在しない場合
@@ -139,42 +147,87 @@ async function fetchGuilds(
     };
   }
 
-  // Discord APIからユーザー所属ギルドを取得
-  const discordResult = await getUserGuilds(providerToken);
+  // キャッシュをチェック
+  const cachedGuilds = getCachedGuilds(userId);
+  if (cachedGuilds !== null) {
+    return { guilds: cachedGuilds };
+  }
 
-  if (!discordResult.success) {
+  // 進行中のリクエストをチェック（重複リクエストを防ぐ）
+  const pendingRequest = getPendingRequest(userId);
+  if (pendingRequest) {
+    try {
+      const result = await pendingRequest;
+      return { guilds: result.guilds };
+    } catch {
+      // 進行中のリクエストが失敗した場合は続行
+    }
+  }
+
+  // 実際の取得処理をPromiseでラップ
+  const fetchPromise = (async (): Promise<{ guilds: Guild[] }> => {
+    // Discord APIからユーザー所属ギルドを取得
+    const discordResult = await getUserGuilds(providerToken);
+
+    if (!discordResult.success) {
+      // エラー時はキャッシュせずにエラーを返す
+      const error = new Error(
+        discordResult.error.code === "unauthorized"
+          ? "UNAUTHORIZED"
+          : discordResult.error.message
+      ) as Error & { code?: string };
+      error.code = discordResult.error.code;
+      throw error;
+    }
+
+    // ギルドIDリストを抽出
+    const guildIds = discordResult.data.map((guild) => guild.id);
+
+    if (guildIds.length === 0) {
+      const emptyGuilds: Guild[] = [];
+      // 空配列もキャッシュする
+      setCachedGuilds(userId, emptyGuilds);
+      return { guilds: emptyGuilds };
+    }
+
+    // DB照合を実行
+    try {
+      const joinedGuilds = await getJoinedGuilds(guildIds);
+      // 成功時のみキャッシュに保存
+      setCachedGuilds(userId, joinedGuilds);
+      return { guilds: joinedGuilds };
+    } catch (dbError) {
+      console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
+      throw new Error("ギルド情報の取得に失敗しました。");
+    }
+  })();
+
+  // 進行中のリクエストとして登録
+  setPendingRequest(userId, fetchPromise);
+
+  try {
+    const result = await fetchPromise;
+    return result;
+  } catch (error) {
     // エラータイプに応じてGuildListErrorに変換
-    if (discordResult.error.code === "unauthorized") {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "unauthorized"
+    ) {
       return {
         guilds: [],
         error: { type: "token_expired" },
       };
     }
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "ギルド情報の取得に失敗しました。";
     return {
       guilds: [],
-      error: { type: "api_error", message: discordResult.error.message },
-    };
-  }
-
-  // ギルドIDリストを抽出
-  const guildIds = discordResult.data.map((guild) => guild.id);
-
-  if (guildIds.length === 0) {
-    return { guilds: [] };
-  }
-
-  // DB照合を実行
-  try {
-    const joinedGuilds = await getJoinedGuilds(guildIds);
-    return { guilds: joinedGuilds };
-  } catch (dbError) {
-    console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
-    return {
-      guilds: [],
-      error: {
-        type: "api_error",
-        message: "ギルド情報の取得に失敗しました。",
-      },
+      error: { type: "api_error", message: errorMessage },
     };
   }
 }
@@ -223,8 +276,11 @@ export default async function DashboardPage() {
     avatarUrl: (user.user_metadata?.avatar_url as string) ?? null,
   };
 
-  // ギルド一覧を取得
-  const { guilds, error: guildError } = await fetchGuilds(providerToken);
+  // ギルド一覧を取得（ユーザーIDをキーとしてキャッシュを使用）
+  const { guilds, error: guildError } = await fetchGuilds(
+    user.id,
+    providerToken
+  );
 
   return (
     <DashboardPageClient
