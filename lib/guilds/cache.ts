@@ -9,7 +9,19 @@
  *   キャッシュが共有されません
  * - 開発環境でも、Next.jsの高速リフレッシュによりモジュールが再読み込みされ、キャッシュが消失する可能性があります
  * - 将来的には、Next.jsの`unstable_cache`やReact Cacheへの移行を検討してください
+ *
+ * ⚠️ セキュリティ考慮事項:
+ * - キャッシュサイズは最大1000エントリに制限されています（DoS対策）
+ * - キャッシュキーは認証済みユーザーIDであり、外部入力ではありません
+ * - キャッシュデータはメモリ上にのみ存在し、永続化されません
+ *
+ * 📊 監視推奨項目:
+ * - キャッシュヒット率
+ * - 平均キャッシュサイズ
+ * - pending requestの平均期間
  */
+
+import { randomUUID } from "node:crypto";
 
 import type { Guild } from "./types";
 
@@ -58,7 +70,12 @@ export const PENDING_REQUEST_TIMEOUT_MS = 30 * 1000;
 /**
  * キャッシュの最大エントリ数（メモリリーク防止）
  */
-const MAX_CACHE_ENTRIES = 1000;
+export const MAX_CACHE_ENTRIES = 1000;
+
+/**
+ * クリーンアップの実行間隔（デフォルト: 5分）
+ */
+const CLEANUP_INTERVAL_MS = CACHE_TTL_MS;
 
 /**
  * キャッシュを取得
@@ -178,7 +195,7 @@ export function setPendingRequest(
   requestId?: string
 ): string {
   const finalRequestId =
-    requestId ?? `${userId}-${Date.now()}-${Math.random()}`;
+    requestId ?? `${userId}-${Date.now()}-${randomUUID()}`;
   pendingRequests.set(userId, {
     promise,
     startedAt: Date.now(),
@@ -218,7 +235,7 @@ export function getOrSetPendingRequest(
   }
 
   // リクエストIDを事前に生成
-  const requestId = `${userId}-${Date.now()}-${Math.random()}`;
+  const requestId = `${userId}-${Date.now()}-${randomUUID()}`;
 
   // 新しいリクエストを作成して設定
   const promise = factory(requestId);
@@ -246,21 +263,27 @@ export function cleanupExpiredCache(): void {
 }
 
 /**
- * クリーンアップ用のinterval ID
+ * クリーンアップ用のinterval IDを管理するグローバルシンボル
+ * HMR（Hot Module Replacement）時も既存のインターバルをクリアできるようにする
  */
-let cleanupInterval: NodeJS.Timeout | null = null;
+const CLEANUP_INTERVAL_KEY = Symbol.for("guild-cache-cleanup-interval");
 
 /**
  * 定期的なクリーンアップを開始
  * サーバーサイドでのみ実行される（クライアントサイドでは実行されない）
  */
 export function startPeriodicCleanup(): void {
+  const globalAny = globalThis as any;
+
   if (
-    cleanupInterval === null &&
     typeof setInterval !== "undefined" &&
-    typeof window === "undefined"
+    typeof window === "undefined" &&
+    !globalAny[CLEANUP_INTERVAL_KEY]
   ) {
-    cleanupInterval = setInterval(cleanupExpiredCache, 5 * 60 * 1000);
+    globalAny[CLEANUP_INTERVAL_KEY] = setInterval(
+      cleanupExpiredCache,
+      CLEANUP_INTERVAL_MS
+    );
   }
 }
 
@@ -268,9 +291,10 @@ export function startPeriodicCleanup(): void {
  * 定期的なクリーンアップを停止
  */
 export function stopPeriodicCleanup(): void {
-  if (cleanupInterval !== null) {
-    clearInterval(cleanupInterval);
-    cleanupInterval = null;
+  const globalAny = globalThis as any;
+  if (globalAny[CLEANUP_INTERVAL_KEY]) {
+    clearInterval(globalAny[CLEANUP_INTERVAL_KEY]);
+    globalAny[CLEANUP_INTERVAL_KEY] = null;
   }
 }
 
