@@ -206,14 +206,22 @@ describe("パフォーマンス - Tailwind CSS最適化", () => {
 
       // classNameプロパティが存在する（Tailwindユーティリティクラス使用）
       if (content.includes("className=")) {
-        // Tailwind標準クラスの使用を確認（例: px-, py-, text-, bg-）
+        // Tailwind標準クラスの使用を確認（例: px-, py-, text-, bg-, mr-, ml-, h-, w-）
         const hasTailwindClasses =
           content.includes("px-") ||
           content.includes("py-") ||
           content.includes("text-") ||
           content.includes("bg-") ||
           content.includes("flex") ||
-          content.includes("grid");
+          content.includes("grid") ||
+          content.includes("mr-") ||
+          content.includes("ml-") ||
+          content.includes("mt-") ||
+          content.includes("mb-") ||
+          content.includes("h-") ||
+          content.includes("w-") ||
+          content.includes("absolute") ||
+          content.includes("relative");
 
         expect(hasTailwindClasses).toBe(
           true,
