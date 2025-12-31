@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { getUserGuilds } from "@/lib/discord/client";
 import { getJoinedGuilds } from "@/lib/guilds/service";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
@@ -77,6 +78,7 @@ export function DashboardPageClient({
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <h1 className="font-bold text-xl">Discalendar</h1>
           <div className="flex items-center gap-4">
+            <ThemeSwitcher />
             <div className="flex items-center gap-3">
               {user.avatarUrl ? (
                 <Image
