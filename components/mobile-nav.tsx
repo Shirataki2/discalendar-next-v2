@@ -30,6 +30,7 @@
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -109,6 +110,12 @@ export function MobileNav({ links, isAuthenticated }: MobileNavProps) {
                 {link.label}
               </a>
             ))}
+
+            {/* テーマスイッチャー */}
+            <div className="flex items-center gap-2 border-t pt-4">
+              <span className="text-muted-foreground text-sm">テーマ:</span>
+              <ThemeSwitcher />
+            </div>
 
             {/* モバイルCTAボタン - Task 8 */}
             <div className="mt-4 flex flex-col gap-3">

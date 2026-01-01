@@ -30,6 +30,7 @@
 
 import { LogoutButton } from "@/components/auth/logout-button";
 import { MobileNav } from "@/components/mobile-nav";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 
@@ -97,6 +98,7 @@ export async function Header() {
 
         {/* CTAボタン（デスクトップ） - Requirement 2.4, 10.5, Task 8 */}
         <div className="hidden items-center gap-3 md:flex">
+          <ThemeSwitcher />
           {isAuthenticated ? (
             <>
               <Button asChild variant="ghost">
