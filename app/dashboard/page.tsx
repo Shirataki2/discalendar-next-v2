@@ -81,7 +81,12 @@ export function DashboardPageClient({
     <>
       <header className="border-b">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <h1 className="font-bold text-xl">Discalendar</h1>
+          <a
+            className="font-uni-sans-heavy text-2xl transition-colors hover:text-primary"
+            href="/"
+          >
+            Discalendar
+          </a>
           <div className="flex items-center gap-4">
             <ThemeSwitcher />
             <div className="flex items-center gap-3">

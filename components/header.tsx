@@ -78,7 +78,10 @@ export async function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* サービス名またはロゴ - Requirement 2.2 */}
         <div className="flex items-center">
-          <a className="font-bold text-xl" href="/">
+          <a
+            className="font-uni-sans-heavy text-2xl transition-colors hover:text-primary"
+            href="/"
+          >
             Discalendar
           </a>
         </div>

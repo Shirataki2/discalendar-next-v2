@@ -114,8 +114,9 @@ describe("DashboardPage", () => {
         />
       );
 
-      const heading = screen.getByRole("heading", { level: 1 });
-      expect(heading).toBeInTheDocument();
+      const appTitle = screen.getByRole("link", { name: "Discalendar" });
+      expect(appTitle).toBeInTheDocument();
+      expect(appTitle).toHaveAttribute("href", "/");
     });
 
     it("should render logout button (Requirement 6.1)", async () => {
