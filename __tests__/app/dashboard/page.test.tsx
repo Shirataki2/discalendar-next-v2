@@ -381,7 +381,9 @@ describe("DashboardPage", () => {
         />
       );
 
-      expect(screen.getByText(NO_SERVERS_PATTERN)).toBeInTheDocument();
+      // 空状態メッセージはモバイルとデスクトップの両方に表示される
+      const emptyMessages = screen.getAllByText(NO_SERVERS_PATTERN);
+      expect(emptyMessages.length).toBeGreaterThan(0);
     });
 
     it("should display error message when token is expired (Requirement 2.4)", async () => {
@@ -399,7 +401,9 @@ describe("DashboardPage", () => {
         />
       );
 
-      expect(screen.getByText(SESSION_EXPIRED_PATTERN)).toBeInTheDocument();
+      // エラーメッセージはモバイルとデスクトップの両方に表示される
+      const errorMessages = screen.getAllByText(SESSION_EXPIRED_PATTERN);
+      expect(errorMessages.length).toBeGreaterThan(0);
     });
 
     it("should display error message when no token is available (Requirement 2.4)", async () => {
@@ -417,7 +421,9 @@ describe("DashboardPage", () => {
         />
       );
 
-      expect(screen.getByText(DISCORD_DISABLED_PATTERN)).toBeInTheDocument();
+      // エラーメッセージはモバイルとデスクトップの両方に表示される
+      const errorMessages = screen.getAllByText(DISCORD_DISABLED_PATTERN);
+      expect(errorMessages.length).toBeGreaterThan(0);
     });
 
     it("should display API error message (Requirement 2.3)", async () => {
@@ -435,7 +441,9 @@ describe("DashboardPage", () => {
         />
       );
 
-      expect(screen.getByText(API_ERROR_PATTERN)).toBeInTheDocument();
+      // エラーメッセージはモバイルとデスクトップの両方に表示される
+      const errorMessages = screen.getAllByText(API_ERROR_PATTERN);
+      expect(errorMessages.length).toBeGreaterThan(0);
     });
   });
 });
