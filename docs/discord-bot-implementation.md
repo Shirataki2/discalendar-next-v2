@@ -104,6 +104,48 @@ CREATE TABLE guild_config (
 ALTER TABLE events ADD COLUMN notifications JSONB DEFAULT '[]'::jsonb;
 ```
 
+#### 通知履歴記録用ヘルパー関数
+```sql
+CREATE OR REPLACE FUNCTION append_notification(
+    event_id UUID,
+    notification JSONB
+) RETURNS void AS $$
+BEGIN
+    UPDATE events
+    SET notifications = notifications || jsonb_build_array(notification)
+    WHERE id = event_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**使用方法:**
+```python
+# 通知成功時
+bot.supabase.rpc(
+    "append_notification",
+    {
+        "event_id": event_id,
+        "notification": {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "success"
+        }
+    }
+).execute()
+
+# 通知失敗時
+bot.supabase.rpc(
+    "append_notification",
+    {
+        "event_id": event_id,
+        "notification": {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "failed",
+            "error": "Channel not found"
+        }
+    }
+).execute()
+```
+
 ## プロジェクト構成（Bot側リポジトリ）
 
 ```
@@ -235,8 +277,13 @@ class DisCalendarBot(commands.Bot):
 ### Slashコマンド例 (`/list`)
 
 ```python
+from typing import Optional
 from discord import app_commands
 from discord.ext import commands
+import discord
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ListCommand(commands.Cog):
     def __init__(self, bot):
@@ -251,36 +298,43 @@ class ListCommand(commands.Cog):
     async def list_events(
         self, 
         interaction: discord.Interaction,
-        range: app_commands.Choice[str] = None
+        range: Optional[app_commands.Choice[str]] = None
     ):
-        range_value = range.value if range else "future"
-        guild_id = str(interaction.guild_id)
+        range_value: str = range.value if range else "future"
+        guild_id: str = str(interaction.guild_id)
         
-        # Supabaseからイベント取得
-        response = self.bot.supabase.table("events")\
-            .select("*")\
-            .eq("guild_id", guild_id)\
-            .order("start_at")\
-            .execute()
-        
-        events = response.data
-        
-        if not events:
+        try:
+            # Supabaseからイベント取得（必要なフィールドのみ明示的に指定）
+            response = self.bot.supabase.table("events")\
+                .select("id, name, start_at, end_at, description, color")\
+                .eq("guild_id", guild_id)\
+                .order("start_at")\
+                .execute()
+            
+            events = response.data
+            
+            if not events:
+                await interaction.response.send_message(
+                    "現在登録されている予定はありません",
+                    ephemeral=True
+                )
+                return
+            
+            embed = discord.Embed(title="予定一覧", color=0x0000ff)
+            for event in events[:10]:  # 最大10件
+                embed.add_field(
+                    name=event["name"],
+                    value=f"開始: {event['start_at']}\n終了: {event['end_at']}",
+                    inline=False
+                )
+            
+            await interaction.response.send_message(embed=embed)
+        except Exception as e:
+            logger.error(f"Failed to fetch events for guild {guild_id}: {e}")
             await interaction.response.send_message(
-                "現在登録されている予定はありません",
+                "予定の取得中にエラーが発生しました",
                 ephemeral=True
             )
-            return
-        
-        embed = discord.Embed(title="予定一覧", color=0x0000ff)
-        for event in events[:10]:  # 最大10件
-            embed.add_field(
-                name=event["name"],
-                value=f"開始: {event['start_at']}\n終了: {event['end_at']}",
-                inline=False
-            )
-        
-        await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(ListCommand(bot))
@@ -289,8 +343,13 @@ async def setup(bot):
 ### 通知タスク例
 
 ```python
+from typing import Dict, Any, Optional
 from discord.ext import tasks
 from datetime import datetime, timezone
+import discord
+import logging
+
+logger = logging.getLogger(__name__)
 
 class NotifyTask(commands.Cog):
     def __init__(self, bot):
@@ -304,29 +363,99 @@ class NotifyTask(commands.Cog):
     async def notify_loop(self):
         now = datetime.now(timezone.utc)
         
-        # 通知対象のイベントを取得
-        response = self.bot.supabase.table("events")\
-            .select("*, event_settings!inner(channel_id)")\
-            .gte("start_at", now.isoformat())\
-            .execute()
-        
-        for event in response.data:
-            # 通知時刻チェック・送信処理
-            await self.send_notification(event)
+        try:
+            # 通知対象のイベントを取得（必要なフィールドのみ明示的に指定）
+            response = self.bot.supabase.table("events")\
+                .select("id, name, description, color, start_at, event_settings!inner(channel_id)")\
+                .gte("start_at", now.isoformat())\
+                .execute()
+            
+            for event in response.data:
+                # 通知時刻チェック・送信処理
+                await self.send_notification(event)
+        except Exception as e:
+            logger.error(f"Failed to fetch events for notification: {e}")
     
-    async def send_notification(self, event):
-        channel = self.bot.get_channel(int(event["event_settings"]["channel_id"]))
-        if not channel:
+    async def send_notification(self, event: Dict[str, Any]) -> None:
+        """イベント通知を送信する
+        
+        Args:
+            event: 通知対象のイベントデータ
+        """
+        event_id: str = event.get("id", "unknown")
+        channel_id_str: Optional[str] = event.get("event_settings", {}).get("channel_id")
+        
+        if not channel_id_str:
+            logger.warning(f"Event {event_id}: channel_id not found in event_settings")
+            await self._record_notification_failure(event_id, "channel_id not configured")
             return
         
-        embed = discord.Embed(
-            title=event["name"],
-            description=event.get("description", ""),
-            color=int(event["color"].lstrip("#"), 16)
-        )
-        embed.add_field(name="日時", value=event["start_at"])
-        
-        await channel.send("📅 以下の予定が開催されます", embed=embed)
+        try:
+            channel_id: int = int(channel_id_str)
+            channel = self.bot.get_channel(channel_id)
+            
+            if not channel:
+                error_msg = f"Channel {channel_id} not found or bot has no access"
+                logger.warning(f"Event {event_id}: {error_msg}")
+                await self._record_notification_failure(event_id, error_msg)
+                return
+            
+            embed = discord.Embed(
+                title=event["name"],
+                description=event.get("description", ""),
+                color=int(event["color"].lstrip("#"), 16)
+            )
+            embed.add_field(name="日時", value=event["start_at"])
+            
+            await channel.send("📅 以下の予定が開催されます", embed=embed)
+            await self._record_notification_success(event_id)
+            logger.info(f"Event {event_id}: Notification sent successfully to channel {channel_id}")
+            
+        except ValueError as e:
+            error_msg = f"Invalid channel_id format: {channel_id_str}"
+            logger.error(f"Event {event_id}: {error_msg} - {e}")
+            await self._record_notification_failure(event_id, error_msg)
+        except discord.HTTPException as e:
+            error_msg = f"Failed to send message: {e}"
+            logger.error(f"Event {event_id}: {error_msg}")
+            await self._record_notification_failure(event_id, error_msg)
+        except Exception as e:
+            error_msg = f"Unexpected error: {e}"
+            logger.error(f"Event {event_id}: {error_msg}")
+            await self._record_notification_failure(event_id, error_msg)
+    
+    async def _record_notification_success(self, event_id: str) -> None:
+        """通知成功を記録する"""
+        try:
+            self.bot.supabase.rpc(
+                "append_notification",
+                {
+                    "event_id": event_id,
+                    "notification": {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "status": "success"
+                    }
+                }
+            ).execute()
+        except Exception as e:
+            logger.error(f"Failed to record notification success for event {event_id}: {e}")
+    
+    async def _record_notification_failure(self, event_id: str, error: str) -> None:
+        """通知失敗を記録する（notifications JSONBカラムに保存）"""
+        try:
+            self.bot.supabase.rpc(
+                "append_notification",
+                {
+                    "event_id": event_id,
+                    "notification": {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "status": "failed",
+                        "error": error
+                    }
+                }
+            ).execute()
+        except Exception as e:
+            logger.error(f"Failed to record notification failure for event {event_id}: {e}")
 ```
 
 ## 注意事項
