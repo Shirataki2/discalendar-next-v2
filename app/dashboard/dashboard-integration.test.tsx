@@ -233,7 +233,9 @@ describe("Task 10.2: ローディングとエラー状態のUI実装", () => {
         />
       );
 
-      expect(screen.getByText("サーバーエラー")).toBeInTheDocument();
+      // エラーメッセージはモバイルとデスクトップの両方に表示される
+      const errorMessages = screen.getAllByText("サーバーエラー");
+      expect(errorMessages.length).toBeGreaterThan(0);
     });
   });
 });
