@@ -246,6 +246,7 @@ SENTRY_DSN=https://...  # エラー監視用
 ### Botクラス
 
 ```python
+import os
 import discord
 from discord.ext import commands
 from supabase import create_client, Client
@@ -256,10 +257,13 @@ class DisCalendarBot(commands.Bot):
         intents.guilds = True
         super().__init__(command_prefix="cal ", intents=intents)
         
-        self.supabase: Client = create_client(
-            os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_SERVICE_KEY")
-        )
+        supabase_url: str = os.getenv("SUPABASE_URL", "")
+        supabase_key: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+        
+        if not supabase_url or not supabase_key:
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set")
+        
+        self.supabase: Client = create_client(supabase_url, supabase_key)
     
     async def setup_hook(self):
         # Cogのロード
@@ -300,6 +304,13 @@ class ListCommand(commands.Cog):
         interaction: discord.Interaction,
         range: Optional[app_commands.Choice[str]] = None
     ):
+        if interaction.guild_id is None:
+            await interaction.response.send_message(
+                "このコマンドはサーバー内でのみ使用できます",
+                ephemeral=True
+            )
+            return
+        
         range_value: str = range.value if range else "future"
         guild_id: str = str(interaction.guild_id)
         
@@ -311,7 +322,7 @@ class ListCommand(commands.Cog):
                 .order("start_at")\
                 .execute()
             
-            events = response.data
+            events: list[dict[str, any]] = response.data
             
             if not events:
                 await interaction.response.send_message(
@@ -322,15 +333,18 @@ class ListCommand(commands.Cog):
             
             embed = discord.Embed(title="予定一覧", color=0x0000ff)
             for event in events[:10]:  # 最大10件
+                event_name: str = event.get("name", "無題")
+                start_at: str = event.get("start_at", "不明")
+                end_at: str = event.get("end_at", "不明")
                 embed.add_field(
-                    name=event["name"],
-                    value=f"開始: {event['start_at']}\n終了: {event['end_at']}",
+                    name=event_name,
+                    value=f"開始: {start_at}\n終了: {end_at}",
                     inline=False
                 )
             
             await interaction.response.send_message(embed=embed)
         except Exception as e:
-            logger.error(f"Failed to fetch events for guild {guild_id}: {e}")
+            logger.error(f"Failed to fetch events for guild {guild_id}: {e}", exc_info=True)
             await interaction.response.send_message(
                 "予定の取得中にエラーが発生しました",
                 ephemeral=True
@@ -345,7 +359,7 @@ async def setup(bot):
 ```python
 from typing import Dict, Any, Optional
 from discord.ext import tasks
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import discord
 import logging
 
@@ -362,19 +376,35 @@ class NotifyTask(commands.Cog):
     @tasks.loop(seconds=60)
     async def notify_loop(self):
         now = datetime.now(timezone.utc)
+        # 1分以内に開始するイベントのみを取得（重複通知を防ぐ）
+        one_minute_later = now + timedelta(minutes=1)
         
         try:
             # 通知対象のイベントを取得（必要なフィールドのみ明示的に指定）
+            # 既に通知済みのイベントは除外（notifications配列に"success"ステータスがあるものは除外）
             response = self.bot.supabase.table("events")\
-                .select("id, name, description, color, start_at, event_settings!inner(channel_id)")\
+                .select("id, name, description, color, start_at, notifications, event_settings!inner(channel_id)")\
                 .gte("start_at", now.isoformat())\
+                .lte("start_at", one_minute_later.isoformat())\
                 .execute()
             
             for event in response.data:
+                # 既に通知済みかチェック
+                notifications: list[dict[str, any]] = event.get("notifications", [])
+                has_success_notification = any(
+                    n.get("status") == "success" 
+                    for n in notifications 
+                    if isinstance(n, dict)
+                )
+                
+                if has_success_notification:
+                    logger.debug(f"Event {event.get('id')}: Already notified, skipping")
+                    continue
+                
                 # 通知時刻チェック・送信処理
                 await self.send_notification(event)
         except Exception as e:
-            logger.error(f"Failed to fetch events for notification: {e}")
+            logger.error(f"Failed to fetch events for notification: {e}", exc_info=True)
     
     async def send_notification(self, event: Dict[str, Any]) -> None:
         """イベント通知を送信する
@@ -425,7 +455,11 @@ class NotifyTask(commands.Cog):
             await self._record_notification_failure(event_id, error_msg)
     
     async def _record_notification_success(self, event_id: str) -> None:
-        """通知成功を記録する"""
+        """通知成功を記録する
+        
+        Args:
+            event_id: イベントID
+        """
         try:
             self.bot.supabase.rpc(
                 "append_notification",
@@ -437,11 +471,22 @@ class NotifyTask(commands.Cog):
                     }
                 }
             ).execute()
+            logger.debug(f"Event {event_id}: Notification success recorded")
         except Exception as e:
-            logger.error(f"Failed to record notification success for event {event_id}: {e}")
+            # 記録失敗は警告として記録（通知自体は成功しているため）
+            logger.warning(
+                f"Failed to record notification success for event {event_id}: {e}",
+                exc_info=True
+            )
+            # 繰り返し失敗する場合は、メトリクスやアラートを検討
     
     async def _record_notification_failure(self, event_id: str, error: str) -> None:
-        """通知失敗を記録する（notifications JSONBカラムに保存）"""
+        """通知失敗を記録する（notifications JSONBカラムに保存）
+        
+        Args:
+            event_id: イベントID
+            error: エラーメッセージ
+        """
         try:
             self.bot.supabase.rpc(
                 "append_notification",
@@ -454,8 +499,14 @@ class NotifyTask(commands.Cog):
                     }
                 }
             ).execute()
+            logger.debug(f"Event {event_id}: Notification failure recorded: {error}")
         except Exception as e:
-            logger.error(f"Failed to record notification failure for event {event_id}: {e}")
+            # 記録失敗はエラーとして記録（通知失敗の記録も失敗しているため）
+            logger.error(
+                f"Failed to record notification failure for event {event_id}: {e}",
+                exc_info=True
+            )
+            # 繰り返し失敗する場合は、メトリクスやアラートを検討
 ```
 
 ## 注意事項
@@ -481,6 +532,73 @@ Bot招待時に必要な権限:
 - データベースは `TIMESTAMPTZ` で統一
 - 表示時は日本時間（JST, UTC+9）に変換
 - 既存Botでは `chrono::Utc::now() + Duration::hours(9)` で対応
+
+## マイグレーションロールバック戦略
+
+### ロールバックが必要な場合
+
+マイグレーション `20260101212853_add_bot_settings_and_notifications.sql` をロールバックする必要がある場合、以下の手順を実行してください。
+
+#### 1. ロールバック用マイグレーションファイルの作成
+
+新しいマイグレーションファイル（例: `20260101220000_rollback_bot_settings.sql`）を作成し、以下の内容を記述します:
+
+```sql
+-- ロールバック: Bot設定スキーマと通知機能の削除
+
+-- ヘルパー関数の削除
+DROP FUNCTION IF EXISTS append_notification(UUID, JSONB);
+
+-- eventsテーブルからnotificationsカラムを削除
+-- 注意: 既存データは失われます
+ALTER TABLE events DROP COLUMN IF EXISTS notifications;
+
+-- guild_configテーブルの削除
+DROP TABLE IF EXISTS guild_config;
+
+-- event_settingsテーブルの削除
+DROP TABLE IF EXISTS event_settings;
+```
+
+#### 2. ロールバック前の確認事項
+
+- **データバックアップ**: 本番環境では、ロールバック前にデータベースのバックアップを取得してください
+- **Botの停止**: ロールバック中はBotを停止し、データベースへの書き込みを防いでください
+- **依存関係の確認**: 他のマイグレーションやアプリケーションがこのスキーマに依存していないか確認してください
+
+#### 3. ロールバックの実行
+
+```bash
+# Supabase CLIを使用する場合
+supabase migration up --version 20260101220000
+
+# または、SQLファイルを直接実行
+psql -h <host> -U <user> -d <database> -f 20260101220000_rollback_bot_settings.sql
+```
+
+#### 4. ロールバック後の確認
+
+- テーブルが正しく削除されたことを確認
+- 既存のアプリケーション（Web側）が正常に動作することを確認
+- Bot側のコードがこのスキーマを参照していないことを確認
+
+#### 5. 部分的なロールバック
+
+特定のテーブルのみをロールバックする場合:
+
+```sql
+-- event_settingsのみを削除
+DROP TABLE IF EXISTS event_settings;
+
+-- または、notificationsカラムのみを削除
+ALTER TABLE events DROP COLUMN IF EXISTS notifications;
+```
+
+### 注意事項
+
+- **データ損失**: `notifications`カラムを削除すると、既存の通知履歴データは失われます
+- **外部キー制約**: `event_settings`と`guild_config`は`guilds`テーブルに依存しているため、`guilds`テーブルを削除する場合は自動的に削除されます（CASCADE）
+- **RLSポリシー**: テーブルを削除すると、関連するRLSポリシーも自動的に削除されます
 
 ## 参考リンク
 
