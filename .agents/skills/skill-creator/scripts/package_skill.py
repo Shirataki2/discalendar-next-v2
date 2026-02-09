@@ -69,6 +69,9 @@ def package_skill(skill_path, output_dir=None):
             # Walk through the skill directory
             for file_path in skill_path.rglob('*'):
                 if file_path.is_file():
+                    # Skip .skill files to avoid self-referencing archives
+                    if file_path.suffix == '.skill':
+                        continue
                     # Calculate the relative path within the zip
                     arcname = file_path.relative_to(skill_path.parent)
                     zipf.write(file_path, arcname)

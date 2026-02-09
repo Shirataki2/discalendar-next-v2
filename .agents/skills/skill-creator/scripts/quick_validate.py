@@ -49,11 +49,15 @@ def validate_skill(skill_path):
             f"Allowed properties are: {', '.join(sorted(ALLOWED_PROPERTIES))}"
         )
 
-    # Check required fields
+    # Check required fields (must exist and be non-empty)
     if 'name' not in frontmatter:
         return False, "Missing 'name' in frontmatter"
+    if not frontmatter['name'] or (isinstance(frontmatter['name'], str) and not frontmatter['name'].strip()):
+        return False, "'name' in frontmatter must not be empty"
     if 'description' not in frontmatter:
         return False, "Missing 'description' in frontmatter"
+    if not frontmatter['description'] or (isinstance(frontmatter['description'], str) and not frontmatter['description'].strip()):
+        return False, "'description' in frontmatter must not be empty"
 
     # Extract name for validation
     name = frontmatter.get('name', '')
