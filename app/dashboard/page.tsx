@@ -78,7 +78,7 @@ export function DashboardPageClient({
   const initials = getUserInitials(user);
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <header className="border-b">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <a
@@ -109,8 +109,8 @@ export function DashboardPageClient({
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
+      <main className="container mx-auto flex flex-1 flex-col px-4 py-8">
+        <div className="flex flex-1 flex-col gap-6">
           <div className="space-y-2">
             <h2 className="font-bold text-2xl">
               ようこそ、{user.fullName ?? "ユーザー"}さん
@@ -124,7 +124,7 @@ export function DashboardPageClient({
           <DashboardWithCalendar guildError={guildError} guilds={guilds} />
         </div>
       </main>
-    </>
+    </div>
   );
 }
 

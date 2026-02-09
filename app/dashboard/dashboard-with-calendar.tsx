@@ -275,7 +275,7 @@ export function DashboardWithCalendar({
   }, []);
 
   return (
-    <div className="flex flex-col gap-8 lg:flex-row lg:gap-6">
+    <div className="flex flex-1 flex-col gap-8 lg:flex-row lg:gap-6">
       <MobileGuildSelector
         guildError={guildError}
         guilds={guilds}
