@@ -574,4 +574,86 @@ describe("CalendarGrid", () => {
       expect(daySlots.length).toBeGreaterThan(0);
     });
   });
+
+  // DnD（ドラッグ＆ドロップ）機能のテスト
+  describe("ドラッグ＆ドロップ機能", () => {
+    it("DnD props を渡した場合に正常にレンダリングされる", () => {
+      const onEventDrop = vi.fn();
+      const onEventResize = vi.fn();
+
+      render(
+        <CalendarGrid
+          {...defaultProps}
+          onEventDrop={onEventDrop}
+          onEventResize={onEventResize}
+          resizable
+          viewMode="week"
+        />
+      );
+
+      const calendarElement = screen.getByRole("region", {
+        name: CALENDAR_REGION_PATTERN,
+      });
+      expect(calendarElement).toBeInTheDocument();
+    });
+
+    it("rbc-addons-dnd CSSクラスが存在する", () => {
+      render(
+        <CalendarGrid
+          {...defaultProps}
+          onEventDrop={vi.fn()}
+          onEventResize={vi.fn()}
+          viewMode="week"
+        />
+      );
+
+      // withDragAndDrop HOCが適用されると rbc-addons-dnd クラスが付与される
+      const dndElement = document.querySelector(".rbc-addons-dnd");
+      expect(dndElement).toBeInTheDocument();
+    });
+
+    it("DnD props が未設定でもエラーにならない", () => {
+      render(<CalendarGrid {...defaultProps} viewMode="week" />);
+
+      const calendarElement = screen.getByRole("region", {
+        name: CALENDAR_REGION_PATTERN,
+      });
+      expect(calendarElement).toBeInTheDocument();
+    });
+
+    it("resizable=false の場合でも正常にレンダリングされる", () => {
+      render(
+        <CalendarGrid
+          {...defaultProps}
+          onEventDrop={vi.fn()}
+          resizable={false}
+          viewMode="week"
+        />
+      );
+
+      const calendarElement = screen.getByRole("region", {
+        name: CALENDAR_REGION_PATTERN,
+      });
+      expect(calendarElement).toBeInTheDocument();
+    });
+
+    it("月ビューでもDnDが有効な状態でレンダリングされる", () => {
+      render(
+        <CalendarGrid
+          {...defaultProps}
+          onEventDrop={vi.fn()}
+          onEventResize={vi.fn()}
+          viewMode="month"
+        />
+      );
+
+      const calendarElement = screen.getByRole("region", {
+        name: CALENDAR_REGION_PATTERN,
+      });
+      expect(calendarElement).toBeInTheDocument();
+
+      const dndElement = document.querySelector(".rbc-addons-dnd");
+      expect(dndElement).toBeInTheDocument();
+    });
+  });
 });

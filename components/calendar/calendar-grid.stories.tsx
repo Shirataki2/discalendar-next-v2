@@ -113,6 +113,8 @@ export const MonthView: Story = {
     events: mockEvents,
     onEventClick: fn(),
     onDateChange: fn(),
+    onEventDrop: fn(),
+    onEventResize: fn(),
   },
 };
 
@@ -128,6 +130,8 @@ export const WeekView: Story = {
     events: mockEvents,
     onEventClick: fn(),
     onDateChange: fn(),
+    onEventDrop: fn(),
+    onEventResize: fn(),
   },
 };
 
@@ -143,6 +147,8 @@ export const DayView: Story = {
     events: mockEvents,
     onEventClick: fn(),
     onDateChange: fn(),
+    onEventDrop: fn(),
+    onEventResize: fn(),
   },
 };
 
@@ -218,5 +224,25 @@ export const TodayHighlighted: Story = {
     })),
     onEventClick: fn(),
     onDateChange: fn(),
+    onEventDrop: fn(),
+    onEventResize: fn(),
+  },
+};
+
+/**
+ * ドラッグ＆ドロップ
+ * 週ビューでイベントのドラッグ移動・リサイズを確認
+ */
+export const DragAndDrop: Story = {
+  args: {
+    viewMode: "week",
+    selectedDate: new Date(2025, 0, 15),
+    today: new Date(2025, 0, 15),
+    events: mockEvents,
+    onEventClick: fn(),
+    onDateChange: fn(),
+    onEventDrop: fn(),
+    onEventResize: fn(),
+    resizable: true,
   },
 };

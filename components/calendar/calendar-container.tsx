@@ -124,6 +124,32 @@ function useConfirmDialog() {
 }
 
 /**
+ * ナビゲーションアクションに基づいて新しい日付を計算する
+ */
+function calculateNavigationDate(
+  action: "PREV" | "NEXT" | "TODAY",
+  currentViewMode: ViewMode,
+  currentDate: Date
+): Date {
+  if (action === "TODAY") {
+    return new Date();
+  }
+
+  const newDate = new Date(currentDate);
+  const direction = action === "NEXT" ? 1 : -1;
+
+  if (currentViewMode === "day") {
+    newDate.setDate(newDate.getDate() + direction);
+  } else if (currentViewMode === "week") {
+    newDate.setDate(newDate.getDate() + 7 * direction);
+  } else {
+    newDate.setMonth(newDate.getMonth() + direction);
+  }
+
+  return newDate;
+}
+
+/**
  * CalendarContainerのProps
  */
 export type CalendarContainerProps = {
@@ -271,6 +297,9 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
   // AbortController for cancelling requests
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // 最新のfetchEventsを保持するref（DnDハンドラーのstale closure回避用）
+  const fetchEventsRef = useRef<() => Promise<void>>(() => Promise.resolve());
+
   // Task 7: ポップオーバーの状態管理
   const {
     selectedEvent,
@@ -299,10 +328,12 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
     setIsOpen: setConfirmDialogOpen,
   } = useConfirmDialog();
 
-  // Task 7.2: useEventMutation for delete operations
-  const { state: mutationState, deleteEvent } = useEventMutation(
-    eventServiceRef.current
-  );
+  // Task 7.2: useEventMutation for CRUD operations
+  const {
+    state: mutationState,
+    updateEvent,
+    deleteEvent,
+  } = useEventMutation(eventServiceRef.current);
 
   /**
    * イベントデータを取得する
@@ -358,6 +389,9 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
     }
   }, [guildId, viewMode, selectedDate, actions]);
 
+  // fetchEventsの最新参照をrefに同期（stale closure回避）
+  fetchEventsRef.current = fetchEvents;
+
   /**
    * ギルドIDまたは表示期間が変更されたらイベントを再取得
    */
@@ -388,45 +422,7 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
    */
   const handleNavigate = useCallback(
     (action: "PREV" | "NEXT" | "TODAY") => {
-      let newDate: Date;
-
-      switch (action) {
-        case "TODAY":
-          newDate = new Date();
-          break;
-
-        case "PREV":
-          if (viewMode === "day") {
-            newDate = new Date(selectedDate);
-            newDate.setDate(newDate.getDate() - 1);
-          } else if (viewMode === "week") {
-            newDate = new Date(selectedDate);
-            newDate.setDate(newDate.getDate() - 7);
-          } else {
-            // month
-            newDate = new Date(selectedDate);
-            newDate.setMonth(newDate.getMonth() - 1);
-          }
-          break;
-
-        case "NEXT":
-          if (viewMode === "day") {
-            newDate = new Date(selectedDate);
-            newDate.setDate(newDate.getDate() + 1);
-          } else if (viewMode === "week") {
-            newDate = new Date(selectedDate);
-            newDate.setDate(newDate.getDate() + 7);
-          } else {
-            // month
-            newDate = new Date(selectedDate);
-            newDate.setMonth(newDate.getMonth() + 1);
-          }
-          break;
-
-        default:
-          newDate = selectedDate;
-      }
-
+      const newDate = calculateNavigationDate(action, viewMode, selectedDate);
       setSelectedDate(newDate);
       actions.setSelectedDate(newDate);
     },
@@ -536,6 +532,78 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
     }
   }, [eventToDelete, deleteEvent, closeConfirmDialog, fetchEvents]);
 
+  /**
+   * イベントドロップ（日時変更）ハンドラー
+   * ドラッグ＆ドロップでイベントの日時を変更する
+   */
+  const handleEventDrop = useCallback(
+    async (args: {
+      event: CalendarEvent;
+      start: Date | string;
+      end: Date | string;
+      isAllDay?: boolean;
+    }) => {
+      const { event, start, end, isAllDay } = args;
+      const newStart = start instanceof Date ? start : new Date(start);
+      const newEnd = end instanceof Date ? end : new Date(end);
+
+      // オプティミスティック更新: ローカル状態を即座に更新
+      const updatedEvents = state.events.map((e) =>
+        e.id === event.id
+          ? { ...e, start: newStart, end: newEnd, allDay: isAllDay ?? e.allDay }
+          : e
+      );
+      actions.setEvents(updatedEvents);
+
+      // Supabaseに永続化
+      const result = await updateEvent(event.id, {
+        startAt: newStart,
+        endAt: newEnd,
+        isAllDay: isAllDay ?? event.allDay,
+      });
+
+      // 失敗時はリバート（最新の表示範囲でrefetch）
+      if (!result.success) {
+        fetchEventsRef.current();
+      }
+    },
+    [state.events, actions, updateEvent]
+  );
+
+  /**
+   * イベントリサイズ（期間変更）ハンドラー
+   * ドラッグでイベントの開始時刻・終了時刻を変更する
+   */
+  const handleEventResize = useCallback(
+    async (args: {
+      event: CalendarEvent;
+      start: Date | string;
+      end: Date | string;
+    }) => {
+      const { event, start, end } = args;
+      const newStart = start instanceof Date ? start : new Date(start);
+      const newEnd = end instanceof Date ? end : new Date(end);
+
+      // オプティミスティック更新: ローカル状態を即座に更新
+      const updatedEvents = state.events.map((e) =>
+        e.id === event.id ? { ...e, start: newStart, end: newEnd } : e
+      );
+      actions.setEvents(updatedEvents);
+
+      // Supabaseに永続化
+      const result = await updateEvent(event.id, {
+        startAt: newStart,
+        endAt: newEnd,
+      });
+
+      // 失敗時はリバート（最新の表示範囲でrefetch）
+      if (!result.success) {
+        fetchEventsRef.current();
+      }
+    },
+    [state.events, actions, updateEvent]
+  );
+
   // ギルド未選択時は空のカレンダーを表示 (Req 5.2)
   const shouldShowEmpty = !guildId || guildId.trim() === "";
 
@@ -545,6 +613,12 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
   // Task 7.2: ギルド選択時のみ編集・削除ハンドラーを有効化
   const popoverEditHandler = shouldShowEmpty ? undefined : handleEditEvent;
   const popoverDeleteHandler = shouldShowEmpty ? undefined : handleDeleteEvent;
+
+  // DnD: ギルド選択時のみドラッグ＆ドロップを有効化
+  const gridEventDropHandler = shouldShowEmpty ? undefined : handleEventDrop;
+  const gridEventResizeHandler = shouldShowEmpty
+    ? undefined
+    : handleEventResize;
 
   return (
     <div className="flex flex-1 flex-col" data-testid="calendar-container">
@@ -596,6 +670,8 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
             events={shouldShowEmpty ? [] : state.events}
             onDateChange={handleDateChange}
             onEventClick={handleEventClick}
+            onEventDrop={gridEventDropHandler}
+            onEventResize={gridEventResizeHandler}
             onSlotSelect={handleSlotSelect}
             selectedDate={selectedDate}
             today={new Date()}
