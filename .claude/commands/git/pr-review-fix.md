@@ -92,12 +92,7 @@ gh pr list --head <current-branch> --json number,title,url,state,headRefName
    gh pr view <pr-number> --json comments --jq '.comments[] | {id: .id, body: .body, author: .author.login, createdAt: .createdAt}'
    ```
 
-2. **レビューコメント（ファイルへのコメント）**:
-   ```bash
-   gh pr view <pr-number> --json reviewThreads --jq '.reviewThreads[] | {path: .path, line: .line, comments: .comments[] | {body: .body, author: .author.login, createdAt: .createdAt}}'
-   ```
-
-3. **レビューコメント（レビュー全体）**:
+2. **レビューコメント（レビュー全体）**:
    ```bash
    gh pr view <pr-number> --json reviews --jq '.reviews[] | {state: .state, body: .body, author: .author.login, createdAt: .createdAt}'
    ```
