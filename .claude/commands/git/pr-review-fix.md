@@ -1,13 +1,13 @@
 ---
 description: 現在のブランチのプルリクエストコメントを確認し、分類して修正を実施
 allowed-tools: Read, Write, SearchReplace, Bash, TodoWrite, CodebaseSearch, Grep
-argument-hint: [--auto-apply-critical]
+argument-hint: [PR番号] [--auto-apply-critical]
 ---
 
 # プルリクエストレビューコメント修正コマンド
 
 <background_information>
-- **Mission**: 現在のブランチに関連するプルリクエストのコメントを取得し、重要度別に分類して要約を表示。ユーザー確認後に修正を実施
+- **Mission**: 指定されたプルリクエスト（または現在のブランチに関連するプルリクエスト）のコメントを取得し、重要度別に分類して要約を表示。ユーザー確認後に修正を実施
 - **Success Criteria**:
   - プルリクエストのコメントを正確に取得
   - コメントを3つのカテゴリ（必須、推奨、改善）に適切に分類
@@ -17,9 +17,10 @@ argument-hint: [--auto-apply-critical]
 
 <instructions>
 ## Core Task
-現在のブランチのプルリクエストコメントを取得し、分類して要約表示。ユーザー確認後に修正を実施。
+指定されたPR番号（または現在のブランチ）のプルリクエストコメントを取得し、分類して要約表示。ユーザー確認後に修正を実施。
 
 ## Parse Arguments
+- `<PR番号>`: 数値が指定された場合、そのPR番号のプルリクエストを対象とする（例: `25`）。指定がない場合は現在のブランチから自動検索
 - `--auto-apply-critical`: 必須修正のみ自動適用（確認をスキップ）
 
 ## Validation
@@ -34,14 +35,34 @@ argument-hint: [--auto-apply-critical]
 
 ## Execution Steps
 
-### Step 1: 現在のブランチとリポジトリ情報を取得
+### Step 1: PR番号の判定とブランチ準備
 
-1. 現在のブランチ名を取得:
-   ```bash
-   git rev-parse --abbrev-ref HEAD
-   ```
+引数 `$ARGUMENTS` を解析し、PR番号が指定されているか判定する:
 
-2. リモートリポジトリ情報を取得:
+1. **PR番号が指定されている場合**（引数に数値が含まれる場合）:
+   - 指定されたPR番号の情報を取得:
+     ```bash
+     gh pr view <PR番号> --json number,title,url,state,headRefName
+     ```
+   - PRが存在しない場合、エラーを報告して終了
+   - PRの `headRefName`（ブランチ名）を取得
+   - 現在のブランチを確認し、異なる場合はPRのブランチにチェックアウト:
+     ```bash
+     git fetch origin <headRefName>
+     git checkout <headRefName>
+     ```
+   - チェックアウト後、リモートの最新状態を反映:
+     ```bash
+     git pull origin <headRefName>
+     ```
+
+2. **PR番号が指定されていない場合**:
+   - 現在のブランチ名を取得:
+     ```bash
+     git rev-parse --abbrev-ref HEAD
+     ```
+
+3. リモートリポジトリ情報を取得:
    ```bash
    git remote get-url origin
    ```
@@ -50,13 +71,15 @@ argument-hint: [--auto-apply-critical]
 
 ### Step 2: GitHub CLIでプルリクエストを検索
 
-現在のブランチに関連するプルリクエストを検索:
+**PR番号が指定されている場合**: Step 1 で既に取得済みのため、このステップをスキップ。
+
+**PR番号が指定されていない場合**: 現在のブランチに関連するプルリクエストを検索:
 
 ```bash
 gh pr list --head <current-branch> --json number,title,url,state,headRefName
 ```
 
-**注意**: 
+**注意**:
 - 複数のPRが見つかった場合は、最新のオープンなPRを選択
 - PRが見つからない場合、エラーを報告
 
@@ -279,7 +302,16 @@ gh pr list --head <current-branch> --json number,title,url,state,headRefName
   - エラーを報告
   - 認証方法を提案: `gh auth login`
 
-- **プルリクエストが見つからない場合**:
+- **指定されたPR番号が存在しない場合**:
+  - PR番号が正しいか確認を促す
+  - `gh pr list` でオープンなPR一覧を表示して選択を促す
+
+- **PR番号指定時にチェックアウトに失敗した場合**:
+  - ローカルに未コミットの変更がないか確認を促す（`git stash` を提案）
+  - ブランチがローカルに存在しない場合は `git fetch` を実行
+  - 具体的なエラーメッセージを表示
+
+- **プルリクエストが見つからない場合**（PR番号未指定時）:
   - 現在のブランチがリモートにプッシュされているか確認を促す
   - ブランチ名が正しいか確認を促す
   - 手動でPRを作成することを提案
