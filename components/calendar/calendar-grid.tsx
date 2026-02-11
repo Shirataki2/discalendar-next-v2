@@ -46,6 +46,9 @@ import {
   type SlotInfo,
   type View,
 } from "react-big-calendar";
+import type { EventInteractionArgs } from "react-big-calendar/lib/addons/dragAndDrop";
+import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
 import {
@@ -55,6 +58,14 @@ import {
 } from "@/lib/calendar/localizer";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { EventBlockWrapper } from "./event-block";
+
+export type { EventInteractionArgs } from "react-big-calendar/lib/addons/dragAndDrop";
+
+/**
+ * DnD対応カレンダーコンポーネント
+ * withDragAndDrop HOCをモジュールレベルで適用（レンダー中にHOCを呼ばない）
+ */
+const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
 
 /**
  * react-big-calendarのカスタムコンポーネント設定
@@ -95,6 +106,12 @@ export type CalendarGridProps = {
    * Task 6.3: ドラッグ選択完了時に選択期間を通知
    */
   onSlotSelect?: (slotInfo: SlotSelectInfo) => void;
+  /** イベントドロップ（移動）ハンドラー */
+  onEventDrop?: (args: EventInteractionArgs<CalendarEvent>) => void;
+  /** イベントリサイズハンドラー */
+  onEventResize?: (args: EventInteractionArgs<CalendarEvent>) => void;
+  /** リサイズ可能かどうか（デフォルト: true） */
+  resizable?: boolean;
 };
 
 /**
@@ -161,6 +178,9 @@ export function CalendarGrid({
   onDateChange,
   today,
   onSlotSelect,
+  onEventDrop,
+  onEventResize,
+  resizable = true,
 }: CalendarGridProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -325,7 +345,7 @@ export function CalendarGrid({
       ref={sectionRef}
     >
       <div className="flex h-full flex-1 flex-col">
-        <Calendar
+        <DnDCalendar
           components={calendarComponents}
           date={selectedDate}
           dayPropGetter={dayPropGetter}
@@ -334,6 +354,8 @@ export function CalendarGrid({
           formats={calendarFormats}
           localizer={calendarLocalizer}
           messages={calendarMessages}
+          onEventDrop={onEventDrop}
+          onEventResize={onEventResize}
           onNavigate={handleNavigate}
           onSelectEvent={handleSelectEvent}
           onSelectSlot={handleSelectSlot}
@@ -341,6 +363,7 @@ export function CalendarGrid({
             // ビュー変更は親コンポーネントで管理
           }}
           popup
+          resizable={resizable}
           selectable
           slotPropGetter={slotPropGetter}
           style={{ flex: "1 1 0%", height: "100%", width: "100%" }}
