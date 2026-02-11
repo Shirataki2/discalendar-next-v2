@@ -6,15 +6,15 @@
  * - ギルドセレクターとカレンダーを連携させる
  * - ギルド選択変更時にカレンダーを更新する
  * - 初期ロード時のデータ取得フローを確立する
- * - デスクトップ: リスト表示とアイコンのみ表示を切り替え可能
+ * - デスクトップ: サイドバー折りたたみ/展開切り替え可能
  * - モバイル: ドロップダウン形式でサーバー選択
  *
  * Requirements: 5.1, 5.2
  */
 "use client";
 
-import { Grid3x3, List } from "lucide-react";
-import { useCallback, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useCallback } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
 import { SelectableGuildCard } from "@/components/guilds/selectable-guild-card";
@@ -26,12 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
-
-/**
- * デスクトップでの表示モード
- */
-type ViewMode = "list" | "icons";
+import { cn } from "@/lib/utils";
 
 /**
  * DashboardWithCalendarのProps
@@ -151,52 +148,66 @@ function DesktopGuildSidebar({
   guilds,
   guildError,
   selectedGuildId,
-  viewMode,
+  isCollapsed,
   onGuildSelect,
-  onViewModeToggle,
+  onToggleCollapse,
 }: {
   guilds: Guild[];
   guildError?: GuildListError;
   selectedGuildId: string | null;
-  viewMode: ViewMode;
+  isCollapsed: boolean;
   onGuildSelect: (guildId: string) => void;
-  onViewModeToggle: () => void;
+  onToggleCollapse: () => void;
 }) {
   const hasError = guildError !== undefined;
   const hasGuilds = guilds.length > 0;
 
   return (
-    <aside className="hidden w-full shrink-0 lg:block lg:w-72">
+    <aside
+      className={cn(
+        "hidden shrink-0 overflow-hidden lg:block",
+        "transition-[width] duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-72"
+      )}
+    >
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">サーバー一覧</h3>
-          {!hasError && hasGuilds ? (
-            <Button
-              aria-label={
-                viewMode === "list"
-                  ? "アイコン表示に切り替え"
-                  : "リスト表示に切り替え"
-              }
-              onClick={onViewModeToggle}
-              size="sm"
-              variant="ghost"
-            >
-              {viewMode === "list" ? (
-                <Grid3x3 className="h-4 w-4" />
-              ) : (
-                <List className="h-4 w-4" />
-              )}
-            </Button>
-          ) : null}
+        <div
+          className={cn(
+            "flex items-center",
+            isCollapsed ? "justify-center" : "justify-between"
+          )}
+        >
+          {isCollapsed ? null : (
+            <h3 className="font-semibold text-lg">サーバー一覧</h3>
+          )}
+          <Button
+            aria-expanded={!isCollapsed}
+            aria-label={
+              isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"
+            }
+            onClick={onToggleCollapse}
+            size="sm"
+            variant="ghost"
+          >
+            {isCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
         </div>
 
-        {hasError ? <ErrorDisplay error={guildError} /> : null}
-        {hasError || hasGuilds ? null : <EmptyState />}
+        {isCollapsed ? null : (
+          <>
+            {hasError ? <ErrorDisplay error={guildError} /> : null}
+            {hasError || hasGuilds ? null : <EmptyState />}
+          </>
+        )}
 
-        {!hasError && hasGuilds && viewMode === "list" ? (
-          <div className="space-y-2">
+        {!hasError && hasGuilds && isCollapsed ? (
+          <div className="flex flex-col items-center gap-3">
             {guilds.map((guild) => (
-              <SelectableGuildCard
+              <GuildIconButton
                 guild={guild}
                 isSelected={selectedGuildId === guild.guildId}
                 key={guild.guildId}
@@ -206,10 +217,10 @@ function DesktopGuildSidebar({
           </div>
         ) : null}
 
-        {!hasError && hasGuilds && viewMode === "icons" ? (
-          <div className="flex flex-wrap gap-3">
+        {!hasError && hasGuilds && !isCollapsed ? (
+          <div className="space-y-2">
             {guilds.map((guild) => (
-              <GuildIconButton
+              <SelectableGuildCard
                 guild={guild}
                 isSelected={selectedGuildId === guild.guildId}
                 key={guild.guildId}
@@ -257,22 +268,31 @@ function CalendarArea({ selectedGuildId }: { selectedGuildId: string | null }) {
  *
  * ギルド選択とカレンダー表示を統合したダッシュボードメインコンテンツ。
  * ギルドカードをクリックすることでカレンダーに表示するギルドを切り替える。
- * デスクトップではリスト/アイコン表示を切り替え可能、モバイルではドロップダウン形式。
+ * デスクトップではサイドバーの折りたたみ/展開が可能、モバイルではドロップダウン形式。
  */
 export function DashboardWithCalendar({
   guilds,
   guildError,
 }: DashboardWithCalendarProps) {
-  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [selectedGuildId, setSelectedGuildId] = useLocalStorage<string | null>(
+    "discalendar:selected-guild",
+    null
+  );
+  const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
+    "discalendar:sidebar-collapsed",
+    false
+  );
 
-  const handleGuildSelect = useCallback((guildId: string) => {
-    setSelectedGuildId(guildId);
-  }, []);
+  const handleGuildSelect = useCallback(
+    (guildId: string) => {
+      setSelectedGuildId(guildId);
+    },
+    [setSelectedGuildId]
+  );
 
-  const handleViewModeToggle = useCallback(() => {
-    setViewMode((prev) => (prev === "list" ? "icons" : "list"));
-  }, []);
+  const handleToggleCollapse = useCallback(() => {
+    setSidebarCollapsed((prev) => !prev);
+  }, [setSidebarCollapsed]);
 
   return (
     <div className="flex flex-1 flex-col gap-8 lg:flex-row lg:gap-6">
@@ -285,10 +305,10 @@ export function DashboardWithCalendar({
       <DesktopGuildSidebar
         guildError={guildError}
         guilds={guilds}
+        isCollapsed={sidebarCollapsed}
         onGuildSelect={handleGuildSelect}
-        onViewModeToggle={handleViewModeToggle}
+        onToggleCollapse={handleToggleCollapse}
         selectedGuildId={selectedGuildId}
-        viewMode={viewMode}
       />
       <CalendarArea selectedGuildId={selectedGuildId} />
     </div>

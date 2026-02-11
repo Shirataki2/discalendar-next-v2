@@ -1,4 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Top-level regex patterns for test matching
@@ -9,6 +11,19 @@ const NO_SERVERS_PATTERN = /利用可能なサーバーがありません/;
 const SESSION_EXPIRED_PATTERN = /セッションの有効期限が切れました/;
 const DISCORD_DISABLED_PATTERN = /Discord連携が無効です/;
 const API_ERROR_PATTERN = /APIエラーが発生しました/;
+const SIDEBAR_COLLAPSE_PATTERN = /サイドバーを折りたたむ/;
+const SIDEBAR_EXPAND_PATTERN = /サイドバーを展開/;
+
+// Mock useLocalStorage with useState to avoid useSyncExternalStore issues in tests
+vi.mock("@/hooks/use-local-storage", () => ({
+  useLocalStorage: <T,>(
+    _key: string,
+    defaultValue: T
+  ): [T, (value: T | ((prev: T) => T)) => void] => {
+    const [state, setState] = useState<T>(defaultValue);
+    return [state, setState];
+  },
+}));
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
@@ -445,6 +460,71 @@ describe("DashboardPage", () => {
       // エラーメッセージはモバイルとデスクトップの両方に表示される
       const errorMessages = screen.getAllByText(API_ERROR_PATTERN);
       expect(errorMessages.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("サイドバー折りたたみ/展開", () => {
+    it("should render collapse toggle button with aria-expanded", async () => {
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guilds={[]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      const toggleButton = screen.getByRole("button", {
+        name: SIDEBAR_COLLAPSE_PATTERN,
+      });
+      expect(toggleButton).toBeInTheDocument();
+      expect(toggleButton).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("should toggle sidebar collapse state on button click", async () => {
+      const user = userEvent.setup();
+      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      render(
+        <DashboardPageClient
+          guilds={[
+            {
+              id: 1,
+              guildId: "123",
+              name: "Test Server",
+              avatarUrl: null,
+              locale: "ja",
+            },
+          ]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      // 初期状態: 展開（サーバー一覧ヘッダーが見える）
+      expect(
+        screen.getByRole("heading", { level: 3, name: SERVER_SECTION_PATTERN })
+      ).toBeInTheDocument();
+
+      // 折りたたみボタンをクリック
+      const collapseButton = screen.getByRole("button", {
+        name: SIDEBAR_COLLAPSE_PATTERN,
+      });
+      await user.click(collapseButton);
+
+      // 折りたたみ後: 展開ボタンに変わる
+      const expandButton = screen.getByRole("button", {
+        name: SIDEBAR_EXPAND_PATTERN,
+      });
+      expect(expandButton).toBeInTheDocument();
+      expect(expandButton).toHaveAttribute("aria-expanded", "false");
     });
   });
 });
