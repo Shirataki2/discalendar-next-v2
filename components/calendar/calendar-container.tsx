@@ -297,6 +297,9 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
   // AbortController for cancelling requests
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // 最新のfetchEventsを保持するref（DnDハンドラーのstale closure回避用）
+  const fetchEventsRef = useRef<() => Promise<void>>(() => Promise.resolve());
+
   // Task 7: ポップオーバーの状態管理
   const {
     selectedEvent,
@@ -385,6 +388,9 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
       actions.completeFetchingError(result.error);
     }
   }, [guildId, viewMode, selectedDate, actions]);
+
+  // fetchEventsの最新参照をrefに同期（stale closure回避）
+  fetchEventsRef.current = fetchEvents;
 
   /**
    * ギルドIDまたは表示期間が変更されたらイベントを再取得
@@ -556,12 +562,12 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
         isAllDay: isAllDay ?? event.allDay,
       });
 
-      // 失敗時はリバート
+      // 失敗時はリバート（最新の表示範囲でrefetch）
       if (!result.success) {
-        fetchEvents();
+        fetchEventsRef.current();
       }
     },
-    [state.events, actions, updateEvent, fetchEvents]
+    [state.events, actions, updateEvent]
   );
 
   /**
@@ -590,12 +596,12 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
         endAt: newEnd,
       });
 
-      // 失敗時はリバート
+      // 失敗時はリバート（最新の表示範囲でrefetch）
       if (!result.success) {
-        fetchEvents();
+        fetchEventsRef.current();
       }
     },
-    [state.events, actions, updateEvent, fetchEvents]
+    [state.events, actions, updateEvent]
   );
 
   // ギルド未選択時は空のカレンダーを表示 (Req 5.2)
