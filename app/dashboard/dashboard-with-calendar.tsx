@@ -14,7 +14,7 @@
 "use client";
 
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
 import { SelectableGuildCard } from "@/components/guilds/selectable-guild-card";
@@ -142,6 +142,49 @@ function MobileGuildSelector({
 }
 
 /**
+ * サイドバーヘッダー（トグルボタン + タイトル）
+ */
+function SidebarHeader({
+  isCollapsed,
+  hasError,
+  onToggleCollapse,
+}: {
+  isCollapsed: boolean;
+  hasError: boolean;
+  onToggleCollapse: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center",
+        isCollapsed ? "justify-center" : "justify-between"
+      )}
+    >
+      {isCollapsed ? null : (
+        <h3 className="font-semibold text-lg">サーバー一覧</h3>
+      )}
+      <Button
+        aria-expanded={!isCollapsed}
+        aria-label={isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
+        className="relative"
+        onClick={onToggleCollapse}
+        size="sm"
+        variant="ghost"
+      >
+        {isCollapsed ? (
+          <PanelLeftOpen className="h-4 w-4" />
+        ) : (
+          <PanelLeftClose className="h-4 w-4" />
+        )}
+        {isCollapsed === true && hasError ? (
+          <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-destructive" />
+        ) : null}
+      </Button>
+    </div>
+  );
+}
+
+/**
  * デスクトップ用ギルド一覧サイドバーコンポーネント
  */
 function DesktopGuildSidebar({
@@ -171,31 +214,11 @@ function DesktopGuildSidebar({
       )}
     >
       <section className="space-y-4">
-        <div
-          className={cn(
-            "flex items-center",
-            isCollapsed ? "justify-center" : "justify-between"
-          )}
-        >
-          {isCollapsed ? null : (
-            <h3 className="font-semibold text-lg">サーバー一覧</h3>
-          )}
-          <Button
-            aria-expanded={!isCollapsed}
-            aria-label={
-              isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"
-            }
-            onClick={onToggleCollapse}
-            size="sm"
-            variant="ghost"
-          >
-            {isCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+        <SidebarHeader
+          hasError={hasError}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={onToggleCollapse}
+        />
 
         {isCollapsed ? null : (
           <>
@@ -274,21 +297,15 @@ export function DashboardWithCalendar({
   guilds,
   guildError,
 }: DashboardWithCalendarProps) {
-  const [selectedGuildId, setSelectedGuildId] = useLocalStorage<string | null>(
-    "discalendar:selected-guild",
-    null
-  );
+  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
     "discalendar:sidebar-collapsed",
     false
   );
 
-  const handleGuildSelect = useCallback(
-    (guildId: string) => {
-      setSelectedGuildId(guildId);
-    },
-    [setSelectedGuildId]
-  );
+  const handleGuildSelect = useCallback((guildId: string) => {
+    setSelectedGuildId(guildId);
+  }, []);
 
   const handleToggleCollapse = useCallback(() => {
     setSidebarCollapsed((prev) => !prev);

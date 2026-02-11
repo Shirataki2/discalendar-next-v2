@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
 function subscribe(callback: () => void): () => void {
   window.addEventListener("storage", callback);
   return () => window.removeEventListener("storage", callback);
+}
+
+function getServerSnapshot(): string | null {
+  return null;
 }
 
 /**
@@ -25,10 +29,6 @@ export function useLocalStorage<T>(
     }
   }, [key]);
 
-  const getServerSnapshot = useCallback((): string | null => {
-    return null;
-  }, []);
-
   const raw = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const [localState, setLocalState] = useState<T>(() => {
@@ -40,16 +40,14 @@ export function useLocalStorage<T>(
     }
   });
 
-  const currentValue: T =
-    raw === null
-      ? localState
-      : (() => {
-          try {
-            return JSON.parse(raw) as T;
-          } catch {
-            return defaultValue;
-          }
-        })();
+  const currentValue = useMemo<T>(() => {
+    if (raw === null) return localState;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return defaultValue;
+    }
+  }, [raw, localState, defaultValue]);
 
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
@@ -60,7 +58,12 @@ export function useLocalStorage<T>(
             : value;
         window.localStorage.setItem(key, JSON.stringify(nextValue));
         setLocalState(nextValue);
-        window.dispatchEvent(new StorageEvent("storage", { key }));
+        window.dispatchEvent(
+          new StorageEvent("storage", {
+            key,
+            newValue: JSON.stringify(nextValue),
+          })
+        );
       } catch {
         // localStorage が使えない場合はローカル state のみ更新
         const nextValue =
