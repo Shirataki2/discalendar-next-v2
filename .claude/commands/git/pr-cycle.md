@@ -24,6 +24,11 @@ argument-hint: [PR番号] [--create] [--fix-all]
 - `--create`: 強制的にPR作成モードで実行
 - `--fix-all`: 必須 + 推奨 + 改善すべてを修正（デフォルトは必須 + 推奨のみ）
 
+**引数の排他性ルール**:
+- `--create` と `[PR番号]` は同時に指定不可。同時指定された場合はエラーを報告する
+- `--fix-all` は `[PR番号]` または レビュー修正フロー時のみ有効。`--create` と組み合わせた場合は無視する
+- 引数なしの場合は自動検出モード（Phase 0）で動作する
+
 ## Phase 0: 状態検出
 
 以下の順序で現在の状態を判定し、実行するフローを決定する:
@@ -54,6 +59,24 @@ argument-hint: [PR番号] [--create] [--fix-all]
    - 3a. 未コミット変更がある → **PR作成フロー**
    - 3b. 変更がない → **ステータス報告**（PRの作成を促すメッセージを表示）
 
+   **疑似コード**:
+   ```
+   if --create → PR作成フロー
+   if PR番号指定 → レビュー修正フロー
+   branch = git branch --show-current
+   changes = git status --porcelain
+   pr = gh pr list --head branch
+   if branch == main:
+     return changes ? PR作成 : ステータス報告
+   if pr exists:
+     comments = fetch_review_comments(pr)
+     if comments.length > 0: return レビュー修正
+     if changes: return PR作成(追加コミット)
+     return ステータス報告
+   else:
+     return changes ? PR作成 : ステータス報告
+   ```
+
 状態検出結果を表示:
 ```
 🔍 状態検出結果:
@@ -73,15 +96,15 @@ argument-hint: [PR番号] [--create] [--fix-all]
 - `git diff --stat` で変更の概要を取得
 - `git diff` で詳細な差分を取得（ステージング済み + 未ステージング）
 
-### A-2: ブランチ名とコミットメッセージの自動生成
+### A-2: コミットメッセージの自動生成（+ mainブランチ時のみブランチ名生成）
 変更内容を分析して以下を生成:
 
-**ブランチ名の生成ルール**:
+**ブランチ名の生成**（**mainブランチにいる場合のみ**。featureブランチでは**スキップ**）:
 - ファイルパスから機能名を抽出
 - kebab-case: `feature/add-calendar`, `fix/login-bug`, `refactor/auth-module`
 - プレフィックス: `feature/`, `fix/`, `refactor/`, `docs/`, `style/`, `test/`, `chore/`
 
-**コミットメッセージの生成ルール**:
+**コミットメッセージの生成ルール**（常に実行）:
 - conventional commit形式: `<type>(<scope>): <subject>`
 - Types: feat, fix, refactor, docs, style, test, chore
 - Subject: 50文字以内の変更概要
@@ -170,8 +193,10 @@ gh pr view <pr-number> --json reviews --jq '.reviews[] | {state: .state, body: .
 
 3. インラインレビューコメント（ファイル・行番号付き）:
 ```bash
-gh api repos/{owner}/{repo}/pulls/<pr-number>/comments --jq '.[] | {path: .path, line: .line, body: .body, author: .user.login}'
+gh api repos/{owner}/{repo}/pulls/<pr-number>/comments --jq '.[] | {path: .path, line: .line, body: .body, author: .user.login, diff_hunk: .diff_hunk}'
 ```
+
+**注意**: `{owner}/{repo}` は `git remote get-url origin` の出力から抽出する。値は英数字・ハイフン・アンダースコア・ドットのみで構成されることを検証し、不正な文字が含まれる場合はエラーとして中断する。
 
 ### B-3: コメントの分類
 
@@ -247,19 +272,21 @@ lint/型チェックが通るまで修正を繰り返す（最大3回）。
 1. 修正ループを即座に停止する
 2. 残りのエラー内容を一覧表示する
 3. 「自動修正の上限（3回）に達しました。以下のエラーは手動での修正が必要です。」と報告する
-4. それまでに成功した修正はコミット対象に含める（部分的成功を保持）
-5. **修正フローの後続ステップ（B-8以降）は、成功した修正分のみで続行する**
+4. **型チェックが失敗している状態ではコミット・プッシュを実行しない**（B-8以降を中断）
+5. ユーザーに手動修正を促し、修正完了後に再度 `/git:pr-cycle` を実行するよう案内する
 
 ### B-8: 自動コミット
 ```bash
 git add .
 git commit -m "$(cat <<'EOF'
-fix: PRレビューコメントに基づく修正
+fix: address PR review comments - <critical-count> critical, <recommended-count> recommended
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 EOF
 )"
 ```
+
+**注意**: コミットメッセージは修正内容のカウント情報を含め、複数回のレビュー修正コミットを区別できるようにする。
 
 ### B-9: 自動プッシュ
 ```bash
