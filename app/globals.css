@@ -530,3 +530,31 @@
     animation: dialog-fade-out 200ms ease-in;
   }
 }
+
+/**
+ * ダークモード: react-big-calendar のデフォルトボーダーをオーバーライド
+ * @layer外に配置してライブラリCSSより高い優先度を確保
+ * 時間グリッドの罫線を抑えめの色にする
+ */
+.dark .rbc-time-slot,
+.dark .rbc-timeslot-group,
+.dark .rbc-time-content,
+.dark .rbc-time-header,
+.dark .rbc-day-bg,
+.dark .rbc-day-slot {
+  border-color: hsl(222 15% 14%);
+}
+
+.dark .rbc-time-view {
+  border-color: hsl(222 15% 14%);
+}
+
+.dark .rbc-month-row,
+.dark .rbc-month-view,
+.dark .rbc-header {
+  border-color: hsl(222 15% 14%);
+}
+
+.dark .rbc-allday-cell {
+  border-bottom-color: hsl(222 15% 14%);
+}
