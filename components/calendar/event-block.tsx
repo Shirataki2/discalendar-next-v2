@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { CalendarEvent } from "@/lib/calendar/types";
+import { cn } from "@/lib/utils";
 
 export type EventBlockProps = {
   event: CalendarEvent;
@@ -46,14 +47,11 @@ export function EventBlock({
     onClick?.();
   }, [onClick]);
 
-  const baseClasses =
-    "event-block px-1.5 py-0.5 rounded text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500";
-
-  const allDayClasses = isAllDay
-    ? "event-block-all-day event-block-bar"
-    : "event-block-timed";
-
-  const combinedClasses = `${baseClasses} ${allDayClasses}`;
+  const combinedClasses = cn(
+    "event-block cursor-pointer rounded px-1.5 py-0.5 text-xs",
+    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
+    isAllDay ? "event-block-all-day event-block-bar" : "event-block-timed"
+  );
 
   const shouldShowTime = showTime === true && !isAllDay;
 
