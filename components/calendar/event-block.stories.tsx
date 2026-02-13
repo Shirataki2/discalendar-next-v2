@@ -11,6 +11,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { EventBlock } from "./event-block";
 
@@ -68,9 +69,11 @@ const meta: Meta<typeof EventBlock> = {
   },
   decorators: [
     (StoryFn) => (
-      <div style={{ width: "200px" }}>
-        <StoryFn />
-      </div>
+      <TooltipProvider>
+        <div style={{ width: "200px" }}>
+          <StoryFn />
+        </div>
+      </TooltipProvider>
     ),
   ],
 };
@@ -217,8 +220,8 @@ export const FocusState: Story = {
 
 /**
  * ツールチップ表示 (Task 8.1)
- * ホバー時にネイティブツールチップを表示
- * - 時間指定イベント: タイトルと時間
+ * ホバー時にshadcn/ui Tooltipでイベント名と時間を表示
+ * - 時間指定イベント: タイトルと開始〜終了時刻
  * - 終日イベント: タイトルと「終日」
  */
 export const WithTooltip: Story = {

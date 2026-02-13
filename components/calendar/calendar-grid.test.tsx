@@ -7,8 +7,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { CalendarGrid } from "./calendar-grid";
+
+function renderWithTooltip(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
 
 // jsdomでサポートされていないdocument.elementFromPointをモック
 // react-big-calendarのSelectionで使用される
@@ -54,7 +59,7 @@ describe("CalendarGrid", () => {
   };
 
   it("react-big-calendarコンポーネントをレンダリングする", () => {
-    render(<CalendarGrid {...defaultProps} />);
+    renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
     // react-big-calendarの典型的なDOM要素が存在することを確認
     const calendarElement = screen.getByRole("region", {
@@ -64,7 +69,7 @@ describe("CalendarGrid", () => {
   });
 
   it("月ビューモードで正しく表示する (Req 1.3)", () => {
-    render(<CalendarGrid {...defaultProps} viewMode="month" />);
+    renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="month" />);
 
     // 月ビューではカレンダーグリッドが表示される
     const calendarElement = screen.getByRole("region", {
@@ -78,7 +83,7 @@ describe("CalendarGrid", () => {
   });
 
   it("週ビューモードで正しく表示する (Req 1.2)", () => {
-    render(<CalendarGrid {...defaultProps} viewMode="week" />);
+    renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="week" />);
 
     // 週ビューでは時間軸が縦方向に表示される
     const calendarElement = screen.getByRole("region", {
@@ -91,7 +96,7 @@ describe("CalendarGrid", () => {
   });
 
   it("日ビューモードで正しく表示する (Req 1.1)", () => {
-    render(<CalendarGrid {...defaultProps} viewMode="day" />);
+    renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="day" />);
 
     // 日ビューでは1日の時間軸が縦方向に表示される
     const calendarElement = screen.getByRole("region", {
@@ -105,7 +110,9 @@ describe("CalendarGrid", () => {
 
   it("選択された日付を正しく反映する", () => {
     const selectedDate = new Date(2025, 11, 10);
-    render(<CalendarGrid {...defaultProps} selectedDate={selectedDate} />);
+    renderWithTooltip(
+      <CalendarGrid {...defaultProps} selectedDate={selectedDate} />
+    );
 
     // カレンダーが選択された日付を基準に表示される
     const calendarElement = screen.getByRole("region", {
@@ -115,7 +122,7 @@ describe("CalendarGrid", () => {
   });
 
   it("イベントをカレンダーグリッド上に配置して表示する (Req 3.1)", () => {
-    render(<CalendarGrid {...defaultProps} />);
+    renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
     // イベントがカレンダー上に表示される
     const event1 = screen.getByText("テストイベント1");
@@ -129,7 +136,9 @@ describe("CalendarGrid", () => {
     const user = userEvent.setup();
     const onEventClick = vi.fn();
 
-    render(<CalendarGrid {...defaultProps} onEventClick={onEventClick} />);
+    renderWithTooltip(
+      <CalendarGrid {...defaultProps} onEventClick={onEventClick} />
+    );
 
     // イベントをクリック
     const eventElement = screen.getByText("テストイベント1");
@@ -149,13 +158,16 @@ describe("CalendarGrid", () => {
     const user = userEvent.setup();
     const onDateChange = vi.fn();
 
-    render(<CalendarGrid {...defaultProps} onDateChange={onDateChange} />);
+    renderWithTooltip(
+      <CalendarGrid {...defaultProps} onDateChange={onDateChange} />
+    );
 
     // カレンダーグリッドの日付セルをクリック
     // react-big-calendarでは日付セルに data-date 属性が付与される
+    // 日付番号のみ（時刻表示「10:00」等を除外するため完全一致）
     const dateCell = screen
       .getAllByRole("button")
-      .find((button) => button.textContent?.includes("10"));
+      .find((button) => button.textContent?.trim() === "10");
 
     if (dateCell) {
       await user.click(dateCell);
@@ -166,7 +178,7 @@ describe("CalendarGrid", () => {
   });
 
   it("空のイベント配列でも正しくレンダリングされる", () => {
-    render(<CalendarGrid {...defaultProps} events={[]} />);
+    renderWithTooltip(<CalendarGrid {...defaultProps} events={[]} />);
 
     // カレンダーグリッドは表示される
     const calendarElement = screen.getByRole("region", {
@@ -177,7 +189,7 @@ describe("CalendarGrid", () => {
 
   it("今日の日付が正しく設定される", () => {
     const today = new Date(2025, 11, 5);
-    render(<CalendarGrid {...defaultProps} today={today} />);
+    renderWithTooltip(<CalendarGrid {...defaultProps} today={today} />);
 
     // カレンダーが表示される
     const calendarElement = screen.getByRole("region", {
@@ -216,7 +228,7 @@ describe("CalendarGrid", () => {
     ];
 
     it("イベントを開始日時に基づいてグリッド上の適切な位置に配置する (Req 3.2)", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           events={multipleEvents}
@@ -231,7 +243,7 @@ describe("CalendarGrid", () => {
     });
 
     it("日/週ビューでイベントの継続時間に応じた高さを設定する (Req 3.3)", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           events={multipleEvents}
@@ -248,7 +260,7 @@ describe("CalendarGrid", () => {
     });
 
     it("月ビューでイベントをコンパクトなバー形式で表示する (Req 3.4)", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           events={multipleEvents}
@@ -262,7 +274,7 @@ describe("CalendarGrid", () => {
     });
 
     it("同一時間帯の複数イベントを表示し、全てのイベントにアクセス可能にする (Req 3.5)", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           events={multipleEvents}
@@ -324,7 +336,7 @@ describe("CalendarGrid", () => {
     ];
 
     it("月ビューの日付セルあたりの表示イベント数を制限する (Req 3.6)", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           events={manyEventsOnSameDay}
@@ -340,7 +352,7 @@ describe("CalendarGrid", () => {
     });
 
     it("popup propを設定して「+N件」クリック時にポップアップを表示する (Req 3.6)", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           events={manyEventsOnSameDay}
@@ -356,7 +368,7 @@ describe("CalendarGrid", () => {
     });
 
     it("表示月外の日付セルが視覚的に区別される (Req 2.5)", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           selectedDate={new Date(2025, 11, 15)}
@@ -376,7 +388,7 @@ describe("CalendarGrid", () => {
   describe("Task 5.4: 今日の日付ハイライト機能の実装", () => {
     it("dayPropGetterを使用して今日の日付セルをハイライトする (Req 7.1)", () => {
       const today = new Date(2025, 11, 5);
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           selectedDate={today}
@@ -397,7 +409,7 @@ describe("CalendarGrid", () => {
 
     it("月ビューで今日の日付番号を強調表示する (Req 7.2)", () => {
       const today = new Date(2025, 11, 5);
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           selectedDate={today}
@@ -415,7 +427,7 @@ describe("CalendarGrid", () => {
 
     it("週ビューで今日の列ヘッダーを強調表示する (Req 7.3)", () => {
       const today = new Date(2025, 11, 5);
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           selectedDate={today}
@@ -433,7 +445,7 @@ describe("CalendarGrid", () => {
 
     it("日ビューで今日表示時にヘッダーを強調する (Req 7.4)", () => {
       const today = new Date(2025, 11, 5);
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           selectedDate={today}
@@ -452,7 +464,7 @@ describe("CalendarGrid", () => {
     it("今日以外の日付にはハイライトが適用されない", () => {
       const today = new Date(2025, 11, 5);
       const otherDate = new Date(2025, 11, 10);
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           selectedDate={otherDate}
@@ -474,7 +486,7 @@ describe("CalendarGrid", () => {
     it("onSlotSelect propを受け取り、selectableが有効な状態でレンダリングされる (Req 1.1)", () => {
       const onSlotSelect = vi.fn();
 
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           onSlotSelect={onSlotSelect}
@@ -493,7 +505,7 @@ describe("CalendarGrid", () => {
     });
 
     it("選択中のスロットにハイライトスタイルが適用される (Req 5.3)", () => {
-      render(<CalendarGrid {...defaultProps} viewMode="week" />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="week" />);
 
       // カレンダーが表示される
       const calendarElement = screen.getByRole("region", {
@@ -507,7 +519,7 @@ describe("CalendarGrid", () => {
     });
 
     it("slotPropGetterが時間スロットにスタイルを適用する", () => {
-      render(<CalendarGrid {...defaultProps} viewMode="week" />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="week" />);
 
       // 週ビューで時間スロットが表示される
       const calendarElement = screen.getByRole("region", {
@@ -525,7 +537,7 @@ describe("CalendarGrid", () => {
       const user = userEvent.setup();
 
       // onSlotSelectを設定せずにレンダリング
-      render(<CalendarGrid {...defaultProps} viewMode="week" />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="week" />);
 
       const calendarElement = screen.getByRole("region", {
         name: CALENDAR_REGION_PATTERN,
@@ -545,7 +557,7 @@ describe("CalendarGrid", () => {
     it("月ビューでもonSlotSelect propを受け取りレンダリングされる (Req 1.1)", () => {
       const onSlotSelect = vi.fn();
 
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           onSlotSelect={onSlotSelect}
@@ -563,7 +575,7 @@ describe("CalendarGrid", () => {
     });
 
     it("週ビューで時間スロットが表示される", () => {
-      render(<CalendarGrid {...defaultProps} viewMode="week" />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="week" />);
 
       // 時間スロットが表示される
       const timeSlots = document.querySelectorAll(".rbc-time-slot");
@@ -581,7 +593,7 @@ describe("CalendarGrid", () => {
       const onEventDrop = vi.fn();
       const onEventResize = vi.fn();
 
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           onEventDrop={onEventDrop}
@@ -598,7 +610,7 @@ describe("CalendarGrid", () => {
     });
 
     it("rbc-addons-dnd CSSクラスが存在する", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           onEventDrop={vi.fn()}
@@ -613,7 +625,7 @@ describe("CalendarGrid", () => {
     });
 
     it("DnD props が未設定でもエラーにならない", () => {
-      render(<CalendarGrid {...defaultProps} viewMode="week" />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} viewMode="week" />);
 
       const calendarElement = screen.getByRole("region", {
         name: CALENDAR_REGION_PATTERN,
@@ -622,7 +634,7 @@ describe("CalendarGrid", () => {
     });
 
     it("resizable=false の場合でも正常にレンダリングされる", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           onEventDrop={vi.fn()}
@@ -638,7 +650,7 @@ describe("CalendarGrid", () => {
     });
 
     it("月ビューでもDnDが有効な状態でレンダリングされる", () => {
-      render(
+      renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
           onEventDrop={vi.fn()}
