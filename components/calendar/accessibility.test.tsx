@@ -24,10 +24,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { CalendarGrid, type CalendarGridProps } from "./calendar-grid";
 import { CalendarToolbar, type CalendarToolbarProps } from "./calendar-toolbar";
 import { EventBlock, type EventBlockProps } from "./event-block";
+
+function renderWithTooltip(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
 
 // テスト用のモックイベント
 const mockEvent: CalendarEvent = {
@@ -148,7 +153,7 @@ describe("Task 9.1: キーボードナビゲーション (Req 8.1, 8.4)", () => 
     };
 
     it("Tabキーでイベントブロックにフォーカスできる", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventBlock = screen.getByTestId("event-block");
       eventBlock.focus();
@@ -159,7 +164,7 @@ describe("Task 9.1: キーボードナビゲーション (Req 8.1, 8.4)", () => 
     it("Enterキーでイベント詳細ポップオーバーを開く", async () => {
       const user = userEvent.setup();
       const onClick = vi.fn();
-      render(<EventBlock {...defaultProps} onClick={onClick} />);
+      renderWithTooltip(<EventBlock {...defaultProps} onClick={onClick} />);
 
       const eventBlock = screen.getByTestId("event-block");
       eventBlock.focus();
@@ -171,7 +176,7 @@ describe("Task 9.1: キーボードナビゲーション (Req 8.1, 8.4)", () => 
     it("Spaceキーでイベント詳細ポップオーバーを開く", async () => {
       const user = userEvent.setup();
       const onClick = vi.fn();
-      render(<EventBlock {...defaultProps} onClick={onClick} />);
+      renderWithTooltip(<EventBlock {...defaultProps} onClick={onClick} />);
 
       const eventBlock = screen.getByTestId("event-block");
       eventBlock.focus();
@@ -181,7 +186,7 @@ describe("Task 9.1: キーボードナビゲーション (Req 8.1, 8.4)", () => 
     });
 
     it("フォーカス状態の視覚的インジケーターが表示される", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventBlock = screen.getByTestId("event-block");
 
@@ -190,7 +195,7 @@ describe("Task 9.1: キーボードナビゲーション (Req 8.1, 8.4)", () => 
     });
 
     it("tabIndexが0に設定されている", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventBlock = screen.getByTestId("event-block");
       expect(eventBlock).toHaveAttribute("tabIndex", "0");
@@ -212,7 +217,7 @@ describe("Task 9.1: キーボードナビゲーション (Req 8.1, 8.4)", () => 
     });
 
     it("カレンダーグリッドがキーボード操作可能なことを示すroleを持つ", () => {
-      render(<CalendarGrid {...defaultProps} />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
       // カレンダーグリッドのコンテナがaria-labelを持つ
       const calendarGrid = screen.getByTestId("calendar-grid");
@@ -220,7 +225,7 @@ describe("Task 9.1: キーボードナビゲーション (Req 8.1, 8.4)", () => 
     });
 
     it("カレンダーがテーブル構造でアクセシブルに表示される", () => {
-      render(<CalendarGrid {...defaultProps} />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
       // react-big-calendarはテーブル構造でカレンダーを表示
       // rowgroup, row, cell, columnheader のロールが適用される
@@ -302,14 +307,14 @@ describe("Task 9.2: ARIAラベルとセマンティクス (Req 8.2, 8.3)", () =>
     });
 
     it("カレンダーグリッドにaria-labelが設定されている", () => {
-      render(<CalendarGrid {...defaultProps} />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
       const grid = screen.getByTestId("calendar-grid");
       expect(grid).toHaveAttribute("aria-label", "カレンダー");
     });
 
     it('日付セルにrole="cell"が適用されている', () => {
-      render(<CalendarGrid {...defaultProps} />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
       // react-big-calendarはrole="cell"を日付セルに適用
       const cells = screen.getAllByRole("cell");
@@ -317,7 +322,7 @@ describe("Task 9.2: ARIAラベルとセマンティクス (Req 8.2, 8.3)", () =>
     });
 
     it('グリッド行にrole="row"が適用されている', () => {
-      render(<CalendarGrid {...defaultProps} />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
       const rows = screen.getAllByRole("row");
       expect(rows.length).toBeGreaterThan(0);
@@ -331,14 +336,14 @@ describe("Task 9.2: ARIAラベルとセマンティクス (Req 8.2, 8.3)", () =>
     };
 
     it("イベントブロックにaria-labelが設定されている", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventBlock = screen.getByTestId("event-block");
       expect(eventBlock).toHaveAttribute("aria-label", "テストイベント");
     });
 
     it("終日イベントのaria-labelに「終日」が含まれる", () => {
-      render(
+      renderWithTooltip(
         <EventBlock event={mockAllDayEvent} title={mockAllDayEvent.title} />
       );
 
@@ -350,14 +355,14 @@ describe("Task 9.2: ARIAラベルとセマンティクス (Req 8.2, 8.3)", () =>
     });
 
     it("イベントブロックがbutton roleを持つ", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const button = screen.getByRole("button", { name: "テストイベント" });
       expect(button).toBeInTheDocument();
     });
 
     it("イベント情報をスクリーンリーダーで読み上げ可能にするaria-describedbyが設定されている", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventBlock = screen.getByTestId("event-block");
       // aria-describedbyまたは詳細なaria-labelが設定されている
@@ -370,14 +375,18 @@ describe("Task 9.2: ARIAラベルとセマンティクス (Req 8.2, 8.3)", () =>
 describe("Task 9.3: カラーコントラスト (Req 8.5)", () => {
   describe("EventBlock カラーコントラスト", () => {
     it("テキストカラーが白（#ffffff）で十分なコントラストを持つ", () => {
-      render(<EventBlock event={mockEvent} title={mockEvent.title} />);
+      renderWithTooltip(
+        <EventBlock event={mockEvent} title={mockEvent.title} />
+      );
 
       const eventBlock = screen.getByTestId("event-block");
       expect(eventBlock).toHaveStyle({ color: "#ffffff" });
     });
 
     it("イベントブロックに背景色が適用されている", () => {
-      render(<EventBlock event={mockEvent} title={mockEvent.title} />);
+      renderWithTooltip(
+        <EventBlock event={mockEvent} title={mockEvent.title} />
+      );
 
       const eventBlock = screen.getByTestId("event-block");
       expect(eventBlock).toHaveStyle({ backgroundColor: "#3b82f6" });
@@ -399,7 +408,7 @@ describe("Task 9.3: カラーコントラスト (Req 8.5)", () => {
     });
 
     it("今日の日付ハイライトがアクセシブルなコントラスト比を持つ", () => {
-      render(<CalendarGrid {...defaultProps} />);
+      renderWithTooltip(<CalendarGrid {...defaultProps} />);
 
       // 今日のハイライトセルを確認
       // react-big-calendarがtoday classを適用するかを確認
@@ -410,7 +419,9 @@ describe("Task 9.3: カラーコントラスト (Req 8.5)", () => {
 
   describe("フォーカス表示のコントラスト", () => {
     it("EventBlockのフォーカスリングが視認可能", () => {
-      render(<EventBlock event={mockEvent} title={mockEvent.title} />);
+      renderWithTooltip(
+        <EventBlock event={mockEvent} title={mockEvent.title} />
+      );
 
       const eventBlock = screen.getByTestId("event-block");
       // フォーカスリングのTailwindクラスが適用されている

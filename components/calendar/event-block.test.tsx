@@ -1,29 +1,16 @@
-/**
- * EventBlock - テスト
- *
- * タスク6.1: EventBlockカスタムレンダラーの作成
- * - react-big-calendarのcomponents.eventでカスタムレンダラーを設定する
- * - イベント名を表示し、長いテキストは省略する
- * - イベントカラーを背景色として適用する
- * - クリックとキーボード操作でのイベント選択に対応する
- * Requirements: 3.7, 8.4
- *
- * タスク6.2: 終日イベントの視覚的区別
- * - 終日イベントと時間指定イベントを異なるスタイルで表示する
- * - 月ビューで終日イベントを日付セル上部にバー形式で配置する
- * - 週/日ビューで終日イベントを時間軸上部の専用エリアに表示する
- * - 同一日の複数終日イベントを縦に積み重ねて表示する
- * Requirements: 9.1, 9.2, 9.3, 9.4, 9.6
- */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { EventBlock, type EventBlockProps } from "./event-block";
 
-// トップレベルに正規表現を定義（パフォーマンス最適化）
 const TIME_1400_PATTERN = /14:00/;
 const TIME_FORMAT_PATTERN = /\d{1,2}:\d{2}/;
+
+function renderWithTooltip(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
 
 describe("EventBlock", () => {
   const mockEvent: CalendarEvent = {
@@ -40,22 +27,33 @@ describe("EventBlock", () => {
     title: "テストイベント",
   };
 
-  // Task 6.1: EventBlockカスタムレンダラーの作成
   describe("Task 6.1: EventBlockカスタムレンダラー", () => {
-    it("イベント名を表示する (Req 3.7)", () => {
-      render(<EventBlock {...defaultProps} />);
+    it("イベント名を表示する", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       expect(screen.getByText("テストイベント")).toBeInTheDocument();
     });
 
-    it("長いイベント名は省略して表示する (Req 3.7)", () => {
+    it("デフォルトでは開始時刻を表示しない", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} />);
+
+      expect(screen.queryByText("10:00")).not.toBeInTheDocument();
+    });
+
+    it("showTime=true の場合は開始時刻を表示する", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} showTime />);
+
+      expect(screen.getByText("10:00")).toBeInTheDocument();
+    });
+
+    it("長いイベント名は省略して表示する", () => {
       const longTitleEvent: CalendarEvent = {
         ...mockEvent,
         title:
           "これはとても長いイベント名で、表示領域を超える可能性があります。この場合は省略記号で切り詰めて表示します。",
       };
 
-      render(
+      renderWithTooltip(
         <EventBlock
           {...defaultProps}
           event={longTitleEvent}
@@ -63,45 +61,38 @@ describe("EventBlock", () => {
         />
       );
 
-      // イベント名が表示される
       const eventElement = screen.getByText(longTitleEvent.title);
       expect(eventElement).toBeInTheDocument();
-
-      // テキストオーバーフロー時に省略されるスタイルが適用される
       expect(eventElement).toHaveClass("truncate");
     });
 
-    it("イベントカラーを背景色として適用する (Req 3.7)", () => {
-      render(<EventBlock {...defaultProps} />);
+    it("イベントカラーを背景色として適用する", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventElement = screen.getByTestId("event-block");
       expect(eventElement).toHaveStyle({ backgroundColor: "#3b82f6" });
     });
 
-    it("キーボード操作（Enter）でイベントを選択できる (Req 8.4)", async () => {
+    it("キーボード操作（Enter）でイベントを選択できる", async () => {
       const user = userEvent.setup();
       const onClick = vi.fn();
 
-      render(<EventBlock {...defaultProps} onClick={onClick} />);
+      renderWithTooltip(<EventBlock {...defaultProps} onClick={onClick} />);
 
       const eventElement = screen.getByTestId("event-block");
-
-      // フォーカスしてEnterキーを押す
       eventElement.focus();
       await user.keyboard("{Enter}");
 
       expect(onClick).toHaveBeenCalledTimes(1);
     });
 
-    it("キーボード操作（Space）でイベントを選択できる (Req 8.4)", async () => {
+    it("キーボード操作（Space）でイベントを選択できる", async () => {
       const user = userEvent.setup();
       const onClick = vi.fn();
 
-      render(<EventBlock {...defaultProps} onClick={onClick} />);
+      renderWithTooltip(<EventBlock {...defaultProps} onClick={onClick} />);
 
       const eventElement = screen.getByTestId("event-block");
-
-      // フォーカスしてSpaceキーを押す
       eventElement.focus();
       await user.keyboard(" ");
 
@@ -112,7 +103,7 @@ describe("EventBlock", () => {
       const user = userEvent.setup();
       const onClick = vi.fn();
 
-      render(<EventBlock {...defaultProps} onClick={onClick} />);
+      renderWithTooltip(<EventBlock {...defaultProps} onClick={onClick} />);
 
       const eventElement = screen.getByTestId("event-block");
       await user.click(eventElement);
@@ -121,31 +112,29 @@ describe("EventBlock", () => {
     });
 
     it("フォーカス可能である (tabIndex=0)", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventElement = screen.getByTestId("event-block");
       expect(eventElement).toHaveAttribute("tabIndex", "0");
     });
 
     it("適切なARIAロールが設定されている", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
-      // button要素は暗黙的にbutton roleを持つ
       const eventElement = screen.getByRole("button", {
         name: "テストイベント",
       });
       expect(eventElement).toBeInTheDocument();
     });
 
-    it("イベント名がARIAラベルとして設定されている (Req 8.4)", () => {
-      render(<EventBlock {...defaultProps} />);
+    it("イベント名がARIAラベルとして設定されている", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventElement = screen.getByTestId("event-block");
       expect(eventElement).toHaveAttribute("aria-label", "テストイベント");
     });
   });
 
-  // Task 6.2: 終日イベントの視覚的区別
   describe("Task 6.2: 終日イベントの視覚的区別", () => {
     const allDayEvent: CalendarEvent = {
       id: "2",
@@ -165,134 +154,84 @@ describe("EventBlock", () => {
       color: "#f59e0b",
     };
 
-    it("終日イベントと時間指定イベントを視覚的に区別する (Req 9.1)", () => {
-      const { rerender } = render(
+    it("終日イベントと時間指定イベントを視覚的に区別する", () => {
+      const { rerender } = renderWithTooltip(
         <EventBlock event={allDayEvent} title={allDayEvent.title} />
       );
 
-      // 終日イベントの要素を取得
       const allDayElement = screen.getByTestId("event-block");
       expect(allDayElement).toHaveAttribute("data-all-day", "true");
 
-      // 時間指定イベントに再レンダリング
-      rerender(<EventBlock event={timedEvent} title={timedEvent.title} />);
+      rerender(
+        <TooltipProvider>
+          <EventBlock event={timedEvent} title={timedEvent.title} />
+        </TooltipProvider>
+      );
 
-      // 時間指定イベントの要素を取得
       const timedElement = screen.getByTestId("event-block");
       expect(timedElement).toHaveAttribute("data-all-day", "false");
     });
 
-    it("終日イベントには専用のスタイルクラスが適用される (Req 9.1)", () => {
-      render(<EventBlock event={allDayEvent} title={allDayEvent.title} />);
+    it("終日イベントには専用のスタイルクラスが適用される", () => {
+      renderWithTooltip(
+        <EventBlock event={allDayEvent} title={allDayEvent.title} />
+      );
 
       const eventElement = screen.getByTestId("event-block");
       expect(eventElement).toHaveClass("event-block-all-day");
     });
 
-    it("時間指定イベントには専用のスタイルクラスが適用される (Req 9.1)", () => {
-      render(<EventBlock event={timedEvent} title={timedEvent.title} />);
+    it("時間指定イベントには専用のスタイルクラスが適用される", () => {
+      renderWithTooltip(
+        <EventBlock event={timedEvent} title={timedEvent.title} />
+      );
 
       const eventElement = screen.getByTestId("event-block");
       expect(eventElement).toHaveClass("event-block-timed");
     });
 
-    it("終日イベントはバー形式で表示される (Req 9.2)", () => {
-      render(<EventBlock event={allDayEvent} title={allDayEvent.title} />);
+    it("終日イベントはバー形式で表示される", () => {
+      renderWithTooltip(
+        <EventBlock event={allDayEvent} title={allDayEvent.title} />
+      );
 
       const eventElement = screen.getByTestId("event-block");
-      // バー形式のスタイル（幅100%、高さが固定）
       expect(eventElement).toHaveClass("event-block-bar");
     });
 
     it("時間指定イベントは時刻を表示する", () => {
-      render(
+      renderWithTooltip(
         <EventBlock event={timedEvent} showTime title={timedEvent.title} />
       );
 
-      // 時間が表示される
       expect(screen.getByText(TIME_1400_PATTERN)).toBeInTheDocument();
     });
 
     it("終日イベントには時刻が表示されない", () => {
-      render(
+      renderWithTooltip(
         <EventBlock event={allDayEvent} showTime title={allDayEvent.title} />
       );
 
-      // 終日イベントには時刻が表示されない
       expect(screen.queryByText(TIME_FORMAT_PATTERN)).not.toBeInTheDocument();
     });
 
     it("イベントブロックに正しいカラーが適用される", () => {
-      render(<EventBlock event={allDayEvent} title={allDayEvent.title} />);
+      renderWithTooltip(
+        <EventBlock event={allDayEvent} title={allDayEvent.title} />
+      );
 
       const eventElement = screen.getByTestId("event-block");
       expect(eventElement).toHaveStyle({ backgroundColor: "#10b981" });
     });
 
     it("テキストカラーは白で読みやすく表示される", () => {
-      render(<EventBlock {...defaultProps} />);
+      renderWithTooltip(<EventBlock {...defaultProps} />);
 
       const eventElement = screen.getByTestId("event-block");
       expect(eventElement).toHaveStyle({ color: "#ffffff" });
     });
   });
 
-  // Task 8.1: ホバー時のツールチップ表示
-  describe("Task 8.1: ホバー時のツールチップ表示", () => {
-    const timedEventForTooltip: CalendarEvent = {
-      id: "tooltip-1",
-      title: "会議",
-      start: new Date(2025, 11, 6, 14, 0),
-      end: new Date(2025, 11, 6, 15, 30),
-      allDay: false,
-      color: "#3b82f6",
-    };
-
-    const allDayEventForTooltip: CalendarEvent = {
-      id: "tooltip-2",
-      title: "祝日",
-      start: new Date(2025, 11, 6),
-      end: new Date(2025, 11, 6),
-      allDay: true,
-      color: "#ef4444",
-    };
-
-    it("時間指定イベントにはタイトルと時間を含むツールチップが表示される (Req 5.4)", () => {
-      render(
-        <EventBlock
-          event={timedEventForTooltip}
-          title={timedEventForTooltip.title}
-        />
-      );
-
-      const eventElement = screen.getByTestId("event-block");
-      // ツールチップにはイベント名と時間が含まれる
-      expect(eventElement).toHaveAttribute("title", "会議 (14:00 - 15:30)");
-    });
-
-    it("終日イベントにはタイトルと終日を含むツールチップが表示される (Req 5.4)", () => {
-      render(
-        <EventBlock
-          event={allDayEventForTooltip}
-          title={allDayEventForTooltip.title}
-        />
-      );
-
-      const eventElement = screen.getByTestId("event-block");
-      // 終日イベントのツールチップには「終日」が含まれる
-      expect(eventElement).toHaveAttribute("title", "祝日 (終日)");
-    });
-
-    it("ブラウザネイティブのtitle属性が設定されている (Req 5.4)", () => {
-      render(<EventBlock {...defaultProps} />);
-
-      const eventElement = screen.getByTestId("event-block");
-      // title属性が存在する
-      expect(eventElement).toHaveAttribute("title");
-    });
-  });
-
-  // エッジケース
   describe("エッジケース", () => {
     it("説明文が設定されている場合もイベント名のみ表示する", () => {
       const eventWithDescription: CalendarEvent = {
@@ -300,14 +239,13 @@ describe("EventBlock", () => {
         description: "これはイベントの説明文です",
       };
 
-      render(
+      renderWithTooltip(
         <EventBlock
           event={eventWithDescription}
           title={eventWithDescription.title}
         />
       );
 
-      // イベント名のみ表示（説明文はポップオーバーで表示）
       expect(screen.getByText("テストイベント")).toBeInTheDocument();
       expect(
         screen.queryByText("これはイベントの説明文です")
@@ -320,11 +258,10 @@ describe("EventBlock", () => {
         location: "東京都渋谷区",
       };
 
-      render(
+      renderWithTooltip(
         <EventBlock event={eventWithLocation} title={eventWithLocation.title} />
       );
 
-      // イベント名のみ表示
       expect(screen.getByText("テストイベント")).toBeInTheDocument();
       expect(screen.queryByText("東京都渋谷区")).not.toBeInTheDocument();
     });
@@ -335,7 +272,7 @@ describe("EventBlock", () => {
         title: "",
       };
 
-      render(
+      renderWithTooltip(
         <EventBlock event={emptyTitleEvent} title={emptyTitleEvent.title} />
       );
 

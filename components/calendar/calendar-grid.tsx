@@ -57,7 +57,7 @@ import {
   calendarMessages,
 } from "@/lib/calendar/localizer";
 import type { CalendarEvent } from "@/lib/calendar/types";
-import { EventBlockWrapper } from "./event-block";
+import { EventBlockWrapper, MonthEventBlockWrapper } from "./event-block";
 
 export type { EventInteractionArgs } from "react-big-calendar/lib/addons/dragAndDrop";
 
@@ -71,10 +71,14 @@ const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
  * react-big-calendarのカスタムコンポーネント設定
  * Task 6.1, 6.2: EventBlockカスタムレンダラーを使用
  * ツールバーは非表示（手動で作成したCalendarToolbarを使用するため）
+ * 月表示のみ開始時刻を表示する専用ラッパーを使用
  */
 const calendarComponents = {
   event: EventBlockWrapper,
-  toolbar: () => null, // Big Calendarのツールバーを非表示
+  month: {
+    event: MonthEventBlockWrapper,
+  },
+  toolbar: () => null,
 };
 
 /**
