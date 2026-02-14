@@ -17,6 +17,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useCallback, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
+import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
 import { SelectableGuildCard } from "@/components/guilds/selectable-guild-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +27,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGuildPermissions } from "@/hooks/guilds/use-guild-permissions";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
 import { cn } from "@/lib/utils";
+
+/**
+ * ギルドごとの権限情報（Server Component からシリアライズ可能な形式）
+ */
+export type GuildPermissionInfo = {
+  /** Discord 権限ビットフィールド文字列 */
+  permissionsBitfield: string;
+  /** guild_config の restricted フラグ */
+  restricted: boolean;
+};
 
 /**
  * DashboardWithCalendarのProps
@@ -38,6 +50,8 @@ export type DashboardWithCalendarProps = {
   guilds: Guild[];
   /** ギルド取得時のエラー（オプション） */
   guildError?: GuildListError;
+  /** ギルドごとの権限情報マップ（guildId → 権限情報） */
+  guildPermissions?: Record<string, GuildPermissionInfo>;
 };
 
 /**
@@ -260,7 +274,13 @@ function DesktopGuildSidebar({
 /**
  * カレンダー表示エリアコンポーネント
  */
-function CalendarArea({ selectedGuildId }: { selectedGuildId: string | null }) {
+function CalendarArea({
+  selectedGuildId,
+  canEditEvents,
+}: {
+  selectedGuildId: string | null;
+  canEditEvents: boolean;
+}) {
   return (
     <section
       aria-label="カレンダー"
@@ -268,7 +288,10 @@ function CalendarArea({ selectedGuildId }: { selectedGuildId: string | null }) {
     >
       {selectedGuildId ? (
         <div className="flex flex-1 flex-col rounded-lg border">
-          <CalendarContainer guildId={selectedGuildId} />
+          <CalendarContainer
+            canEditEvents={canEditEvents}
+            guildId={selectedGuildId}
+          />
         </div>
       ) : (
         <div className="flex min-h-[500px] flex-col items-center justify-center rounded-lg border border-dashed p-8 lg:min-h-[600px]">
@@ -292,15 +315,37 @@ function CalendarArea({ selectedGuildId }: { selectedGuildId: string | null }) {
  * ギルド選択とカレンダー表示を統合したダッシュボードメインコンテンツ。
  * ギルドカードをクリックすることでカレンダーに表示するギルドを切り替える。
  * デスクトップではサイドバーの折りたたみ/展開が可能、モバイルではドロップダウン形式。
+ *
+ * guild-permissions Task 7.2:
+ * - useGuildPermissions Hook で権限状態を管理
+ * - canEditEvents に基づいてカレンダー操作を制御
+ * - canManageGuild に基づいて GuildSettingsPanel の表示/非表示を制御
  */
 export function DashboardWithCalendar({
   guilds,
   guildError,
+  guildPermissions,
 }: DashboardWithCalendarProps) {
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
     "discalendar:sidebar-collapsed",
     false
+  );
+
+  // 選択中ギルドの権限情報を取得
+  const selectedPermInfo = selectedGuildId
+    ? guildPermissions?.[selectedGuildId]
+    : undefined;
+
+  // guild-permissions: 権限状態を計算
+  const {
+    canManageGuild,
+    canEditEvents,
+    isLoading: permissionsLoading,
+  } = useGuildPermissions(
+    selectedGuildId,
+    selectedPermInfo?.permissionsBitfield ?? null,
+    selectedPermInfo?.restricted ?? false
   );
 
   const handleGuildSelect = useCallback((guildId: string) => {
@@ -310,6 +355,9 @@ export function DashboardWithCalendar({
   const handleToggleCollapse = useCallback(() => {
     setSidebarCollapsed((prev) => !prev);
   }, [setSidebarCollapsed]);
+
+  // Req 5.5: ローディング中は操作を無効化
+  const effectiveCanEdit = permissionsLoading ? false : canEditEvents;
 
   return (
     <div className="flex flex-1 flex-col gap-8 lg:flex-row lg:gap-6">
@@ -327,7 +375,20 @@ export function DashboardWithCalendar({
         onToggleCollapse={handleToggleCollapse}
         selectedGuildId={selectedGuildId}
       />
-      <CalendarArea selectedGuildId={selectedGuildId} />
+      <div className="flex flex-1 flex-col gap-4">
+        {/* Req 5.3: 管理権限のあるユーザーにのみ設定パネルを表示 */}
+        {selectedGuildId !== null && canManageGuild && selectedPermInfo ? (
+          <GuildSettingsPanel
+            guildId={selectedGuildId}
+            permissionsBitfield={selectedPermInfo.permissionsBitfield}
+            restricted={selectedPermInfo.restricted}
+          />
+        ) : null}
+        <CalendarArea
+          canEditEvents={effectiveCanEdit}
+          selectedGuildId={selectedGuildId}
+        />
+      </div>
     </div>
   );
 }

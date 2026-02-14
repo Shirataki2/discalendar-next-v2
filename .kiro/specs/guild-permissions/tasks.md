@@ -72,8 +72,8 @@
   - restricted フラグが無効なギルドでは既存の動作を維持する（全認証ユーザーに操作を許可）
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 7. UI への権限制御統合
-- [ ] 7.1 ギルド設定パネルコンポーネントを作成する
+- [x] 7. UI への権限制御統合
+- [x] 7.1 ギルド設定パネルコンポーネントを作成する
   - `GuildSettingsPanel` コンポーネントを実装し、管理権限のあるユーザーにのみ表示する
   - shadcn/ui の Switch コンポーネントで restricted フラグのトグルを提供する
   - トグル変更時に `updateGuildConfig` Server Action を呼び出す
@@ -82,7 +82,7 @@
   - Storybook ストーリー（管理者表示、非管理者非表示、ローディング状態）を作成する
   - _Requirements: 5.3, 5.4_
 
-- [ ] 7.2 ダッシュボードとカレンダーに権限ベースの表示制御を適用する
+- [x] 7.2 ダッシュボードとカレンダーに権限ベースの表示制御を適用する
   - ダッシュボードの Server Component で `GuildWithPermissions` と `GuildConfig` を取得し、Client Component に渡す
   - `useGuildPermissions` Hook を使用して権限状態を取得する
   - `canEditEvents` が false の場合、イベント作成ボタンを disabled にする

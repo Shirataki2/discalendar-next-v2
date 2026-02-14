@@ -150,11 +150,39 @@ function calculateNavigationDate(
 }
 
 /**
+ * Date | string を Date に変換するヘルパー
+ */
+function toDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+/**
+ * ギルドが未選択かどうかを判定する
+ */
+function isGuildEmpty(guildId: string | null): boolean {
+  return !guildId || guildId.trim() === "";
+}
+
+/**
+ * 編集操作が有効かどうかを判定するヘルパー
+ *
+ * guild-permissions 5.2: ギルド選択済みかつ編集権限がある場合のみ true
+ */
+function canInteractWithEvents(
+  shouldShowEmpty: boolean,
+  canEditEvents: boolean
+): boolean {
+  return !shouldShowEmpty && canEditEvents;
+}
+
+/**
  * CalendarContainerのProps
  */
 export type CalendarContainerProps = {
   /** ギルドID（nullまたは空文字列の場合は未選択） */
   guildId: string | null;
+  /** イベント編集可否（権限制御）。undefined の場合は true（後方互換性） */
+  canEditEvents?: boolean;
 };
 
 /**
@@ -276,7 +304,10 @@ function useEventPopover() {
  * <CalendarContainer guildId="123456789" />
  * ```
  */
-export function CalendarContainer({ guildId }: CalendarContainerProps) {
+export function CalendarContainer({
+  guildId,
+  canEditEvents = true,
+}: CalendarContainerProps) {
   // URL同期されたビューモードと日付
   const { viewMode, selectedDate, setViewMode, setSelectedDate } =
     useCalendarUrlSync();
@@ -340,7 +371,7 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
    */
   const fetchEvents = useCallback(async () => {
     // ギルドが選択されていない場合は何もしない
-    if (!guildId || guildId.trim() === "") {
+    if (isGuildEmpty(guildId)) {
       actions.clearEvents();
       return;
     }
@@ -544,8 +575,8 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
       isAllDay?: boolean;
     }) => {
       const { event, start, end, isAllDay } = args;
-      const newStart = start instanceof Date ? start : new Date(start);
-      const newEnd = end instanceof Date ? end : new Date(end);
+      const newStart = toDate(start);
+      const newEnd = toDate(end);
 
       // オプティミスティック更新: ローカル状態を即座に更新
       const updatedEvents = state.events.map((e) =>
@@ -581,8 +612,8 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
       end: Date | string;
     }) => {
       const { event, start, end } = args;
-      const newStart = start instanceof Date ? start : new Date(start);
-      const newEnd = end instanceof Date ? end : new Date(end);
+      const newStart = toDate(start);
+      const newEnd = toDate(end);
 
       // オプティミスティック更新: ローカル状態を即座に更新
       const updatedEvents = state.events.map((e) =>
@@ -605,25 +636,26 @@ export function CalendarContainer({ guildId }: CalendarContainerProps) {
   );
 
   // ギルド未選択時は空のカレンダーを表示 (Req 5.2)
-  const shouldShowEmpty = !guildId || guildId.trim() === "";
+  const shouldShowEmpty = isGuildEmpty(guildId);
 
   // Task 7.1: ギルド選択時のみ追加ボタンを有効化
   const toolbarAddClickHandler = shouldShowEmpty ? undefined : handleAddClick;
 
-  // Task 7.2: ギルド選択時のみ編集・削除ハンドラーを有効化
-  const popoverEditHandler = shouldShowEmpty ? undefined : handleEditEvent;
-  const popoverDeleteHandler = shouldShowEmpty ? undefined : handleDeleteEvent;
+  // guild-permissions 5.1: 権限不足時は追加ボタンを disabled にする
+  const isAddDisabled = canEditEvents ? undefined : true;
 
-  // DnD: ギルド選択時のみドラッグ＆ドロップを有効化
-  const gridEventDropHandler = shouldShowEmpty ? undefined : handleEventDrop;
-  const gridEventResizeHandler = shouldShowEmpty
-    ? undefined
-    : handleEventResize;
+  // guild-permissions 5.2: 編集・削除・DnD は選択済みかつ権限がある場合のみ有効化
+  const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
+  const popoverEditHandler = canInteract ? handleEditEvent : undefined;
+  const popoverDeleteHandler = canInteract ? handleDeleteEvent : undefined;
+  const gridEventDropHandler = canInteract ? handleEventDrop : undefined;
+  const gridEventResizeHandler = canInteract ? handleEventResize : undefined;
 
   return (
     <div className="flex flex-1 flex-col" data-testid="calendar-container">
       {/* ツールバー */}
       <CalendarToolbar
+        isAddDisabled={isAddDisabled}
         isMobile={isMobile}
         onAddClick={toolbarAddClickHandler}
         onNavigate={handleNavigate}

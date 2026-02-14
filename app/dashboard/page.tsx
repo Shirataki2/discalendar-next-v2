@@ -9,6 +9,7 @@ import {
   getOrSetPendingRequest,
   setCachedGuilds,
 } from "@/lib/guilds/cache";
+import { createGuildConfigService } from "@/lib/guilds/guild-config-service";
 import { getJoinedGuilds } from "@/lib/guilds/service";
 import type {
   Guild,
@@ -16,7 +17,10 @@ import type {
   GuildWithPermissions,
 } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardWithCalendar } from "./dashboard-with-calendar";
+import {
+  DashboardWithCalendar,
+  type GuildPermissionInfo,
+} from "./dashboard-with-calendar";
 
 // 認証状態を取得するため動的レンダリングを強制
 export const dynamic = "force-dynamic";
@@ -40,6 +44,7 @@ export type DashboardUser = {
  *
  * Requirements:
  * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
+ * - guild-permissions 7.2: 権限情報をクライアントに渡す
  */
 export type DashboardPageClientProps = {
   /** 認証済みユーザー情報 */
@@ -48,6 +53,8 @@ export type DashboardPageClientProps = {
   guilds: Guild[];
   /** ギルド取得時のエラー（オプション） */
   guildError?: GuildListError;
+  /** ギルドごとの権限情報マップ（guildId → 権限情報） */
+  guildPermissions?: Record<string, GuildPermissionInfo>;
 };
 
 /**
@@ -78,6 +85,7 @@ export function DashboardPageClient({
   user,
   guilds,
   guildError,
+  guildPermissions,
 }: DashboardPageClientProps) {
   const displayName = user.fullName ?? user.email;
   const initials = getUserInitials(user);
@@ -125,8 +133,12 @@ export function DashboardPageClient({
             </p>
           </div>
 
-          {/* ギルド一覧とカレンダー統合 (Task 10.1) */}
-          <DashboardWithCalendar guildError={guildError} guilds={guilds} />
+          {/* ギルド一覧とカレンダー統合 (Task 10.1, guild-permissions 7.2) */}
+          <DashboardWithCalendar
+            guildError={guildError}
+            guildPermissions={guildPermissions}
+            guilds={guilds}
+          />
         </div>
       </main>
     </div>
@@ -271,6 +283,40 @@ function mergePermissions(
 }
 
 /**
+ * ギルド権限情報マップを構築する
+ *
+ * GuildWithPermissions 配列から権限ビットフィールド文字列を抽出し、
+ * guild_config テーブルから restricted フラグを取得して、
+ * クライアントコンポーネントにシリアライズ可能な形式にまとめる。
+ *
+ * Requirements: guild-permissions 7.2
+ */
+async function buildGuildPermissions(
+  guilds: GuildWithPermissions[],
+  supabase: Parameters<typeof createGuildConfigService>[0]
+): Promise<Record<string, GuildPermissionInfo>> {
+  if (guilds.length === 0) {
+    return {};
+  }
+
+  const configService = createGuildConfigService(supabase);
+  const configs = await Promise.all(
+    guilds.map((guild) => configService.getGuildConfig(guild.guildId))
+  );
+
+  const permissions: Record<string, GuildPermissionInfo> = {};
+  for (let i = 0; i < guilds.length; i++) {
+    const guild = guilds[i];
+    permissions[guild.guildId] = {
+      permissionsBitfield: guild.permissions.raw.toString(),
+      restricted: configs[i].restricted,
+    };
+  }
+
+  return permissions;
+}
+
+/**
  * ダッシュボードページ（Server Component）
  *
  * 認証後のランディングページとして機能する。
@@ -281,6 +327,7 @@ function mergePermissions(
  * - 5.2: Supabaseクライアント（Server用）を使用してDBクエリを実行する
  * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
  * - 5.4: 未認証ユーザーをログインページへリダイレクト
+ * - guild-permissions 7.2: 権限情報をクライアントに渡す
  *
  * Note: Middlewareで認証済みユーザーのみがアクセスできるよう保護されている。
  * 万が一未認証の場合はログインページへリダイレクト。
@@ -320,9 +367,13 @@ export default async function DashboardPage() {
     providerToken
   );
 
+  // guild-permissions 7.2: ギルド権限情報マップを構築
+  const guildPermissions = await buildGuildPermissions(guilds, supabase);
+
   return (
     <DashboardPageClient
       guildError={guildError}
+      guildPermissions={guildPermissions}
       guilds={guilds}
       user={dashboardUser}
     />

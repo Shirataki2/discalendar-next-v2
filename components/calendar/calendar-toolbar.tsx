@@ -29,6 +29,8 @@ export type CalendarToolbarProps = {
   isMobile: boolean;
   /** 新規追加ボタンクリックハンドラー */
   onAddClick?: () => void;
+  /** 追加ボタンの無効化状態（権限不足時） */
+  isAddDisabled?: boolean;
 };
 
 /**
@@ -88,6 +90,7 @@ export function CalendarToolbar({
   onNavigate,
   isMobile,
   onAddClick,
+  isAddDisabled,
 }: CalendarToolbarProps) {
   const dateRangeLabel = getDateRangeLabel(viewMode, selectedDate);
 
@@ -108,11 +111,12 @@ export function CalendarToolbar({
       >
         {/* 新規追加と日付ナビゲーション */}
         <div className="flex items-center gap-2">
-          {/* 新規追加ボタン (Task 6.2) */}
+          {/* 新規追加ボタン (Task 6.2, guild-permissions 5.1) */}
           {onAddClick ? (
             <Button
               aria-label="予定を追加"
               data-testid="add-event-button"
+              disabled={isAddDisabled}
               onClick={onAddClick}
               size={isMobile ? "sm" : "default"}
               type="button"
