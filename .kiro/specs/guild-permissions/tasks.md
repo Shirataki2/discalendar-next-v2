@@ -31,7 +31,7 @@
   - DB エラー時のエラーレスポンスを検証する
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 3. ギルド一覧の権限情報拡張
+- [x] 3. ギルド一覧の権限情報拡張
   - 既存の `Guild` 型を拡張した `GuildWithPermissions` 型を定義し、解析済み権限情報を含める
   - `fetchGuilds()` の処理フローを拡張し、Discord API から取得済みの `DiscordGuild.permissions` フィールドを `parsePermissions` で解析して `GuildWithPermissions` として返す
   - 未認証時はフェイルセーフとして全権限を拒否する（全フラグ false のデフォルト権限を付与）

@@ -3,13 +3,18 @@ import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { getUserGuilds } from "@/lib/discord/client";
+import { parsePermissions } from "@/lib/discord/permissions";
 import {
   getCachedGuilds,
   getOrSetPendingRequest,
   setCachedGuilds,
 } from "@/lib/guilds/cache";
 import { getJoinedGuilds } from "@/lib/guilds/service";
-import type { Guild, GuildListError } from "@/lib/guilds/types";
+import type {
+  Guild,
+  GuildListError,
+  GuildWithPermissions,
+} from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardWithCalendar } from "./dashboard-with-calendar";
 
@@ -144,7 +149,7 @@ export function DashboardPageClient({
 export async function fetchGuilds(
   userId: string,
   providerToken: string | null | undefined
-): Promise<{ guilds: Guild[]; error?: GuildListError }> {
+): Promise<{ guilds: GuildWithPermissions[]; error?: GuildListError }> {
   // provider_tokenが存在しない場合
   if (!providerToken) {
     return {
@@ -182,11 +187,17 @@ export async function fetchGuilds(
         return { guilds: [] };
       }
 
+      // Discord ギルドごとの権限ビットフィールドをマップに保持
+      const permissionsMap = new Map<string, string>();
+      for (const dg of discordResult.data) {
+        permissionsMap.set(dg.id, dg.permissions);
+      }
+
       // ギルドIDリストを抽出
       const guildIds = discordResult.data.map((guild) => guild.id);
 
       if (guildIds.length === 0) {
-        const emptyGuilds: Guild[] = [];
+        const emptyGuilds: GuildWithPermissions[] = [];
         // 空配列もキャッシュする（リクエストIDを渡して一貫性を保つ）
         setCachedGuilds(userId, emptyGuilds, requestId);
         return { guilds: emptyGuilds };
@@ -195,9 +206,16 @@ export async function fetchGuilds(
       // DB照合を実行
       try {
         const joinedGuilds = await getJoinedGuilds(guildIds);
+
+        // 権限情報をマージして GuildWithPermissions に変換
+        const guildsWithPermissions = mergePermissions(
+          joinedGuilds,
+          permissionsMap
+        );
+
         // 成功時のみキャッシュに保存（リクエストIDを渡して古いリクエストの結果で上書きされないようにする）
-        setCachedGuilds(userId, joinedGuilds, requestId);
-        return { guilds: joinedGuilds };
+        setCachedGuilds(userId, guildsWithPermissions, requestId);
+        return { guilds: guildsWithPermissions };
       } catch (dbError) {
         console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
         // DBエラー情報を保持
@@ -231,6 +249,25 @@ export async function fetchGuilds(
       error: { type: "api_error", message: errorMessage },
     };
   }
+}
+
+/**
+ * Guild 配列に Discord 権限情報をマージする
+ *
+ * Discord API から取得した権限ビットフィールドを解析し、
+ * DB から取得したギルド情報に付加する。
+ * 権限情報が見つからない場合はフェイルセーフとしてデフォルト権限（全 false）を付与する。
+ *
+ * Requirements: guild-permissions 2.1, 2.3
+ */
+function mergePermissions(
+  guilds: Guild[],
+  permissionsMap: Map<string, string>
+): GuildWithPermissions[] {
+  return guilds.map((guild) => ({
+    ...guild,
+    permissions: parsePermissions(permissionsMap.get(guild.guildId) ?? ""),
+  }));
 }
 
 /**
