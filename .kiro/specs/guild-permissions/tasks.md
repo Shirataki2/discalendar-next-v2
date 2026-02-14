@@ -1,7 +1,7 @@
 # Implementation Plan
 
 - [ ] 1. 権限解析基盤の構築
-- [ ] 1.1 (P) Discord 権限ビットフィールド解析ユーティリティを作成する
+- [x] 1.1 (P) Discord 権限ビットフィールド解析ユーティリティを作成する
   - Discord 権限ビットフィールド文字列を受け取り、各管理権限フラグ（administrator, manageGuild, manageChannels, manageMessages, manageRoles, manageEvents）をブール値として返す `parsePermissions` 関数を実装する
   - BigInt を使用してビット演算を行い、64 ビット超のフラグ（manageEvents = 1 << 33 等）に対応する
   - 入力が空文字列または "0" の場合はすべてのフラグを false として返す
@@ -9,7 +9,7 @@
   - 解析結果の型 `DiscordPermissions` とフラグ定数 `DISCORD_PERMISSION_FLAGS` を定義する
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 1.2 (P) parsePermissions のユニットテストを作成する
+- [x] 1.2 (P) parsePermissions のユニットテストを作成する
   - 全フラグ ON（administrator ビットフィールド等）、全フラグ OFF（"0"）、空文字列のケースを検証する
   - 個別フラグの解析精度を検証する（manageGuild のみ ON、manageRoles のみ ON 等）
   - `canManageGuild` の判定ロジックを検証する（各管理権限の単独 true、全て false、複数 true の組み合わせ）
@@ -17,7 +17,7 @@
   - _Requirements: 1.1, 1.2, 1.3_
 
 - [ ] 2. ギルド設定サービスの構築
-- [ ] 2.1 (P) GuildConfigService を作成する
+- [x] 2.1 (P) GuildConfigService を作成する
   - Supabase クライアントを受け取るファクトリ関数 `createGuildConfigService` を実装する
   - `getGuildConfig(guildId)`: guild_config テーブルから restricted フラグを取得する。レコードが存在しない場合は `restricted: false` をデフォルト値として返す
   - `upsertGuildConfig(guildId, config)`: guild_config テーブルに restricted フラグを挿入または更新する（PostgreSQL の UPSERT を使用）
@@ -25,7 +25,7 @@
   - `GuildConfig` 型（guildId, restricted）を定義する
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 2.2 (P) GuildConfigService のユニットテストを作成する
+- [x] 2.2 (P) GuildConfigService のユニットテストを作成する
   - `getGuildConfig`: レコードが存在する場合の取得、レコードが存在しない場合のデフォルト値返却を検証する
   - `upsertGuildConfig`: 新規作成（INSERT）と既存更新（UPDATE）の両パターンを検証する
   - DB エラー時のエラーレスポンスを検証する
