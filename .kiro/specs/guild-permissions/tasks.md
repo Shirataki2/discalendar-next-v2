@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. 権限解析基盤の構築
+- [x] 1. 権限解析基盤の構築
 - [x] 1.1 (P) Discord 権限ビットフィールド解析ユーティリティを作成する
   - Discord 権限ビットフィールド文字列を受け取り、各管理権限フラグ（administrator, manageGuild, manageChannels, manageMessages, manageRoles, manageEvents）をブール値として返す `parsePermissions` 関数を実装する
   - BigInt を使用してビット演算を行い、64 ビット超のフラグ（manageEvents = 1 << 33 等）に対応する
@@ -16,7 +16,7 @@
   - 不正な入力（非数値文字列）に対するエッジケースを検証する
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 2. ギルド設定サービスの構築
+- [x] 2. ギルド設定サービスの構築
 - [x] 2.1 (P) GuildConfigService を作成する
   - Supabase クライアントを受け取るファクトリ関数 `createGuildConfigService` を実装する
   - `getGuildConfig(guildId)`: guild_config テーブルから restricted フラグを取得する。レコードが存在しない場合は `restricted: false` をデフォルト値として返す
@@ -91,7 +91,7 @@
   - ギルド設定パネルをダッシュボードに配置し、`canManageGuild` に基づいて表示/非表示を制御する
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ]* 8. 権限チェック統合テスト
+- [x] 8. 権限チェック統合テスト
   - Server Action `updateGuildConfig` の統合テスト: 管理権限ありの場合に DB が更新されること、管理権限なしの場合に PERMISSION_DENIED が返ることを検証する
   - イベント操作の権限チェック統合テスト: restricted ギルドでの管理者による操作成功、一般ユーザーによる操作拒否を検証する
   - `fetchGuilds` 拡張の統合テスト: Discord API レスポンスから `GuildWithPermissions` が正しく生成されることを検証する
