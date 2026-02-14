@@ -3,15 +3,23 @@ import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { getUserGuilds } from "@/lib/discord/client";
+import { parsePermissions } from "@/lib/discord/permissions";
 import {
   getCachedGuilds,
   getOrSetPendingRequest,
   setCachedGuilds,
 } from "@/lib/guilds/cache";
 import { getJoinedGuilds } from "@/lib/guilds/service";
-import type { Guild, GuildListError } from "@/lib/guilds/types";
+import type {
+  Guild,
+  GuildListError,
+  GuildWithPermissions,
+} from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardWithCalendar } from "./dashboard-with-calendar";
+import {
+  DashboardWithCalendar,
+  type GuildPermissionInfo,
+} from "./dashboard-with-calendar";
 
 // 認証状態を取得するため動的レンダリングを強制
 export const dynamic = "force-dynamic";
@@ -35,6 +43,7 @@ export type DashboardUser = {
  *
  * Requirements:
  * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
+ * - guild-permissions 7.2: 権限情報をクライアントに渡す
  */
 export type DashboardPageClientProps = {
   /** 認証済みユーザー情報 */
@@ -43,6 +52,8 @@ export type DashboardPageClientProps = {
   guilds: Guild[];
   /** ギルド取得時のエラー（オプション） */
   guildError?: GuildListError;
+  /** ギルドごとの権限情報マップ（guildId → 権限情報） */
+  guildPermissions?: Record<string, GuildPermissionInfo>;
 };
 
 /**
@@ -73,6 +84,7 @@ export function DashboardPageClient({
   user,
   guilds,
   guildError,
+  guildPermissions,
 }: DashboardPageClientProps) {
   const displayName = user.fullName ?? user.email;
   const initials = getUserInitials(user);
@@ -120,8 +132,12 @@ export function DashboardPageClient({
             </p>
           </div>
 
-          {/* ギルド一覧とカレンダー統合 (Task 10.1) */}
-          <DashboardWithCalendar guildError={guildError} guilds={guilds} />
+          {/* ギルド一覧とカレンダー統合 (Task 10.1, guild-permissions 7.2) */}
+          <DashboardWithCalendar
+            guildError={guildError}
+            guildPermissions={guildPermissions}
+            guilds={guilds}
+          />
         </div>
       </main>
     </div>
@@ -144,7 +160,7 @@ export function DashboardPageClient({
 export async function fetchGuilds(
   userId: string,
   providerToken: string | null | undefined
-): Promise<{ guilds: Guild[]; error?: GuildListError }> {
+): Promise<{ guilds: GuildWithPermissions[]; error?: GuildListError }> {
   // provider_tokenが存在しない場合
   if (!providerToken) {
     return {
@@ -182,11 +198,17 @@ export async function fetchGuilds(
         return { guilds: [] };
       }
 
+      // Discord ギルドごとの権限ビットフィールドをマップに保持
+      const permissionsMap = new Map<string, string>();
+      for (const dg of discordResult.data) {
+        permissionsMap.set(dg.id, dg.permissions);
+      }
+
       // ギルドIDリストを抽出
       const guildIds = discordResult.data.map((guild) => guild.id);
 
       if (guildIds.length === 0) {
-        const emptyGuilds: Guild[] = [];
+        const emptyGuilds: GuildWithPermissions[] = [];
         // 空配列もキャッシュする（リクエストIDを渡して一貫性を保つ）
         setCachedGuilds(userId, emptyGuilds, requestId);
         return { guilds: emptyGuilds };
@@ -195,9 +217,16 @@ export async function fetchGuilds(
       // DB照合を実行
       try {
         const joinedGuilds = await getJoinedGuilds(guildIds);
+
+        // 権限情報をマージして GuildWithPermissions に変換
+        const guildsWithPermissions = mergePermissions(
+          joinedGuilds,
+          permissionsMap
+        );
+
         // 成功時のみキャッシュに保存（リクエストIDを渡して古いリクエストの結果で上書きされないようにする）
-        setCachedGuilds(userId, joinedGuilds, requestId);
-        return { guilds: joinedGuilds };
+        setCachedGuilds(userId, guildsWithPermissions, requestId);
+        return { guilds: guildsWithPermissions };
       } catch (dbError) {
         console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
         // DBエラー情報を保持
@@ -234,6 +263,70 @@ export async function fetchGuilds(
 }
 
 /**
+ * Guild 配列に Discord 権限情報をマージする
+ *
+ * Discord API から取得した権限ビットフィールドを解析し、
+ * DB から取得したギルド情報に付加する。
+ * 権限情報が見つからない場合はフェイルセーフとしてデフォルト権限（全 false）を付与する。
+ *
+ * Requirements: guild-permissions 2.1, 2.3
+ */
+function mergePermissions(
+  guilds: Guild[],
+  permissionsMap: Map<string, string>
+): GuildWithPermissions[] {
+  return guilds.map((guild) => ({
+    ...guild,
+    permissions: parsePermissions(permissionsMap.get(guild.guildId) ?? ""),
+  }));
+}
+
+/**
+ * ギルド権限情報マップを構築する
+ *
+ * GuildWithPermissions 配列から権限ビットフィールド文字列を抽出し、
+ * guild_config テーブルから restricted フラグを取得して、
+ * クライアントコンポーネントにシリアライズ可能な形式にまとめる。
+ *
+ * Requirements: guild-permissions 7.2
+ */
+async function buildGuildPermissions(
+  guilds: GuildWithPermissions[],
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<Record<string, GuildPermissionInfo>> {
+  if (guilds.length === 0) {
+    return {};
+  }
+
+  // N+1 クエリを回避: 全ギルドの設定を一括取得
+  const guildIds = guilds.map((guild) => guild.guildId);
+  const { data, error } = await supabase
+    .from("guild_config")
+    .select("guild_id, restricted")
+    .in("guild_id", guildIds);
+
+  // エラー時はフェイルセーフとして restricted: false で返す
+  const restrictedMap = new Map<string, boolean>();
+  if (!error && data) {
+    for (const row of data) {
+      // Supabase の select("guild_id, restricted") は { guild_id: string, restricted: boolean } を返す
+      restrictedMap.set(String(row.guild_id), Boolean(row.restricted));
+    }
+  }
+
+  const permissions: Record<string, GuildPermissionInfo> = {};
+  for (const guild of guilds) {
+    permissions[guild.guildId] = {
+      // BigInt は JSON シリアライズ不可のため文字列に変換
+      permissionsBitfield: guild.permissions.raw.toString(),
+      restricted: restrictedMap.get(guild.guildId) ?? false,
+    };
+  }
+
+  return permissions;
+}
+
+/**
  * ダッシュボードページ（Server Component）
  *
  * 認証後のランディングページとして機能する。
@@ -244,6 +337,7 @@ export async function fetchGuilds(
  * - 5.2: Supabaseクライアント（Server用）を使用してDBクエリを実行する
  * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
  * - 5.4: 未認証ユーザーをログインページへリダイレクト
+ * - guild-permissions 7.2: 権限情報をクライアントに渡す
  *
  * Note: Middlewareで認証済みユーザーのみがアクセスできるよう保護されている。
  * 万が一未認証の場合はログインページへリダイレクト。
@@ -283,9 +377,13 @@ export default async function DashboardPage() {
     providerToken
   );
 
+  // guild-permissions 7.2: ギルド権限情報マップを構築
+  const guildPermissions = await buildGuildPermissions(guilds, supabase);
+
   return (
     <DashboardPageClient
       guildError={guildError}
+      guildPermissions={guildPermissions}
       guilds={guilds}
       user={dashboardUser}
     />

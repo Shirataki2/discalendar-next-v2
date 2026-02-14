@@ -10,9 +10,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchGuilds } from "@/app/dashboard/page";
 import { getUserGuilds } from "@/lib/discord/client";
+import { parsePermissions } from "@/lib/discord/permissions";
 import { clearCache } from "@/lib/guilds/cache";
 import { getJoinedGuilds } from "@/lib/guilds/service";
-import type { Guild } from "@/lib/guilds/types";
+import type { Guild, GuildWithPermissions } from "@/lib/guilds/types";
 
 // モック
 vi.mock("@/lib/discord/client");
@@ -31,7 +32,7 @@ describe("fetchGuilds統合テスト", () => {
       features: ["COMMUNITY"],
     },
   ];
-  const mockGuilds: Guild[] = [
+  const mockGuildsBase: Guild[] = [
     {
       id: 1,
       guildId: "123456789012345678",
@@ -40,6 +41,10 @@ describe("fetchGuilds統合テスト", () => {
       locale: "ja",
     },
   ];
+  const mockGuilds: GuildWithPermissions[] = mockGuildsBase.map((g) => ({
+    ...g,
+    permissions: parsePermissions("2146958847"),
+  }));
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,7 +63,7 @@ describe("fetchGuilds統合テスト", () => {
       success: true,
       data: mockDiscordGuilds,
     });
-    vi.mocked(getJoinedGuilds).mockResolvedValueOnce(mockGuilds);
+    vi.mocked(getJoinedGuilds).mockResolvedValueOnce(mockGuildsBase);
 
     // Act - 1回目の呼び出し
     const result1 = await fetchGuilds(userId, providerToken);
@@ -87,7 +92,7 @@ describe("fetchGuilds統合テスト", () => {
       success: true,
       data: mockDiscordGuilds,
     });
-    vi.mocked(getJoinedGuilds).mockResolvedValueOnce(mockGuilds);
+    vi.mocked(getJoinedGuilds).mockResolvedValueOnce(mockGuildsBase);
 
     // Act - 1回目の呼び出し
     const result1 = await fetchGuilds(userId, providerToken);
@@ -104,7 +109,7 @@ describe("fetchGuilds統合テスト", () => {
       success: true,
       data: mockDiscordGuilds,
     });
-    vi.mocked(getJoinedGuilds).mockResolvedValue(mockGuilds);
+    vi.mocked(getJoinedGuilds).mockResolvedValue(mockGuildsBase);
 
     // Act - 同時に複数のリクエストを開始
     const [result1, result2, result3] = await Promise.all([

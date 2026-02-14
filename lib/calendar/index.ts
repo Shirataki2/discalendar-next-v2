@@ -35,3 +35,10 @@ export {
   createEventService,
   getCalendarErrorMessage,
 } from "./event-service";
+
+// Permission Check (タスク4)
+export {
+  type EventOperation,
+  type PermissionCheckResult,
+  checkEventPermission,
+} from "./permission-check";

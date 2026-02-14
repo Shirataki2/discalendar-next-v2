@@ -5,7 +5,10 @@
  * - 6.1: Guild型を定義 (id, guildId, name, avatarUrl, locale)
  * - 6.2: Supabaseの自動生成型と互換性のある型定義
  * - 2.3/2.4: ギルド一覧UIで使用するエラー型
+ * - guild-permissions 2.1/2.4: GuildWithPermissions型を定義
  */
+
+import type { DiscordPermissions } from "@/lib/discord/permissions";
 
 /**
  * アプリケーション内部のギルド型
@@ -39,6 +42,19 @@ export interface GuildRow {
   avatar_url: string | null;
   /** ロケール設定 */
   locale: string;
+}
+
+/**
+ * 権限情報付きギルド型
+ *
+ * Guild を拡張し、Discord API から取得した権限ビットフィールドの解析結果を含む。
+ * fetchGuilds() の戻り値として使用される。
+ *
+ * Requirements: guild-permissions 2.1, 2.4
+ */
+export interface GuildWithPermissions extends Guild {
+  /** 解析済み Discord 権限 */
+  permissions: DiscordPermissions;
 }
 
 /**

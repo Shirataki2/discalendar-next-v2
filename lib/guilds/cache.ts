@@ -23,14 +23,14 @@
 
 import { randomUUID } from "node:crypto";
 
-import type { Guild } from "./types";
+import type { GuildWithPermissions } from "./types";
 
 /**
  * キャッシュエントリ
  */
 interface CacheEntry {
   /** キャッシュされたギルド一覧 */
-  guilds: Guild[];
+  guilds: GuildWithPermissions[];
   /** キャッシュの有効期限（Unixタイムスタンプ、ミリ秒） */
   expiresAt: number;
 }
@@ -40,7 +40,7 @@ interface CacheEntry {
  */
 interface PendingRequest {
   /** Promise */
-  promise: Promise<{ guilds: Guild[] }>;
+  promise: Promise<{ guilds: GuildWithPermissions[] }>;
   /** リクエスト開始時刻 */
   startedAt: number;
   /** リクエストID（一意の識別子） */
@@ -83,7 +83,7 @@ const CLEANUP_INTERVAL_MS = CACHE_TTL_MS;
  * @param userId ユーザーID
  * @returns キャッシュされたギルド一覧、またはnull（キャッシュがない/期限切れの場合）
  */
-export function getCachedGuilds(userId: string): Guild[] | null {
+export function getCachedGuilds(userId: string): GuildWithPermissions[] | null {
   const entry = cache.get(userId);
 
   if (!entry) {
@@ -108,7 +108,7 @@ export function getCachedGuilds(userId: string): Guild[] | null {
  */
 export function setCachedGuilds(
   userId: string,
-  guilds: Guild[],
+  guilds: GuildWithPermissions[],
   requestId?: string
 ): void {
   // リクエストIDが指定されている場合、現在のpending requestのIDと照合
@@ -165,7 +165,7 @@ export function clearCache(userId?: string): void {
  */
 export function getPendingRequest(
   userId: string
-): Promise<{ guilds: Guild[] }> | null {
+): Promise<{ guilds: GuildWithPermissions[] }> | null {
   const request = pendingRequests.get(userId);
 
   if (!request) {
@@ -191,7 +191,7 @@ export function getPendingRequest(
  */
 export function setPendingRequest(
   userId: string,
-  promise: Promise<{ guilds: Guild[] }>,
+  promise: Promise<{ guilds: GuildWithPermissions[] }>,
   requestId?: string
 ): string {
   const finalRequestId =
@@ -226,8 +226,8 @@ export function setPendingRequest(
  */
 export function getOrSetPendingRequest(
   userId: string,
-  factory: (requestId: string) => Promise<{ guilds: Guild[] }>
-): Promise<{ guilds: Guild[] }> {
+  factory: (requestId: string) => Promise<{ guilds: GuildWithPermissions[] }>
+): Promise<{ guilds: GuildWithPermissions[] }> {
   // 既存のpending requestをチェック
   const existing = getPendingRequest(userId);
   if (existing) {

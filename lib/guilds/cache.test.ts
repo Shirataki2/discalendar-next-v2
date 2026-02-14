@@ -5,7 +5,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Guild } from "./types";
+import { parsePermissions } from "@/lib/discord/permissions";
+import type { GuildWithPermissions } from "./types";
 import {
   CACHE_TTL_MS,
   clearCache,
@@ -19,13 +20,14 @@ import {
 } from "./cache";
 
 describe("ギルドキャッシュ", () => {
-  const mockGuilds: Guild[] = [
+  const mockGuilds: GuildWithPermissions[] = [
     {
       id: 1,
       guildId: "123456789012345678",
       name: "Test Server 1",
       avatarUrl: "https://example.com/icon1.png",
       locale: "ja",
+      permissions: parsePermissions("8"),
     },
     {
       id: 2,
@@ -33,6 +35,7 @@ describe("ギルドキャッシュ", () => {
       name: "Test Server 2",
       avatarUrl: null,
       locale: "en",
+      permissions: parsePermissions("0"),
     },
   ];
 
@@ -61,8 +64,8 @@ describe("ギルドキャッシュ", () => {
     });
 
     it("異なるユーザーIDのキャッシュは独立している", () => {
-      const user1Guilds: Guild[] = [mockGuilds[0]];
-      const user2Guilds: Guild[] = [mockGuilds[1]];
+      const user1Guilds: GuildWithPermissions[] = [mockGuilds[0]];
+      const user2Guilds: GuildWithPermissions[] = [mockGuilds[1]];
 
       setCachedGuilds("user-1", user1Guilds);
       setCachedGuilds("user-2", user2Guilds);
@@ -92,15 +95,15 @@ describe("ギルドキャッシュ", () => {
     });
 
     it("空配列もキャッシュできる", () => {
-      const emptyGuilds: Guild[] = [];
+      const emptyGuilds: GuildWithPermissions[] = [];
       setCachedGuilds("user-1", emptyGuilds);
       const result = getCachedGuilds("user-1");
       expect(result).toEqual([]);
     });
 
     it("キャッシュを上書きできる", () => {
-      const initialGuilds: Guild[] = [mockGuilds[0]];
-      const updatedGuilds: Guild[] = [mockGuilds[1]];
+      const initialGuilds: GuildWithPermissions[] = [mockGuilds[0]];
+      const updatedGuilds: GuildWithPermissions[] = [mockGuilds[1]];
 
       setCachedGuilds("user-1", initialGuilds);
       expect(getCachedGuilds("user-1")).toEqual(initialGuilds);
