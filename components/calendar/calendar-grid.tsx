@@ -102,7 +102,6 @@ type DateHeaderProps = {
   label: string;
   drilldownView?: string;
   onDrillDown: () => void;
-  isOffRange: boolean;
 };
 
 /**

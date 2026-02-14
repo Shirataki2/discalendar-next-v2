@@ -589,7 +589,7 @@ describe("CalendarGrid", () => {
 
   // 土曜日・日曜日の色クラス適用テスト
   describe("週末の色スタイリング", () => {
-    it("月ビューで土曜日のヘッダーにrbc-saturday-textクラスが適用される", () => {
+    it("月ビューで土曜日のヘッダーにrbc-saturday-textクラスが1つ適用される", () => {
       // 2025年12月6日（土曜日）を含む月ビュー
       renderWithTooltip(
         <CalendarGrid
@@ -602,10 +602,10 @@ describe("CalendarGrid", () => {
       const saturdayHeaders = document.querySelectorAll(
         ".rbc-header .rbc-saturday-text"
       );
-      expect(saturdayHeaders.length).toBeGreaterThan(0);
+      expect(saturdayHeaders.length).toBe(1);
     });
 
-    it("月ビューで日曜日のヘッダーにrbc-sunday-textクラスが適用される", () => {
+    it("月ビューで日曜日のヘッダーにrbc-sunday-textクラスが1つ適用される", () => {
       renderWithTooltip(
         <CalendarGrid
           {...defaultProps}
@@ -617,7 +617,7 @@ describe("CalendarGrid", () => {
       const sundayHeaders = document.querySelectorAll(
         ".rbc-header .rbc-sunday-text"
       );
-      expect(sundayHeaders.length).toBeGreaterThan(0);
+      expect(sundayHeaders.length).toBe(1);
     });
 
     it("月ビューで土曜日の日付セルにrbc-saturday-textクラスが適用される", () => {
