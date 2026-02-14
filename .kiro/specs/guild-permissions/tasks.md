@@ -56,8 +56,8 @@
   - `useMemo` で不要な再計算を防止する
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 6. Server Actions への権限チェック統合
-- [ ] 6.1 ギルド設定更新の Server Action を作成する
+- [x] 6. Server Actions への権限チェック統合
+- [x] 6.1 ギルド設定更新の Server Action を作成する
   - `updateGuildConfig` Server Action を実装し、guildId, restricted, permissionsBitfield を受け取る
   - 認証チェック後に `parsePermissions` → `canManageGuild` で管理権限を検証する
   - 権限がある場合のみ `GuildConfigService.upsertGuildConfig` を呼び出す
@@ -65,7 +65,7 @@
   - 更新成功時に `revalidatePath` でダッシュボードを再検証する
   - _Requirements: 3.3, 3.4_
 
-- [ ] 6.2 イベント操作の Server Actions に権限チェックを追加する
+- [x] 6.2 イベント操作の Server Actions に権限チェックを追加する
   - 既存のイベント作成・更新・削除の Server Actions（または対応するサービス呼び出し箇所）に `checkEventPermission` を組み込む
   - 認証チェックの直後、DB 操作の前に権限チェックを実行する
   - 権限チェックに失敗した場合は PERMISSION_DENIED エラーを返し、DB 操作を実行しない
