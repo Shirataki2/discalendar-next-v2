@@ -21,7 +21,15 @@ Discord標準のイベント機能はリスト形式で視覚性に欠けます�
 
 ## プロジェクト状況
 
-Nuxt.js + Vue 2で開発されていた既存バージョン（refs/DisCalendarV2）をNext.js + Reactに移植中のプロジェクトです。
+Nuxt.js + Vue 2で開発されていた既存バージョン（refs/DisCalendarV2）をNext.js 16 + React 19に移植中のプロジェクトです。
+
+### 実装済み機能
+- ランディングページ（Hero、Features、CTA、Header/Footer）
+- Discord OAuth認証（ログイン/ログアウト）
+- ダッシュボード（カレンダー表示、イベントCRUD）
+- ギルド選択UI
+- ダークモード対応
+- Storybook統合（コンポーネントカタログ）
 
 ---
 _パターンと目的に焦点を当て、網羅的な機能リストは避ける_

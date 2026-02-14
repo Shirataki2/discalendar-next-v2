@@ -7,7 +7,7 @@ Next.js App Routerを採用したフルスタックWebアプリケーション�
 ## コアテクノロジー
 
 - **言語**: TypeScript (strict mode)
-- **フレームワーク**: Next.js (latest) + React 19
+- **フレームワーク**: Next.js 16 (App Router) + React 19
 - **ランタイム**: Node.js (ES2017ターゲット)
 - **データベース**: Supabase (PostgreSQL)
 - **認証**: Supabase Auth (Cookie-based SSR)
@@ -16,6 +16,8 @@ Next.js App Routerを採用したフルスタックWebアプリケーション�
 
 - **UIコンポーネント**: shadcn/ui (Radix UI primitives)
 - **スタイリング**: Tailwind CSS 3 + tailwindcss-animate
+- **テーマ**: next-themes（ダークモード対応）
+- **カレンダー**: react-big-calendar + date-fns（日付操作）
 - **アイコン**: lucide-react
 - **状態管理**: React 19組み込み機能 (Server Components/Actions)
 
@@ -40,6 +42,13 @@ Next.js App Routerを採用したフルスタックWebアプリケーション�
 - **単体テスト**: Vitest + Testing Library
 - **テスト環境**: jsdom
 
+### Storybook
+
+- **バージョン**: Storybook v10 (`@storybook/nextjs`)
+- **形式**: CSF3（Component Story Format 3）、`tags: ["autodocs"]`
+- **アドオン**: a11y、docs、themes
+- **配置**: コンポーネントと同ディレクトリに`*.stories.tsx`をCo-locate
+
 ## 開発環境
 
 ### 必須ツール
@@ -62,6 +71,15 @@ npx ultracite check
 
 # 自動修正
 npx ultracite fix
+
+# テスト
+npm run test:unit       # Vitest単体テスト
+npm run test:e2e        # Playwright E2E
+npm run type-check      # 型チェック
+
+# Storybook
+npm run storybook       # 開発サーバー (port 6006)
+npm run build-storybook # ビルド
 ```
 
 ## 重要な技術的判断

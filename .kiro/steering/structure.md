@@ -14,6 +14,11 @@ Next.js App Routerの規約に従いつつ、shadcn/uiのコンポーネント�
 - `app/page.tsx` - トップページ
 - `app/globals.css` - グローバルスタイル
 
+**ルート構成**:
+- `app/page.tsx` - ランディングページ
+- `app/auth/` - 認証（login, callback, actions）
+- `app/dashboard/` - ダッシュボード（カレンダー表示）
+
 **特徴**:
 - ファイルシステムベースルーティング
 - Server Componentsがデフォルト
@@ -36,16 +41,58 @@ Next.js App Routerの規約に従いつつ、shadcn/uiのコンポーネント�
 ### カスタムコンポーネント (`/components/`)
 
 **目的**: アプリケーション固有のビジネスロジックを持つコンポーネント
-**パターン**: UIプリミティブを組み合わせた機能単位のコンポーネント
+**パターン**: 機能ドメインごとにサブディレクトリで整理
+
+**サブディレクトリ構成**:
+- `components/calendar/` - カレンダー機能（グリッド、イベント、ツールバー等）
+- `components/guilds/` - ギルド関連（カード、リスト、アイコン等）
+- `components/auth/` - 認証関連（ログインボタン、ログアウトボタン等）
+- `components/` 直下 - ランディングページ・共通コンポーネント（Header、Hero、Footer等）
+
+**Co-locationパターン**: コンポーネントと同ディレクトリにテスト・ストーリーを配置
+```
+components/calendar/
+  calendar-grid.tsx          # コンポーネント
+  calendar-grid.test.tsx     # テスト
+  calendar-grid.stories.tsx  # Storybookストーリー
+```
+
+### カスタムフック (`/hooks/`)
+
+**目的**: アプリケーション固有のReactカスタムフック
+**パターン**: 機能ドメインごとにサブディレクトリで整理
+- `hooks/calendar/` - カレンダー状態管理、URL同期、イベント操作のフック群
+- `hooks/` 直下 - 汎用フック（`use-local-storage.ts`等）
+
+**特徴**: `index.ts`でバレルエクスポート（ドメインサブディレクトリ内）
 
 ### ユーティリティ・ロジック (`/lib/`)
 
-**目的**: 共通関数、ヘルパー、Supabaseクライアント
-**例**:
-- `lib/utils.ts` - Tailwind CSS mergeなどユーティリティ
+**目的**: 共通関数、ヘルパー、外部サービスクライアント
+**パターン**: 機能ドメインごとにサブディレクトリで整理
 - `lib/supabase/` - Supabaseクライアント設定（Server/Client/Middleware）
+- `lib/auth/` - 認証ロジック
+- `lib/calendar/` - カレンダーデータ処理
+- `lib/discord/` - Discord API連携
+- `lib/guilds/` - ギルドデータ処理
+- `lib/utils.ts` - Tailwind CSS mergeなど汎用ユーティリティ
 
 **特徴**: Biomeのlint対象外
+
+### 型定義 (`/types/`)
+
+**目的**: アプリケーション共通の型定義
+**パターン**: ドメインごとにファイル分割（例: `landing-page.ts`）
+
+### テスト (`/__tests__/`, `/e2e_tests/`)
+
+**単体・統合テスト** (`/__tests__/`):
+- 関心領域ごとにサブディレクトリ（`app/`, `components/`, `hooks/`, `lib/`, `integration/`等）
+- Co-locateテストと併用（複雑な統合テストはこちら）
+
+**E2Eテスト** (`/e2e_tests/`):
+- Playwrightによるエンドツーエンドテスト
+- `*.spec.ts`形式
 
 ### 参照コード (`/refs/`)
 
