@@ -117,6 +117,10 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     };
   }
 
+  // TODO: Discord API 結果をキャッシュに反映する
+  // setCachedGuilds は GuildWithPermissions[]（DB結合済み）を要求するため、
+  // ここでは直接利用できない。user_guilds テーブル導入時にキャッシュ更新を追加する。
+
   const discordGuild = discordResult.data.find((g) => g.id === guildId);
   if (!discordGuild) {
     return {
@@ -243,10 +247,24 @@ async function authorizeEventOperation(
   const { auth } = result;
 
   const configService = createGuildConfigService(auth.supabase);
-  const guildConfig = await configService.getGuildConfig(guildId);
+  const configResult = await configService.getGuildConfig(guildId);
+
+  if (!configResult.success) {
+    return {
+      authorized: false,
+      error: {
+        success: false,
+        error: {
+          code: "FETCH_FAILED",
+          message: configResult.error.message,
+        },
+      },
+    };
+  }
+
   const permCheck = checkEventPermission(
     operation,
-    guildConfig,
+    configResult.data,
     auth.permissions
   );
 

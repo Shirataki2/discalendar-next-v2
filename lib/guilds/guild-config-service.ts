@@ -48,7 +48,9 @@ export type GuildConfigMutationResult<T> =
  */
 export interface GuildConfigServiceInterface {
   /** ギルド設定を取得（不在時はデフォルト値を返す） */
-  getGuildConfig(guildId: string): Promise<GuildConfig>;
+  getGuildConfig(
+    guildId: string,
+  ): Promise<GuildConfigMutationResult<GuildConfig>>;
 
   /** ギルド設定を更新（不在時は新規作成） */
   upsertGuildConfig(
@@ -77,30 +79,35 @@ export function createGuildConfigService(
   supabase: SupabaseClient,
 ): GuildConfigServiceInterface {
   return {
-    async getGuildConfig(guildId: string): Promise<GuildConfig> {
+    async getGuildConfig(
+      guildId: string,
+    ): Promise<GuildConfigMutationResult<GuildConfig>> {
       const { data, error } = await supabase
         .from("guild_config")
         .select("*")
         .eq("guild_id", guildId)
         .single();
 
-      // レコードが存在しない場合はデフォルト値を返す（フェイルセーフ）
       if (error) {
-        // PGRST116: not found（レコード未作成のギルド）
+        // PGRST116: not found（レコード未作成のギルド）→ デフォルト値
         if (error.code === "PGRST116") {
-          return { guildId, restricted: false };
+          return { success: true, data: { guildId, restricted: false } };
         }
-        // 実際のDBエラーはスロー（呼び出し元でハンドリング）
-        throw new Error(
-          `Failed to fetch guild config: ${error.message}`,
-        );
+        return {
+          success: false,
+          error: {
+            code: "FETCH_FAILED",
+            message: "ギルド設定の取得に失敗しました。",
+            details: error.message,
+          },
+        };
       }
 
       if (!data) {
-        return { guildId, restricted: false };
+        return { success: true, data: { guildId, restricted: false } };
       }
 
-      return toGuildConfig(data as GuildConfigRow);
+      return { success: true, data: toGuildConfig(data as GuildConfigRow) };
     },
 
     async upsertGuildConfig(

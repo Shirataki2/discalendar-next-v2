@@ -35,7 +35,7 @@ describe("GuildConfigService", () => {
   });
 
   describe("getGuildConfig", () => {
-    it("レコードが存在する場合、guild_config を返す", async () => {
+    it("レコードが存在する場合、success: true で guild_config を返す", async () => {
       const mockRow = { guild_id: "123456789", restricted: true };
 
       const mockQuery = {
@@ -51,8 +51,8 @@ describe("GuildConfigService", () => {
       const result = await service.getGuildConfig("123456789");
 
       expect(result).toEqual({
-        guildId: "123456789",
-        restricted: true,
+        success: true,
+        data: { guildId: "123456789", restricted: true },
       });
       expect(mockSupabaseClient.from).toHaveBeenCalledWith("guild_config");
       expect(mockQuery.eq).toHaveBeenCalledWith("guild_id", "123456789");
@@ -72,12 +72,12 @@ describe("GuildConfigService", () => {
       const result = await service.getGuildConfig("999999999");
 
       expect(result).toEqual({
-        guildId: "999999999",
-        restricted: false,
+        success: true,
+        data: { guildId: "999999999", restricted: false },
       });
     });
 
-    it("DB エラー時はエラーをスローする", async () => {
+    it("DB エラー時は success: false でエラーを返す", async () => {
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -88,9 +88,13 @@ describe("GuildConfigService", () => {
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.getGuildConfig("123456789")).rejects.toThrow(
-        "Failed to fetch guild config: Internal server error"
-      );
+      const result = await service.getGuildConfig("123456789");
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("FETCH_FAILED");
+        expect(result.error.details).toBe("Internal server error");
+      }
     });
 
     it("restricted: false のレコードを正しく返す", async () => {
@@ -109,8 +113,8 @@ describe("GuildConfigService", () => {
       const result = await service.getGuildConfig("123456789");
 
       expect(result).toEqual({
-        guildId: "123456789",
-        restricted: false,
+        success: true,
+        data: { guildId: "123456789", restricted: false },
       });
     });
   });

@@ -309,13 +309,15 @@ async function buildGuildPermissions(
   const restrictedMap = new Map<string, boolean>();
   if (!error && data) {
     for (const row of data) {
-      restrictedMap.set(row.guild_id as string, row.restricted as boolean);
+      // Supabase の select("guild_id, restricted") は { guild_id: string, restricted: boolean } を返す
+      restrictedMap.set(String(row.guild_id), Boolean(row.restricted));
     }
   }
 
   const permissions: Record<string, GuildPermissionInfo> = {};
   for (const guild of guilds) {
     permissions[guild.guildId] = {
+      // BigInt は JSON シリアライズ不可のため文字列に変換
       permissionsBitfield: guild.permissions.raw.toString(),
       restricted: restrictedMap.get(guild.guildId) ?? false,
     };

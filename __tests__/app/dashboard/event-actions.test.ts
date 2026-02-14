@@ -143,8 +143,8 @@ describe("createEventAction", () => {
     });
     setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: true,
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
     });
 
     const result = await createEventAction({
@@ -171,8 +171,8 @@ describe("createEventAction", () => {
     });
     setupCacheWithAdminPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: true,
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
     });
     mockCreateEvent.mockResolvedValueOnce({
       success: true,
@@ -208,8 +208,8 @@ describe("createEventAction", () => {
     });
     setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: false,
+      success: true,
+      data: { guildId: "guild-1", restricted: false },
     });
     mockCreateEvent.mockResolvedValueOnce({
       success: true,
@@ -266,8 +266,8 @@ describe("updateEventAction", () => {
     });
     setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: true,
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
     });
 
     const result = await updateEventAction({
@@ -290,8 +290,8 @@ describe("updateEventAction", () => {
     });
     setupCacheWithAdminPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: true,
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
     });
     mockUpdateEvent.mockResolvedValueOnce({
       success: true,
@@ -317,8 +317,8 @@ describe("updateEventAction", () => {
     });
     setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: false,
+      success: true,
+      data: { guildId: "guild-1", restricted: false },
     });
     mockUpdateEvent.mockResolvedValueOnce({
       success: true,
@@ -370,8 +370,8 @@ describe("deleteEventAction", () => {
     });
     setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: true,
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
     });
 
     const result = await deleteEventAction({
@@ -393,8 +393,8 @@ describe("deleteEventAction", () => {
     });
     setupCacheWithAdminPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: true,
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
     });
     mockDeleteEvent.mockResolvedValueOnce({
       success: true,
@@ -417,8 +417,8 @@ describe("deleteEventAction", () => {
     });
     setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
-      guildId: "guild-1",
-      restricted: false,
+      success: true,
+      data: { guildId: "guild-1", restricted: false },
     });
     mockDeleteEvent.mockResolvedValueOnce({
       success: true,
