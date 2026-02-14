@@ -401,6 +401,45 @@
     color: hsl(217, 91%, 45%); /* 十分なコントラスト比を持つ青色 */
   }
 
+  /* 土曜日の色スタイル（青色） */
+  .rbc-day-bg.rbc-saturday {
+    background-color: rgba(59, 130, 246, 0.04);
+  }
+
+  .rbc-header:nth-child(7) {
+    color: #2563eb;
+  }
+
+  .rbc-date-cell:nth-child(7),
+  .rbc-date-cell:nth-child(7) .rbc-button-link {
+    color: #2563eb;
+  }
+
+  /* 日曜日の色スタイル（赤色） */
+  .rbc-day-bg.rbc-sunday {
+    background-color: rgba(239, 68, 68, 0.04);
+  }
+
+  .rbc-header:first-child {
+    color: #dc2626;
+  }
+
+  .rbc-date-cell:first-child,
+  .rbc-date-cell:first-child .rbc-button-link {
+    color: #dc2626;
+  }
+
+  /* 範囲外の土曜日・日曜日（薄い色） */
+  .rbc-date-cell.rbc-off-range:nth-child(7),
+  .rbc-date-cell.rbc-off-range:nth-child(7) .rbc-button-link {
+    color: rgba(37, 99, 235, 0.4);
+  }
+
+  .rbc-date-cell.rbc-off-range:first-child,
+  .rbc-date-cell.rbc-off-range:first-child .rbc-button-link {
+    color: rgba(220, 38, 38, 0.4);
+  }
+
   /* 終日イベントバーのスタイル */
   .event-block-bar {
     @apply w-full;
@@ -557,4 +596,31 @@
 
 .dark .rbc-allday-cell {
   border-bottom-color: hsl(222 15% 14%);
+}
+
+/* ダークモード: 土曜日・日曜日の色スタイル */
+.dark .rbc-day-bg.rbc-saturday {
+  background-color: rgba(96, 165, 250, 0.06);
+}
+
+.dark .rbc-header:nth-child(7) {
+  color: #60a5fa;
+}
+
+.dark .rbc-date-cell:nth-child(7),
+.dark .rbc-date-cell:nth-child(7) .rbc-button-link {
+  color: #60a5fa;
+}
+
+.dark .rbc-day-bg.rbc-sunday {
+  background-color: rgba(248, 113, 113, 0.06);
+}
+
+.dark .rbc-header:first-child {
+  color: #f87171;
+}
+
+.dark .rbc-date-cell:first-child,
+.dark .rbc-date-cell:first-child .rbc-button-link {
+  color: #f87171;
 }

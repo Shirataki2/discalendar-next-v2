@@ -306,6 +306,14 @@ export function CalendarGrid({
       const classNames: string[] = [];
       const style: React.CSSProperties = {};
 
+      // 土曜日・日曜日の色分け
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek === 6) {
+        classNames.push("rbc-saturday");
+      } else if (dayOfWeek === 0) {
+        classNames.push("rbc-sunday");
+      }
+
       // Task 5.4: 今日の日付をハイライト
       if (isSameDay(date, today)) {
         classNames.push("rbc-today-highlight");
