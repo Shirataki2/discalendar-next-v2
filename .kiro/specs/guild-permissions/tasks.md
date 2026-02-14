@@ -48,7 +48,7 @@
   - `CalendarErrorCode` に `PERMISSION_DENIED` を追加する
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 5. 権限チェック用 React Hook の作成
+- [x] 5. 権限チェック用 React Hook の作成
   - `useGuildPermissions` Hook を実装し、guildId, permissionsBitfield, restricted を入力として受け取る
   - `canManageGuild`（管理権限の有無）、`isRestricted`（ギルドの制限フラグ）、`canEditEvents`（イベント編集可否の最終判定）を派生状態として返す
   - ローディング状態とエラー状態を管理し、権限情報が未提供の場合は適切な初期状態を返す
