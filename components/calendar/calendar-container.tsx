@@ -176,6 +176,40 @@ function canInteractWithEvents(
 }
 
 /**
+ * カレンダーエラー表示コンポーネント
+ *
+ * エラーメッセージとリトライボタンを表示する。
+ * 開発環境ではエラー詳細も表示する。
+ */
+function CalendarErrorDisplay({
+  error,
+  onRetry,
+}: {
+  error: { message: string; details?: string };
+  onRetry: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 p-8">
+      <div className="flex flex-col items-center gap-2">
+        <div className="text-destructive">{error.message}</div>
+        {process.env.NODE_ENV === "development" && error.details && (
+          <div className="text-muted-foreground text-xs">
+            詳細: {error.details}
+          </div>
+        )}
+      </div>
+      <button
+        className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+        onClick={onRetry}
+        type="button"
+      >
+        再試行
+      </button>
+    </div>
+  );
+}
+
+/**
  * CalendarContainerのProps
  */
 export type CalendarContainerProps = {
@@ -404,9 +438,9 @@ export function CalendarContainer({
     // 取得期間を計算
     const { startDate, endDate } = getDateRange(viewMode, selectedDate);
 
-    // イベント取得
+    // イベント取得（isGuildEmpty チェック通過後なので guildId は非 null）
     const result = await eventServiceRef.current.fetchEvents({
-      guildId,
+      guildId: guildId as string,
       startDate,
       endDate,
       signal: abortControllerRef.current.signal,
@@ -637,19 +671,19 @@ export function CalendarContainer({
 
   // ギルド未選択時は空のカレンダーを表示 (Req 5.2)
   const shouldShowEmpty = isGuildEmpty(guildId);
+  const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
 
   // Task 7.1: ギルド選択時のみ追加ボタンを有効化
   const toolbarAddClickHandler = shouldShowEmpty ? undefined : handleAddClick;
-
   // guild-permissions 5.1: 権限不足時は追加ボタンを disabled にする
   const isAddDisabled = canEditEvents ? undefined : true;
 
-  // guild-permissions 5.2: 編集・削除・DnD は選択済みかつ権限がある場合のみ有効化
-  const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
+  // guild-permissions 5.2: 編集・削除・DnD・スロット選択は選択済みかつ権限がある場合のみ有効化
   const popoverEditHandler = canInteract ? handleEditEvent : undefined;
   const popoverDeleteHandler = canInteract ? handleDeleteEvent : undefined;
   const gridEventDropHandler = canInteract ? handleEventDrop : undefined;
   const gridEventResizeHandler = canInteract ? handleEventResize : undefined;
+  const gridSlotSelectHandler = canInteract ? handleSlotSelect : undefined;
 
   return (
     <div className="flex flex-1 flex-col" data-testid="calendar-container">
@@ -675,24 +709,7 @@ export function CalendarContainer({
       {/* エラー状態 (Req 5.4) */}
       {/* biome-ignore lint/nursery/noLeakedRender: error is CalendarError | null */}
       {state.error && !state.isLoading && (
-        <div className="flex flex-col items-center justify-center gap-4 p-8">
-          <div className="flex flex-col items-center gap-2">
-            <div className="text-destructive">{state.error.message}</div>
-            {/* 開発環境ではエラー詳細を表示 */}
-            {process.env.NODE_ENV === "development" && state.error.details && (
-              <div className="text-muted-foreground text-xs">
-                詳細: {state.error.details}
-              </div>
-            )}
-          </div>
-          <button
-            className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-            onClick={fetchEvents}
-            type="button"
-          >
-            再試行
-          </button>
-        </div>
+        <CalendarErrorDisplay error={state.error} onRetry={fetchEvents} />
       )}
 
       {/* カレンダーグリッド */}
@@ -704,7 +721,7 @@ export function CalendarContainer({
             onEventClick={handleEventClick}
             onEventDrop={gridEventDropHandler}
             onEventResize={gridEventResizeHandler}
-            onSlotSelect={handleSlotSelect}
+            onSlotSelect={gridSlotSelectHandler}
             selectedDate={selectedDate}
             today={new Date()}
             viewMode={viewMode}

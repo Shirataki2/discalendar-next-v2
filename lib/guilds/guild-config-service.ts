@@ -84,8 +84,19 @@ export function createGuildConfigService(
         .eq("guild_id", guildId)
         .single();
 
-      // レコードが存在しない場合、またはエラーの場合はデフォルト値を返す（フェイルセーフ）
-      if (error || !data) {
+      // レコードが存在しない場合はデフォルト値を返す（フェイルセーフ）
+      if (error) {
+        // PGRST116: not found（レコード未作成のギルド）
+        if (error.code === "PGRST116") {
+          return { guildId, restricted: false };
+        }
+        // 実際のDBエラーはスロー（呼び出し元でハンドリング）
+        throw new Error(
+          `Failed to fetch guild config: ${error.message}`,
+        );
+      }
+
+      if (!data) {
         return { guildId, restricted: false };
       }
 

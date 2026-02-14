@@ -2,7 +2,7 @@
  * イベント操作 Server Actions の権限チェックテスト
  *
  * Task 6.2: イベント操作の Server Actions に権限チェックを追加する
- * - 認証チェックの直後、DB 操作の前に権限チェックを実行
+ * - サーバー側で Discord 権限を解決（クライアント入力を信頼しない）
  * - 権限チェックに失敗した場合は PERMISSION_DENIED エラーを返す
  * - restricted フラグが無効なギルドでは既存の動作を維持
  *
@@ -12,9 +12,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // モック設定
 const mockGetUser = vi.fn();
+const mockGetSession = vi.fn();
 const mockSupabase = {
   auth: {
     getUser: mockGetUser,
+    getSession: mockGetSession,
   },
 };
 
@@ -46,11 +48,61 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+// getCachedGuilds モック
+const mockGetCachedGuilds = vi.fn();
+vi.mock("@/lib/guilds/cache", () => ({
+  getCachedGuilds: (...args: unknown[]) => mockGetCachedGuilds(...args),
+}));
+
+// getUserGuilds モック
+const mockGetUserGuilds = vi.fn();
+vi.mock("@/lib/discord/client", () => ({
+  getUserGuilds: (...args: unknown[]) => mockGetUserGuilds(...args),
+}));
+
 import {
   createEventAction,
   deleteEventAction,
   updateEventAction,
 } from "@/app/dashboard/actions";
+
+/** テスト用ヘルパー: 権限なしのキャッシュを設定 */
+function setupCacheWithNoPermissions(guildId: string) {
+  mockGetCachedGuilds.mockReturnValueOnce([
+    {
+      guildId,
+      name: "Test Guild",
+      permissions: {
+        administrator: false,
+        manageGuild: false,
+        manageChannels: false,
+        manageMessages: false,
+        manageRoles: false,
+        manageEvents: false,
+        raw: 0n,
+      },
+    },
+  ]);
+}
+
+/** テスト用ヘルパー: ADMINISTRATOR 権限ありのキャッシュを設定 */
+function setupCacheWithAdminPermissions(guildId: string) {
+  mockGetCachedGuilds.mockReturnValueOnce([
+    {
+      guildId,
+      name: "Test Guild",
+      permissions: {
+        administrator: true,
+        manageGuild: false,
+        manageChannels: false,
+        manageMessages: false,
+        manageRoles: false,
+        manageEvents: false,
+        raw: 8n,
+      },
+    },
+  ]);
+}
 
 describe("createEventAction", () => {
   beforeEach(() => {
@@ -69,7 +121,6 @@ describe("createEventAction", () => {
 
     const result = await createEventAction({
       guildId: "guild-1",
-      permissionsBitfield: "8",
       eventData: {
         guildId: "guild-1",
         title: "Test Event",
@@ -90,6 +141,7 @@ describe("createEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: true,
@@ -97,7 +149,6 @@ describe("createEventAction", () => {
 
     const result = await createEventAction({
       guildId: "guild-1",
-      permissionsBitfield: "0", // 権限なし
       eventData: {
         guildId: "guild-1",
         title: "Test Event",
@@ -118,6 +169,7 @@ describe("createEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithAdminPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: true,
@@ -142,7 +194,6 @@ describe("createEventAction", () => {
 
     const result = await createEventAction({
       guildId: "guild-1",
-      permissionsBitfield: "8", // ADMINISTRATOR
       eventData,
     });
 
@@ -155,6 +206,7 @@ describe("createEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: false,
@@ -166,7 +218,6 @@ describe("createEventAction", () => {
 
     const result = await createEventAction({
       guildId: "guild-1",
-      permissionsBitfield: "0", // 権限なし
       eventData: {
         guildId: "guild-1",
         title: "Test Event",
@@ -198,7 +249,6 @@ describe("updateEventAction", () => {
     const result = await updateEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "8",
       eventData: { title: "Updated" },
     });
 
@@ -214,6 +264,7 @@ describe("updateEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: true,
@@ -222,7 +273,6 @@ describe("updateEventAction", () => {
     const result = await updateEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "0",
       eventData: { title: "Updated" },
     });
 
@@ -238,6 +288,7 @@ describe("updateEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithAdminPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: true,
@@ -250,7 +301,6 @@ describe("updateEventAction", () => {
     const result = await updateEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "32", // MANAGE_GUILD
       eventData: { title: "Updated" },
     });
 
@@ -265,6 +315,7 @@ describe("updateEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: false,
@@ -277,7 +328,6 @@ describe("updateEventAction", () => {
     const result = await updateEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "0",
       eventData: { title: "Updated" },
     });
 
@@ -304,7 +354,6 @@ describe("deleteEventAction", () => {
     const result = await deleteEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "8",
     });
 
     expect(result.success).toBe(false);
@@ -319,6 +368,7 @@ describe("deleteEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: true,
@@ -327,7 +377,6 @@ describe("deleteEventAction", () => {
     const result = await deleteEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "0",
     });
 
     expect(result.success).toBe(false);
@@ -342,6 +391,7 @@ describe("deleteEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithAdminPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: true,
@@ -354,7 +404,6 @@ describe("deleteEventAction", () => {
     const result = await deleteEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "8", // ADMINISTRATOR
     });
 
     expect(result.success).toBe(true);
@@ -366,6 +415,7 @@ describe("deleteEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
+    setupCacheWithNoPermissions("guild-1");
     mockGetGuildConfig.mockResolvedValueOnce({
       guildId: "guild-1",
       restricted: false,
@@ -378,7 +428,6 @@ describe("deleteEventAction", () => {
     const result = await deleteEventAction({
       eventId: "event-1",
       guildId: "guild-1",
-      permissionsBitfield: "0",
     });
 
     expect(result.success).toBe(true);

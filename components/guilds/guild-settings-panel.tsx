@@ -10,7 +10,7 @@
  */
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { updateGuildConfig } from "@/app/dashboard/actions";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -20,8 +20,6 @@ export type GuildSettingsPanelProps = {
   guildId: string;
   /** 現在の restricted フラグ */
   restricted: boolean;
-  /** Discord 権限ビットフィールド文字列 */
-  permissionsBitfield: string;
 };
 
 /**
@@ -29,15 +27,22 @@ export type GuildSettingsPanelProps = {
  *
  * 管理権限のあるユーザー向けに restricted トグルを提供する。
  * トグル変更時に Server Action を呼び出してギルド設定を更新する。
+ * 権限チェックはサーバー側で実施される（クライアント入力を信頼しない）。
  */
 export function GuildSettingsPanel({
   guildId,
   restricted,
-  permissionsBitfield,
 }: GuildSettingsPanelProps) {
   const [isRestricted, setIsRestricted] = useState(restricted);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  // ギルド切替時に props 変更を state に同期する
+  // biome-ignore lint/correctness/useExhaustiveDependencies: guildId は effect 内で直接使用されないが、ギルド切替時にエラーをリセットするために依存配列に含める
+  useEffect(() => {
+    setIsRestricted(restricted);
+    setError(null);
+  }, [guildId, restricted]);
 
   const handleToggle = useCallback(
     (checked: boolean) => {
@@ -49,7 +54,6 @@ export function GuildSettingsPanel({
         const result = await updateGuildConfig({
           guildId,
           restricted: checked,
-          permissionsBitfield,
         });
 
         if (!result.success) {
@@ -58,7 +62,7 @@ export function GuildSettingsPanel({
         }
       });
     },
-    [guildId, permissionsBitfield, isRestricted]
+    [guildId, isRestricted]
   );
 
   return (

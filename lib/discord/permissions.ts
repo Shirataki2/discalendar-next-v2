@@ -7,14 +7,17 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4
  */
 
+const ONE = BigInt(1);
+const ZERO = BigInt(0);
+
 /** Discord 権限ビットフィールドのフラグ定数 */
 export const DISCORD_PERMISSION_FLAGS = {
-  ADMINISTRATOR: 1n << 3n,
-  MANAGE_CHANNELS: 1n << 4n,
-  MANAGE_GUILD: 1n << 5n,
-  MANAGE_MESSAGES: 1n << 13n,
-  MANAGE_ROLES: 1n << 28n,
-  MANAGE_EVENTS: 1n << 33n,
+  ADMINISTRATOR: ONE << BigInt(3),
+  MANAGE_CHANNELS: ONE << BigInt(4),
+  MANAGE_GUILD: ONE << BigInt(5),
+  MANAGE_MESSAGES: ONE << BigInt(13),
+  MANAGE_ROLES: ONE << BigInt(28),
+  MANAGE_EVENTS: ONE << BigInt(33),
 } as const;
 
 /** 解析済み Discord 権限 */
@@ -35,7 +38,7 @@ const DEFAULT_PERMISSIONS: DiscordPermissions = {
   manageMessages: false,
   manageRoles: false,
   manageEvents: false,
-  raw: 0n,
+  raw: ZERO,
 };
 
 /**
@@ -59,12 +62,12 @@ export function parsePermissions(
   }
 
   return {
-    administrator: (raw & DISCORD_PERMISSION_FLAGS.ADMINISTRATOR) !== 0n,
-    manageGuild: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_GUILD) !== 0n,
-    manageChannels: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_CHANNELS) !== 0n,
-    manageMessages: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_MESSAGES) !== 0n,
-    manageRoles: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_ROLES) !== 0n,
-    manageEvents: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_EVENTS) !== 0n,
+    administrator: (raw & DISCORD_PERMISSION_FLAGS.ADMINISTRATOR) !== ZERO,
+    manageGuild: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_GUILD) !== ZERO,
+    manageChannels: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_CHANNELS) !== ZERO,
+    manageMessages: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_MESSAGES) !== ZERO,
+    manageRoles: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_ROLES) !== ZERO,
+    manageEvents: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_EVENTS) !== ZERO,
     raw,
   };
 }

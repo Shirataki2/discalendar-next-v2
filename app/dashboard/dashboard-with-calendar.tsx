@@ -380,7 +380,6 @@ export function DashboardWithCalendar({
         {selectedGuildId !== null && canManageGuild && selectedPermInfo ? (
           <GuildSettingsPanel
             guildId={selectedGuildId}
-            permissionsBitfield={selectedPermInfo.permissionsBitfield}
             restricted={selectedPermInfo.restricted}
           />
         ) : null}

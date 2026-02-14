@@ -9,7 +9,6 @@ import {
   getOrSetPendingRequest,
   setCachedGuilds,
 } from "@/lib/guilds/cache";
-import { createGuildConfigService } from "@/lib/guilds/guild-config-service";
 import { getJoinedGuilds } from "@/lib/guilds/service";
 import type {
   Guild,
@@ -293,23 +292,32 @@ function mergePermissions(
  */
 async function buildGuildPermissions(
   guilds: GuildWithPermissions[],
-  supabase: Parameters<typeof createGuildConfigService>[0]
+  supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<Record<string, GuildPermissionInfo>> {
   if (guilds.length === 0) {
     return {};
   }
 
-  const configService = createGuildConfigService(supabase);
-  const configs = await Promise.all(
-    guilds.map((guild) => configService.getGuildConfig(guild.guildId))
-  );
+  // N+1 クエリを回避: 全ギルドの設定を一括取得
+  const guildIds = guilds.map((guild) => guild.guildId);
+  const { data, error } = await supabase
+    .from("guild_config")
+    .select("guild_id, restricted")
+    .in("guild_id", guildIds);
+
+  // エラー時はフェイルセーフとして restricted: false で返す
+  const restrictedMap = new Map<string, boolean>();
+  if (!error && data) {
+    for (const row of data) {
+      restrictedMap.set(row.guild_id as string, row.restricted as boolean);
+    }
+  }
 
   const permissions: Record<string, GuildPermissionInfo> = {};
-  for (let i = 0; i < guilds.length; i++) {
-    const guild = guilds[i];
+  for (const guild of guilds) {
     permissions[guild.guildId] = {
       permissionsBitfield: guild.permissions.raw.toString(),
-      restricted: configs[i].restricted,
+      restricted: restrictedMap.get(guild.guildId) ?? false,
     };
   }
 

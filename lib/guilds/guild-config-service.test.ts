@@ -77,7 +77,7 @@ describe("GuildConfigService", () => {
       });
     });
 
-    it("DB エラー時はデフォルト値を返す（フェイルセーフ）", async () => {
+    it("DB エラー時はエラーをスローする", async () => {
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -88,12 +88,9 @@ describe("GuildConfigService", () => {
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      const result = await service.getGuildConfig("123456789");
-
-      expect(result).toEqual({
-        guildId: "123456789",
-        restricted: false,
-      });
+      await expect(service.getGuildConfig("123456789")).rejects.toThrow(
+        "Failed to fetch guild config: Internal server error"
+      );
     });
 
     it("restricted: false のレコードを正しく返す", async () => {

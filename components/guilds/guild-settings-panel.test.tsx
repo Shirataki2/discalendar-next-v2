@@ -23,7 +23,6 @@ describe("GuildSettingsPanel", () => {
   const defaultProps = {
     guildId: "123456789",
     restricted: false,
-    permissionsBitfield: "8", // ADMINISTRATOR
   };
 
   it("restricted トグルを表示する", () => {
@@ -65,7 +64,6 @@ describe("GuildSettingsPanel", () => {
     expect(mockedUpdateGuildConfig).toHaveBeenCalledWith({
       guildId: "123456789",
       restricted: true,
-      permissionsBitfield: "8",
     });
   });
 
@@ -128,5 +126,47 @@ describe("GuildSettingsPanel", () => {
     await waitFor(() => {
       expect(toggle).toHaveAttribute("data-state", "unchecked");
     });
+  });
+
+  it("props の restricted が変更された場合にトグル状態が同期される", () => {
+    const { rerender } = render(
+      <GuildSettingsPanel {...defaultProps} restricted={false} />
+    );
+
+    expect(screen.getByRole("switch")).toHaveAttribute(
+      "data-state",
+      "unchecked"
+    );
+
+    rerender(<GuildSettingsPanel {...defaultProps} restricted={true} />);
+
+    expect(screen.getByRole("switch")).toHaveAttribute("data-state", "checked");
+  });
+
+  it("guildId が変更された場合にエラーがクリアされる", async () => {
+    const user = userEvent.setup();
+    mockedUpdateGuildConfig.mockResolvedValue({
+      success: false,
+      error: {
+        code: "UPDATE_FAILED",
+        message: "更新に失敗しました。",
+      },
+    });
+
+    const { rerender } = render(
+      <GuildSettingsPanel {...defaultProps} restricted={false} />
+    );
+
+    const toggle = screen.getByRole("switch");
+    await user.click(toggle);
+
+    await waitFor(() => {
+      expect(screen.getByText("更新に失敗しました。")).toBeInTheDocument();
+    });
+
+    // ギルドを切り替えるとエラーがクリアされる
+    rerender(<GuildSettingsPanel guildId="987654321" restricted={false} />);
+
+    expect(screen.queryByText("更新に失敗しました。")).not.toBeInTheDocument();
   });
 });

@@ -6,6 +6,9 @@
  * Task 6.1: ギルド設定更新の Server Action
  * Task 6.2: イベント操作の Server Actions に権限チェックを追加
  *
+ * セキュリティ: クライアントから送信された permissionsBitfield を信頼せず、
+ * サーバー側で Discord API / キャッシュから権限を解決する。
+ *
  * Requirements: 3.3, 3.4, 4.1, 4.2, 4.3
  */
 
@@ -19,7 +22,13 @@ import {
 } from "@/lib/calendar/event-service";
 import { checkEventPermission } from "@/lib/calendar/permission-check";
 import type { CalendarEvent } from "@/lib/calendar/types";
-import { canManageGuild, parsePermissions } from "@/lib/discord/permissions";
+import { getUserGuilds } from "@/lib/discord/client";
+import {
+  canManageGuild,
+  type DiscordPermissions,
+  parsePermissions,
+} from "@/lib/discord/permissions";
+import { getCachedGuilds } from "@/lib/guilds/cache";
 import {
   createGuildConfigService,
   type GuildConfig,
@@ -34,24 +43,29 @@ const UNAUTHORIZED_ERROR: CalendarError = {
 };
 
 // ──────────────────────────────────────────────
-// Task 6.1: ギルド設定更新
+// サーバー側権限解決ヘルパー
 // ──────────────────────────────────────────────
 
-type UpdateGuildConfigInput = {
-  guildId: string;
-  restricted: boolean;
-  permissionsBitfield: string;
+type ResolvedAuth = {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  permissions: DiscordPermissions;
 };
 
+type AuthResult =
+  | { success: true; auth: ResolvedAuth }
+  | { success: false; error: CalendarError };
+
 /**
- * ギルド設定を更新する Server Action
+ * サーバー側で Discord 権限を解決する
  *
- * 認証チェック → 権限チェック → DB 更新の順に実行する。
- * 管理権限がない場合は PERMISSION_DENIED エラーを返す。
+ * クライアント入力を一切信頼せず、以下の順序で権限を取得する:
+ * 1. メモリキャッシュ（getCachedGuilds）からギルド権限を検索
+ * 2. キャッシュミス時は Discord API から取得
+ *
+ * @param guildId 対象ギルドID
  */
-export async function updateGuildConfig(
-  input: UpdateGuildConfigInput
-): GuildConfigMutationResult<GuildConfig> {
+async function resolveServerAuth(guildId: string): Promise<AuthResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -60,15 +74,103 @@ export async function updateGuildConfig(
   if (!user) {
     return {
       success: false,
+      error: UNAUTHORIZED_ERROR,
+    };
+  }
+
+  // 1. キャッシュから権限を検索
+  const cachedGuilds = getCachedGuilds(user.id);
+  if (cachedGuilds) {
+    const guild = cachedGuilds.find((g) => g.guildId === guildId);
+    if (guild) {
+      return {
+        success: true,
+        auth: { supabase, userId: user.id, permissions: guild.permissions },
+      };
+    }
+  }
+
+  // 2. Discord API から取得
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.provider_token) {
+    return {
+      success: false,
       error: {
         code: "UNAUTHORIZED",
-        message: "認証が必要です。再度ログインしてください。",
+        message:
+          "Discordアクセストークンが期限切れです。再度ログインしてください。",
       },
     };
   }
 
-  const permissions = parsePermissions(input.permissionsBitfield);
-  if (!canManageGuild(permissions)) {
+  const discordResult = await getUserGuilds(session.provider_token);
+  if (!discordResult.success) {
+    return {
+      success: false,
+      error: {
+        code: "FETCH_FAILED",
+        message: discordResult.error.message,
+      },
+    };
+  }
+
+  const discordGuild = discordResult.data.find((g) => g.id === guildId);
+  if (!discordGuild) {
+    return {
+      success: false,
+      error: {
+        code: "PERMISSION_DENIED",
+        message: "このギルドのメンバーではありません。",
+      },
+    };
+  }
+
+  return {
+    success: true,
+    auth: {
+      supabase,
+      userId: user.id,
+      permissions: parsePermissions(discordGuild.permissions),
+    },
+  };
+}
+
+// ──────────────────────────────────────────────
+// Task 6.1: ギルド設定更新
+// ──────────────────────────────────────────────
+
+type UpdateGuildConfigInput = {
+  guildId: string;
+  restricted: boolean;
+};
+
+/**
+ * ギルド設定を更新する Server Action
+ *
+ * 認証チェック → サーバー側権限解決 → DB 更新の順に実行する。
+ * 管理権限がない場合は PERMISSION_DENIED エラーを返す。
+ */
+export async function updateGuildConfig(
+  input: UpdateGuildConfigInput
+): Promise<GuildConfigMutationResult<GuildConfig>> {
+  const result = await resolveServerAuth(input.guildId);
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: {
+        code: result.error.code,
+        message: result.error.message,
+      },
+    };
+  }
+
+  const { auth } = result;
+
+  if (!canManageGuild(auth.permissions)) {
     return {
       success: false,
       error: {
@@ -78,16 +180,16 @@ export async function updateGuildConfig(
     };
   }
 
-  const service = createGuildConfigService(supabase);
-  const result = await service.upsertGuildConfig(input.guildId, {
+  const service = createGuildConfigService(auth.supabase);
+  const upsertResult = await service.upsertGuildConfig(input.guildId, {
     restricted: input.restricted,
   });
 
-  if (result.success) {
+  if (upsertResult.success) {
     revalidatePath("/dashboard");
   }
 
-  return result;
+  return upsertResult;
 }
 
 // ──────────────────────────────────────────────
@@ -96,53 +198,57 @@ export async function updateGuildConfig(
 
 type CreateEventActionInput = {
   guildId: string;
-  permissionsBitfield: string;
   eventData: CreateEventInput;
 };
 
 type UpdateEventActionInput = {
   eventId: string;
   guildId: string;
-  permissionsBitfield: string;
   eventData: UpdateEventInput;
 };
 
 type DeleteEventActionInput = {
   eventId: string;
   guildId: string;
-  permissionsBitfield: string;
 };
 
 /**
  * 認証 + 権限チェックを行う共通ヘルパー
  *
- * 認証済みかつ権限チェックをパスした場合に Supabase クライアントを返す。
- * 失敗時はエラー結果を返す。
+ * サーバー側で権限を解決し、guild_config の restricted フラグと組み合わせて
+ * イベント操作の可否を判定する。
  */
 async function authorizeEventOperation(
   guildId: string,
-  permissionsBitfield: string,
   operation: "create" | "update" | "delete"
 ): Promise<
   | { authorized: true; supabase: Awaited<ReturnType<typeof createClient>> }
   | { authorized: false; error: MutationResult<never> }
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const result = await resolveServerAuth(guildId);
 
-  if (!user) {
+  if (!result.success) {
     return {
       authorized: false,
-      error: { success: false, error: UNAUTHORIZED_ERROR },
+      error: {
+        success: false,
+        error: {
+          code: result.error.code,
+          message: result.error.message,
+        },
+      },
     };
   }
 
-  const configService = createGuildConfigService(supabase);
+  const { auth } = result;
+
+  const configService = createGuildConfigService(auth.supabase);
   const guildConfig = await configService.getGuildConfig(guildId);
-  const permissions = parsePermissions(permissionsBitfield);
-  const permCheck = checkEventPermission(operation, guildConfig, permissions);
+  const permCheck = checkEventPermission(
+    operation,
+    guildConfig,
+    auth.permissions
+  );
 
   if (!permCheck.allowed) {
     return {
@@ -159,7 +265,7 @@ async function authorizeEventOperation(
     };
   }
 
-  return { authorized: true, supabase };
+  return { authorized: true, supabase: auth.supabase };
 }
 
 /**
@@ -168,11 +274,7 @@ async function authorizeEventOperation(
 export async function createEventAction(
   input: CreateEventActionInput
 ): Promise<MutationResult<CalendarEvent>> {
-  const auth = await authorizeEventOperation(
-    input.guildId,
-    input.permissionsBitfield,
-    "create"
-  );
+  const auth = await authorizeEventOperation(input.guildId, "create");
 
   if (!auth.authorized) {
     return auth.error;
@@ -188,11 +290,7 @@ export async function createEventAction(
 export async function updateEventAction(
   input: UpdateEventActionInput
 ): Promise<MutationResult<CalendarEvent>> {
-  const auth = await authorizeEventOperation(
-    input.guildId,
-    input.permissionsBitfield,
-    "update"
-  );
+  const auth = await authorizeEventOperation(input.guildId, "update");
 
   if (!auth.authorized) {
     return auth.error;
@@ -208,11 +306,7 @@ export async function updateEventAction(
 export async function deleteEventAction(
   input: DeleteEventActionInput
 ): Promise<MutationResult<void>> {
-  const auth = await authorizeEventOperation(
-    input.guildId,
-    input.permissionsBitfield,
-    "delete"
-  );
+  const auth = await authorizeEventOperation(input.guildId, "delete");
 
   if (!auth.authorized) {
     return auth.error;
