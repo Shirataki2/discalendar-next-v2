@@ -68,15 +68,85 @@ export type { EventInteractionArgs } from "react-big-calendar/lib/addons/dragAnd
 const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
 
 /**
+ * 曜日に応じたCSSクラスを返す
+ * 土曜日: rbc-saturday-text, 日曜日: rbc-sunday-text
+ */
+function getWeekendClassName(date: Date): string {
+  const day = date.getDay();
+  if (day === 6) {
+    return "rbc-saturday-text";
+  }
+  if (day === 0) {
+    return "rbc-sunday-text";
+  }
+  return "";
+}
+
+type HeaderCellProps = {
+  date: Date;
+  label: string;
+};
+
+/**
+ * 週末色付きヘッダーコンポーネント
+ * 構造セレクタ(:nth-child, :first-child)の代わりに日付ベースでクラスを適用し、
+ * Day Viewでの誤った色適用を防止する
+ */
+function WeekendHeader({ date, label }: HeaderCellProps) {
+  const className = getWeekendClassName(date);
+  return <span className={className || undefined}>{label}</span>;
+}
+
+type DateHeaderProps = {
+  date: Date;
+  label: string;
+  drilldownView?: string;
+  onDrillDown: () => void;
+};
+
+/**
+ * 週末色付き日付ヘッダーコンポーネント（月ビュー用）
+ * 日付番号に土曜・日曜の色クラスを適用する
+ */
+function WeekendDateHeader({
+  date,
+  label,
+  drilldownView,
+  onDrillDown,
+}: DateHeaderProps) {
+  const weekendClass = getWeekendClassName(date);
+
+  if (!drilldownView) {
+    return <span className={weekendClass || undefined}>{label}</span>;
+  }
+
+  return (
+    <button
+      className={
+        weekendClass ? `rbc-button-link ${weekendClass}` : "rbc-button-link"
+      }
+      onClick={onDrillDown}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+/**
  * react-big-calendarのカスタムコンポーネント設定
  * Task 6.1, 6.2: EventBlockカスタムレンダラーを使用
  * ツールバーは非表示（手動で作成したCalendarToolbarを使用するため）
  * 月表示のみ開始時刻を表示する専用ラッパーを使用
+ * WeekendHeader: 構造セレクタの代わりに日付ベースで曜日色を適用
  */
 const calendarComponents = {
   event: EventBlockWrapper,
+  header: WeekendHeader,
   month: {
     event: MonthEventBlockWrapper,
+    header: WeekendHeader,
+    dateHeader: WeekendDateHeader,
   },
   toolbar: () => null,
 };
@@ -306,6 +376,14 @@ export function CalendarGrid({
       const classNames: string[] = [];
       const style: React.CSSProperties = {};
 
+      // 土曜日・日曜日の色分け
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek === 6) {
+        classNames.push("rbc-saturday");
+      } else if (dayOfWeek === 0) {
+        classNames.push("rbc-sunday");
+      }
+
       // Task 5.4: 今日の日付をハイライト
       if (isSameDay(date, today)) {
         classNames.push("rbc-today-highlight");
@@ -316,7 +394,6 @@ export function CalendarGrid({
       if (!isSameMonth(date, selectedDate)) {
         classNames.push("rbc-off-range");
         style.backgroundColor = style.backgroundColor || "rgba(0, 0, 0, 0.02)";
-        style.color = "rgba(0, 0, 0, 0.4)";
       }
 
       return {

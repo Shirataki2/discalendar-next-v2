@@ -401,6 +401,38 @@
     color: hsl(217, 91%, 45%); /* 十分なコントラスト比を持つ青色 */
   }
 
+  /* 土曜日の色スタイル（青色） - WCAG AA: ~5.2:1 on #fff */
+  .rbc-day-bg.rbc-saturday {
+    background-color: rgba(59, 130, 246, 0.04);
+  }
+
+  .rbc-saturday-text {
+    color: #2563eb;
+  }
+
+  /* 日曜日の色スタイル（赤色） - WCAG AA: ~4.9:1 on #fff */
+  .rbc-day-bg.rbc-sunday {
+    background-color: rgba(239, 68, 68, 0.04);
+  }
+
+  .rbc-sunday-text {
+    color: #dc2626;
+  }
+
+  /*
+   * 範囲外の土曜日・日曜日（muted-foreground相当のコントラスト）
+   * off-range日付は視覚的に非アクティブであるため、通常のコントラスト基準より
+   * 低い値を許容（WCAG 2.1 SC 1.4.3 "inactive component" 例外適用）
+   * muted-foreground (#64748b) と同程度の視認性を維持
+   */
+  .rbc-date-cell.rbc-off-range .rbc-saturday-text {
+    color: #6b8fc7;
+  }
+
+  .rbc-date-cell.rbc-off-range .rbc-sunday-text {
+    color: #c27070;
+  }
+
   /* 終日イベントバーのスタイル */
   .event-block-bar {
     @apply w-full;
@@ -557,4 +589,22 @@
 
 .dark .rbc-allday-cell {
   border-bottom-color: hsl(222 15% 14%);
+}
+
+/* ダークモード: 土曜日・日曜日の色スタイル */
+/* WCAG AA: #60a5fa on ~#0e1629 ≈ 7.4:1, #f87171 on ~#0e1629 ≈ 6.7:1 */
+.dark .rbc-day-bg.rbc-saturday {
+  background-color: rgba(96, 165, 250, 0.06);
+}
+
+.dark .rbc-saturday-text {
+  color: #60a5fa;
+}
+
+.dark .rbc-day-bg.rbc-sunday {
+  background-color: rgba(248, 113, 113, 0.06);
+}
+
+.dark .rbc-sunday-text {
+  color: #f87171;
 }

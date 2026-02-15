@@ -587,6 +587,132 @@ describe("CalendarGrid", () => {
     });
   });
 
+  // 土曜日・日曜日の色クラス適用テスト
+  describe("週末の色スタイリング", () => {
+    it("月ビューで土曜日のヘッダーにrbc-saturday-textクラスが1つ適用される", () => {
+      // 2025年12月6日（土曜日）を含む月ビュー
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 6)}
+          viewMode="month"
+        />
+      );
+
+      const saturdayHeaders = document.querySelectorAll(
+        ".rbc-header .rbc-saturday-text"
+      );
+      expect(saturdayHeaders.length).toBe(1);
+    });
+
+    it("月ビューで日曜日のヘッダーにrbc-sunday-textクラスが1つ適用される", () => {
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 7)}
+          viewMode="month"
+        />
+      );
+
+      const sundayHeaders = document.querySelectorAll(
+        ".rbc-header .rbc-sunday-text"
+      );
+      expect(sundayHeaders.length).toBe(1);
+    });
+
+    it("月ビューで土曜日の日付セルにrbc-saturday-textクラスが適用される", () => {
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 6)}
+          viewMode="month"
+        />
+      );
+
+      const saturdayDateCells = document.querySelectorAll(
+        ".rbc-date-cell .rbc-saturday-text"
+      );
+      expect(saturdayDateCells.length).toBeGreaterThan(0);
+    });
+
+    it("月ビューで日曜日の日付セルにrbc-sunday-textクラスが適用される", () => {
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 7)}
+          viewMode="month"
+        />
+      );
+
+      const sundayDateCells = document.querySelectorAll(
+        ".rbc-date-cell .rbc-sunday-text"
+      );
+      expect(sundayDateCells.length).toBeGreaterThan(0);
+    });
+
+    it("dayPropGetterが土曜日にrbc-saturdayクラスを返す", () => {
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 15)}
+          viewMode="month"
+        />
+      );
+
+      const saturdayBgs = document.querySelectorAll(".rbc-day-bg.rbc-saturday");
+      expect(saturdayBgs.length).toBeGreaterThan(0);
+    });
+
+    it("dayPropGetterが日曜日にrbc-sundayクラスを返す", () => {
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 15)}
+          viewMode="month"
+        />
+      );
+
+      const sundayBgs = document.querySelectorAll(".rbc-day-bg.rbc-sunday");
+      expect(sundayBgs.length).toBeGreaterThan(0);
+    });
+
+    it("日ビューで平日のヘッダーに週末クラスが適用されない", () => {
+      // 2025年12月5日（金曜日）
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 5)}
+          viewMode="day"
+        />
+      );
+
+      const saturdayHeaders = document.querySelectorAll(
+        ".rbc-header .rbc-saturday-text"
+      );
+      const sundayHeaders = document.querySelectorAll(
+        ".rbc-header .rbc-sunday-text"
+      );
+      expect(saturdayHeaders.length).toBe(0);
+      expect(sundayHeaders.length).toBe(0);
+    });
+
+    it("日ビューで土曜日のヘッダーにrbc-saturday-textクラスが適用される", () => {
+      // 2025年12月6日（土曜日）
+      renderWithTooltip(
+        <CalendarGrid
+          {...defaultProps}
+          selectedDate={new Date(2025, 11, 6)}
+          viewMode="day"
+        />
+      );
+
+      const saturdayHeaders = document.querySelectorAll(
+        ".rbc-header .rbc-saturday-text"
+      );
+      expect(saturdayHeaders.length).toBeGreaterThan(0);
+    });
+  });
+
   // DnD（ドラッグ＆ドロップ）機能のテスト
   describe("ドラッグ＆ドロップ機能", () => {
     it("DnD props を渡した場合に正常にレンダリングされる", () => {
