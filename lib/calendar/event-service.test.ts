@@ -249,6 +249,7 @@ describe("createEventService", () => {
           location: null,
           channel_id: null,
           channel_name: null,
+          notifications: [],
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -413,6 +414,7 @@ describe("createEventService", () => {
           location: "東京",
           channel_id: "ch-1",
           channel_name: "general",
+          notifications: [],
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -428,6 +430,7 @@ describe("createEventService", () => {
           location: null,
           channel_id: null,
           channel_name: null,
+          notifications: [],
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -543,6 +546,7 @@ describe("createEventService - createEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -586,6 +590,7 @@ describe("createEventService - createEvent", () => {
       location: "東京",
       channel_id: "ch-123",
       channel_name: "general",
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -790,6 +795,7 @@ describe("createEventService - createEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -836,6 +842,7 @@ describe("createEventService - createEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -918,6 +925,7 @@ describe("createEventService - updateEvent", () => {
       location: "大阪",
       channel_id: "ch-1",
       channel_name: "general",
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -967,6 +975,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1009,6 +1018,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1135,6 +1145,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1174,6 +1185,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };

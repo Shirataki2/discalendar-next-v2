@@ -18,6 +18,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type CalendarEvent,
   type EventRecord,
+  type NotificationSetting,
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
@@ -124,6 +125,8 @@ export interface CreateEventInput {
   channelId?: string;
   /** Discordチャンネル名 */
   channelName?: string;
+  /** 通知設定 */
+  notifications?: NotificationSetting[];
 }
 
 /**
@@ -145,6 +148,8 @@ export interface UpdateEventInput {
   color?: string;
   /** 場所情報 */
   location?: string;
+  /** 通知設定 */
+  notifications?: NotificationSetting[];
 }
 
 /**
@@ -363,6 +368,7 @@ export function createEventService(
         location,
         channelId,
         channelName,
+        notifications,
       } = input;
 
       try {
@@ -455,6 +461,7 @@ export function createEventService(
           location: location?.trim() || null,
           channel_id: channelId || null,
           channel_name: channelName || null,
+          notifications: notifications ?? [],
         };
 
         // 認証状態を確認するために、ユーザー情報を取得
@@ -523,6 +530,7 @@ export function createEventService(
         isAllDay,
         color,
         location,
+        notifications,
       } = input;
 
       try {
@@ -588,6 +596,9 @@ export function createEventService(
         }
         if (location !== undefined) {
           updateData.location = location.trim() || null;
+        }
+        if (notifications !== undefined) {
+          updateData.notifications = notifications;
         }
 
         // SupabaseへのUPDATE操作
