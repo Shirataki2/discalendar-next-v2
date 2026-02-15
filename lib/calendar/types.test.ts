@@ -2,12 +2,15 @@
  * イベント型定義とデータ変換ロジックのテスト
  *
  * タスク2.1: イベント型定義とデータ変換ロジックの作成
- * Requirements: 3.1, 9.1
+ * Requirements: 3.1, 3.2, 9.1
  */
 import { describe, expect, it } from "vitest";
 import {
   type CalendarEvent,
   type EventRecord,
+  type NotificationSetting,
+  type NotificationUnit,
+  NOTIFICATION_UNIT_LABELS,
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
@@ -26,6 +29,7 @@ describe("EventRecord type", () => {
       location: "東京都渋谷区",
       channel_id: "channel-456",
       channel_name: "general",
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -48,6 +52,7 @@ describe("EventRecord type", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -113,6 +118,7 @@ describe("toCalendarEvent", () => {
       location: "会議室A",
       channel_id: "channel-456",
       channel_name: "meetings",
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -143,6 +149,7 @@ describe("toCalendarEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -167,6 +174,7 @@ describe("toCalendarEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -192,6 +200,7 @@ describe("toCalendarEvent", () => {
       location: null,
       channel_id: "channel-456",
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -212,6 +221,7 @@ describe("toCalendarEvent", () => {
       location: null,
       channel_id: null,
       channel_name: "general",
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -233,6 +243,7 @@ describe("toCalendarEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-01T00:00:00Z",
       updated_at: "2025-12-01T00:00:00Z",
     };
@@ -258,6 +269,7 @@ describe("toCalendarEvents", () => {
         location: "場所1",
         channel_id: null,
         channel_name: null,
+        notifications: [],
         created_at: "2025-12-01T00:00:00Z",
         updated_at: "2025-12-01T00:00:00Z",
       },
@@ -273,6 +285,7 @@ describe("toCalendarEvents", () => {
         location: null,
         channel_id: "channel-789",
         channel_name: "announcements",
+        notifications: [],
         created_at: "2025-12-01T00:00:00Z",
         updated_at: "2025-12-01T00:00:00Z",
       },
@@ -293,5 +306,140 @@ describe("toCalendarEvents", () => {
 
     expect(events).toEqual([]);
     expect(events).toHaveLength(0);
+  });
+});
+
+describe("NotificationUnit type", () => {
+  it("should accept valid unit values", () => {
+    const units: NotificationUnit[] = ["minutes", "hours", "days", "weeks"];
+
+    expect(units).toHaveLength(4);
+    expect(units).toContain("minutes");
+    expect(units).toContain("hours");
+    expect(units).toContain("days");
+    expect(units).toContain("weeks");
+  });
+});
+
+describe("NotificationSetting type", () => {
+  it("should represent a notification with key, num, and unit", () => {
+    const notification: NotificationSetting = {
+      key: "abc-123",
+      num: 30,
+      unit: "minutes",
+    };
+
+    expect(notification.key).toBe("abc-123");
+    expect(notification.num).toBe(30);
+    expect(notification.unit).toBe("minutes");
+  });
+
+  it("should support all unit types", () => {
+    const notifications: NotificationSetting[] = [
+      { key: "1", num: 15, unit: "minutes" },
+      { key: "2", num: 2, unit: "hours" },
+      { key: "3", num: 1, unit: "days" },
+      { key: "4", num: 1, unit: "weeks" },
+    ];
+
+    expect(notifications).toHaveLength(4);
+  });
+});
+
+describe("NOTIFICATION_UNIT_LABELS", () => {
+  it("should map internal values to Japanese display labels", () => {
+    expect(NOTIFICATION_UNIT_LABELS.minutes).toBe("分前");
+    expect(NOTIFICATION_UNIT_LABELS.hours).toBe("時間前");
+    expect(NOTIFICATION_UNIT_LABELS.days).toBe("日前");
+    expect(NOTIFICATION_UNIT_LABELS.weeks).toBe("週間前");
+  });
+
+  it("should have labels for all NotificationUnit values", () => {
+    const units: NotificationUnit[] = ["minutes", "hours", "days", "weeks"];
+    for (const unit of units) {
+      expect(NOTIFICATION_UNIT_LABELS[unit]).toBeDefined();
+    }
+  });
+});
+
+describe("EventRecord with notifications", () => {
+  it("should include notifications field as an array", () => {
+    const record: EventRecord = {
+      id: "event-1",
+      guild_id: "guild-123",
+      name: "通知付きイベント",
+      description: null,
+      color: "#3788d8",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      notifications: [
+        { key: "a1", num: 1, unit: "hours" },
+        { key: "a2", num: 3, unit: "days" },
+      ],
+      created_at: "2025-12-01T00:00:00Z",
+      updated_at: "2025-12-01T00:00:00Z",
+    };
+
+    expect(record.notifications).toHaveLength(2);
+    expect(record.notifications[0].num).toBe(1);
+    expect(record.notifications[0].unit).toBe("hours");
+  });
+});
+
+describe("toCalendarEvent with notifications", () => {
+  it("should pass through notifications from EventRecord to CalendarEvent", () => {
+    const record: EventRecord = {
+      id: "event-1",
+      guild_id: "guild-123",
+      name: "通知テスト",
+      description: null,
+      color: "#3788d8",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      notifications: [
+        { key: "n1", num: 30, unit: "minutes" },
+        { key: "n2", num: 1, unit: "days" },
+      ],
+      created_at: "2025-12-01T00:00:00Z",
+      updated_at: "2025-12-01T00:00:00Z",
+    };
+
+    const event = toCalendarEvent(record);
+
+    expect(event.notifications).toEqual([
+      { key: "n1", num: 30, unit: "minutes" },
+      { key: "n2", num: 1, unit: "days" },
+    ]);
+  });
+
+  it("should handle empty notifications array", () => {
+    const record: EventRecord = {
+      id: "event-2",
+      guild_id: "guild-123",
+      name: "通知なし",
+      description: null,
+      color: "#3788d8",
+      is_all_day: false,
+      start_at: "2025-12-15T10:00:00Z",
+      end_at: "2025-12-15T12:00:00Z",
+      location: null,
+      channel_id: null,
+      channel_name: null,
+      notifications: [],
+      created_at: "2025-12-01T00:00:00Z",
+      updated_at: "2025-12-01T00:00:00Z",
+    };
+
+    const event = toCalendarEvent(record);
+
+    expect(event.notifications).toEqual([]);
   });
 });

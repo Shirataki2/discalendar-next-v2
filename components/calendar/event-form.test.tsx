@@ -29,6 +29,9 @@ const TITLE_REQUIRED_ERROR_PATTERN = /タイトルは必須です/i;
 const TITLE_MAX_LENGTH_ERROR_PATTERN =
   /タイトルは255文字以内で入力してください/i;
 const END_TIME_ERROR_PATTERN = /終了日時は開始日時以降である必要があります/i;
+const NOTIFICATION_SECTION_PATTERN = /通知設定/;
+const NOTIFICATION_NUM_PATTERN = /通知の数値/;
+const ADD_BUTTON_PATTERN = /追加/;
 
 describe("EventForm", () => {
   const defaultProps: EventFormProps = {
@@ -433,6 +436,115 @@ describe("EventForm", () => {
         expect(errorElement).toHaveAttribute("id");
         const errorId = errorElement.getAttribute("id");
         expect(titleInput).toHaveAttribute("aria-describedby", errorId);
+      });
+    });
+  });
+
+  // Task 5: 通知設定フィールドの統合
+  describe("Task 5: 通知設定フィールドの統合", () => {
+    it("通知設定セクションが表示される (Req 1.1)", () => {
+      render(<EventForm {...defaultProps} />);
+
+      expect(
+        screen.getByText(NOTIFICATION_SECTION_PATTERN)
+      ).toBeInTheDocument();
+    });
+
+    it("defaultValuesで通知設定が復元表示される (Req 2.2)", () => {
+      const defaultValues = {
+        title: "テスト予定",
+        notifications: [
+          { key: "n1", num: 10, unit: "minutes" as const },
+          { key: "n2", num: 1, unit: "hours" as const },
+        ],
+      };
+
+      render(<EventForm {...defaultProps} defaultValues={defaultValues} />);
+
+      expect(screen.getByText("10分前")).toBeInTheDocument();
+      expect(screen.getByText("1時間前")).toBeInTheDocument();
+    });
+
+    it("通知を追加するとチップが表示される (Req 1.2, 1.3)", async () => {
+      const user = userEvent.setup();
+      render(<EventForm {...defaultProps} />);
+
+      // 数値を入力
+      const numInput = screen.getByRole("spinbutton", {
+        name: NOTIFICATION_NUM_PATTERN,
+      });
+      await user.clear(numInput);
+      await user.type(numInput, "30");
+
+      // 追加ボタンをクリック
+      const addButton = screen.getByRole("button", {
+        name: ADD_BUTTON_PATTERN,
+      });
+      await user.click(addButton);
+
+      expect(screen.getByText("30分前")).toBeInTheDocument();
+    });
+
+    it("通知を含むフォーム送信時にnotificationsが含まれる (Req 2.1)", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00"),
+        endAt: new Date("2025-12-10T11:00"),
+        notifications: [{ key: "n1", num: 10, unit: "minutes" as const }],
+      };
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+        />
+      );
+
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            notifications: expect.arrayContaining([
+              expect.objectContaining({ num: 10, unit: "minutes" }),
+            ]),
+          })
+        );
+      });
+    });
+
+    it("通知なし（0件）でもイベントを正常に保存できる (Req 5.3)", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00"),
+        endAt: new Date("2025-12-10T11:00"),
+      };
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+        />
+      );
+
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            notifications: [],
+          })
+        );
       });
     });
   });

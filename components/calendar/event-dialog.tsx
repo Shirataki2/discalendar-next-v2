@@ -46,6 +46,7 @@ function toCreateEventInput(
     isAllDay: data.isAllDay,
     color: data.color,
     location: data.location || undefined,
+    notifications: data.notifications,
   };
 }
 
@@ -61,6 +62,7 @@ function toUpdateEventInput(data: EventFormData): UpdateEventInput {
     isAllDay: data.isAllDay,
     color: data.color,
     location: data.location || undefined,
+    notifications: data.notifications,
   };
 }
 

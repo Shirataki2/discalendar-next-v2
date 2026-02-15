@@ -19,6 +19,9 @@ export {
   type CalendarEvent,
   type ChannelInfo,
   type EventRecord,
+  type NotificationSetting,
+  type NotificationUnit,
+  NOTIFICATION_UNIT_LABELS,
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";

@@ -249,6 +249,7 @@ describe("createEventService", () => {
           location: null,
           channel_id: null,
           channel_name: null,
+          notifications: [],
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -413,6 +414,7 @@ describe("createEventService", () => {
           location: "東京",
           channel_id: "ch-1",
           channel_name: "general",
+          notifications: [],
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -428,6 +430,7 @@ describe("createEventService", () => {
           location: null,
           channel_id: null,
           channel_name: null,
+          notifications: [],
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -543,6 +546,7 @@ describe("createEventService - createEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -586,6 +590,7 @@ describe("createEventService - createEvent", () => {
       location: "東京",
       channel_id: "ch-123",
       channel_name: "general",
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -790,6 +795,7 @@ describe("createEventService - createEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -836,6 +842,7 @@ describe("createEventService - createEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -918,6 +925,7 @@ describe("createEventService - updateEvent", () => {
       location: "大阪",
       channel_id: "ch-1",
       channel_name: "general",
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -967,6 +975,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1009,6 +1018,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1135,6 +1145,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1174,6 +1185,7 @@ describe("createEventService - updateEvent", () => {
       location: null,
       channel_id: null,
       channel_name: null,
+      notifications: [],
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1320,5 +1332,428 @@ describe("CalendarErrorCode - DELETE_FAILED", () => {
   it("should return correct message for DELETE_FAILED", () => {
     const message = getCalendarErrorMessage("DELETE_FAILED");
     expect(message).toBe("イベントの削除に失敗しました。");
+  });
+});
+
+describe("createEventService - notification persistence", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("createEvent with notifications (Req 2.1)", () => {
+    it("should include notifications in insert data when provided", async () => {
+      const notifications = [
+        { key: "n1", num: 1, unit: "hours" as const },
+        { key: "n2", num: 3, unit: "days" as const },
+      ];
+
+      const mockRecord: EventRecord = {
+        id: "event-with-notif",
+        guild_id: "guild-123",
+        name: "通知付きイベント",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications,
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T09:00:00Z",
+      };
+
+      const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: CreateEventInput = {
+        guildId: "guild-123",
+        title: "通知付きイベント",
+        startAt: new Date("2025-12-15T10:00:00Z"),
+        endAt: new Date("2025-12-15T12:00:00Z"),
+        notifications,
+      };
+
+      const result = await service.createEvent(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.notifications).toEqual(notifications);
+      }
+
+      // insertが呼ばれた際の引数で notifications が含まれていることを確認
+      const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+      expect(insertCall).toBeDefined();
+      if (insertCall) {
+        expect(insertCall.notifications).toEqual(notifications);
+      }
+    });
+
+    it("should default to empty array when notifications not provided (Req 5.3)", async () => {
+      const mockRecord: EventRecord = {
+        id: "event-no-notif",
+        guild_id: "guild-123",
+        name: "通知なしイベント",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T09:00:00Z",
+      };
+
+      const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: CreateEventInput = {
+        guildId: "guild-123",
+        title: "通知なしイベント",
+        startAt: new Date("2025-12-15T10:00:00Z"),
+        endAt: new Date("2025-12-15T12:00:00Z"),
+        // notifications は意図的に省略
+      };
+
+      const result = await service.createEvent(input);
+
+      expect(result.success).toBe(true);
+
+      // insertが呼ばれた際の引数で notifications が空配列であることを確認
+      const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+      expect(insertCall).toBeDefined();
+      if (insertCall) {
+        expect(insertCall.notifications).toEqual([]);
+      }
+    });
+
+    it("should save event with empty notifications array (Req 5.3)", async () => {
+      const mockRecord: EventRecord = {
+        id: "event-empty-notif",
+        guild_id: "guild-123",
+        name: "空通知イベント",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T09:00:00Z",
+      };
+
+      const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: CreateEventInput = {
+        guildId: "guild-123",
+        title: "空通知イベント",
+        startAt: new Date("2025-12-15T10:00:00Z"),
+        endAt: new Date("2025-12-15T12:00:00Z"),
+        notifications: [],
+      };
+
+      const result = await service.createEvent(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.notifications).toEqual([]);
+      }
+
+      const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+      expect(insertCall).toBeDefined();
+      if (insertCall) {
+        expect(insertCall.notifications).toEqual([]);
+      }
+    });
+
+    it("should persist notifications through CalendarEvent conversion", async () => {
+      const notifications = [
+        { key: "n1", num: 30, unit: "minutes" as const },
+        { key: "n2", num: 1, unit: "weeks" as const },
+      ];
+
+      const mockRecord: EventRecord = {
+        id: "event-convert",
+        guild_id: "guild-123",
+        name: "変換テスト",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications,
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T09:00:00Z",
+      };
+
+      const insertBuilder = createMockInsertBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: CreateEventInput = {
+        guildId: "guild-123",
+        title: "変換テスト",
+        startAt: new Date("2025-12-15T10:00:00Z"),
+        endAt: new Date("2025-12-15T12:00:00Z"),
+        notifications,
+      };
+
+      const result = await service.createEvent(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        // CalendarEvent に正しく変換されていることを確認
+        expect(result.data.notifications).toHaveLength(2);
+        expect(result.data.notifications?.[0]).toEqual({ key: "n1", num: 30, unit: "minutes" });
+        expect(result.data.notifications?.[1]).toEqual({ key: "n2", num: 1, unit: "weeks" });
+      }
+    });
+  });
+
+  describe("updateEvent with notifications (Req 2.3, 2.4)", () => {
+    it("should include notifications in update data when provided (Req 2.3)", async () => {
+      const notifications = [
+        { key: "n1", num: 2, unit: "hours" as const },
+      ];
+
+      const mockRecord: EventRecord = {
+        id: "event-1",
+        guild_id: "guild-123",
+        name: "元のイベント",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications,
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T10:00:00Z",
+      };
+
+      const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: UpdateEventInput = {
+        notifications,
+      };
+
+      const result = await service.updateEvent("event-1", input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.notifications).toEqual(notifications);
+      }
+
+      // updateが呼ばれた際の引数で notifications が含まれていることを確認
+      const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+      expect(updateCall).toBeDefined();
+      if (updateCall) {
+        expect(updateCall.notifications).toEqual(notifications);
+        // notifications のみが更新されること
+        expect(Object.keys(updateCall)).toHaveLength(1);
+      }
+    });
+
+    it("should not include notifications in update data when not provided", async () => {
+      const mockRecord: EventRecord = {
+        id: "event-1",
+        guild_id: "guild-123",
+        name: "更新されたタイトル",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [{ key: "existing", num: 1, unit: "hours" as const }],
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T10:00:00Z",
+      };
+
+      const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: UpdateEventInput = {
+        title: "更新されたタイトル",
+        // notifications は意図的に省略 → 既存値を維持
+      };
+
+      const result = await service.updateEvent("event-1", input);
+
+      expect(result.success).toBe(true);
+
+      // updateが呼ばれた際の引数で notifications が含まれていないことを確認
+      const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+      expect(updateCall).toBeDefined();
+      if (updateCall) {
+        expect(updateCall).not.toHaveProperty("notifications");
+        expect(updateCall.name).toBe("更新されたタイトル");
+      }
+    });
+
+    it("should save empty array to clear all notifications (Req 2.4)", async () => {
+      const mockRecord: EventRecord = {
+        id: "event-1",
+        guild_id: "guild-123",
+        name: "元のイベント",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T10:00:00Z",
+      };
+
+      const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: UpdateEventInput = {
+        notifications: [], // 全通知を削除
+      };
+
+      const result = await service.updateEvent("event-1", input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.notifications).toEqual([]);
+      }
+
+      // updateが呼ばれた際の引数で notifications が空配列であることを確認
+      const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+      expect(updateCall).toBeDefined();
+      if (updateCall) {
+        expect(updateCall.notifications).toEqual([]);
+      }
+    });
+
+    it("should update notifications together with other fields", async () => {
+      const notifications = [
+        { key: "n1", num: 5, unit: "minutes" as const },
+        { key: "n2", num: 1, unit: "days" as const },
+      ];
+
+      const mockRecord: EventRecord = {
+        id: "event-1",
+        guild_id: "guild-123",
+        name: "更新イベント",
+        description: "新しい説明",
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2025-12-15T10:00:00Z",
+        end_at: "2025-12-15T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications,
+        created_at: "2025-12-15T09:00:00Z",
+        updated_at: "2025-12-15T10:00:00Z",
+      };
+
+      const updateBuilder = createMockUpdateBuilder({ data: mockRecord });
+      mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: UpdateEventInput = {
+        title: "更新イベント",
+        description: "新しい説明",
+        notifications,
+      };
+
+      const result = await service.updateEvent("event-1", input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.notifications).toEqual(notifications);
+        expect(result.data.title).toBe("更新イベント");
+        expect(result.data.description).toBe("新しい説明");
+      }
+
+      // updateが呼ばれた際の引数を確認
+      const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+      expect(updateCall).toBeDefined();
+      if (updateCall) {
+        expect(updateCall.notifications).toEqual(notifications);
+        expect(updateCall.name).toBe("更新イベント");
+        expect(updateCall.description).toBe("新しい説明");
+        expect(Object.keys(updateCall)).toHaveLength(3);
+      }
+    });
+  });
+
+  describe("error handling with notifications (Req 5.2)", () => {
+    it("should return CREATE_FAILED when saving event with notifications fails", async () => {
+      const insertBuilder = createMockInsertBuilder({
+        error: { message: "Database connection failed" },
+      });
+      mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: CreateEventInput = {
+        guildId: "guild-123",
+        title: "通知付きイベント",
+        startAt: new Date("2025-12-15T10:00:00Z"),
+        endAt: new Date("2025-12-15T12:00:00Z"),
+        notifications: [
+          { key: "n1", num: 1, unit: "hours" },
+        ],
+      };
+
+      const result = await service.createEvent(input);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("CREATE_FAILED");
+        expect(result.error.message).toBe("イベントの作成に失敗しました。");
+      }
+    });
+
+    it("should return UPDATE_FAILED when updating notifications fails", async () => {
+      const updateBuilder = createMockUpdateBuilder({
+        error: { message: "Database connection failed" },
+      });
+      mockSupabaseClient.from.mockReturnValue(updateBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      const input: UpdateEventInput = {
+        notifications: [
+          { key: "n1", num: 2, unit: "days" },
+        ],
+      };
+
+      const result = await service.updateEvent("event-1", input);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("UPDATE_FAILED");
+        expect(result.error.message).toBe("イベントの更新に失敗しました。");
+      }
+    });
   });
 });

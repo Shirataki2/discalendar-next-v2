@@ -18,6 +18,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type CalendarEvent,
   type EventRecord,
+  type NotificationSetting,
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
@@ -124,6 +125,8 @@ export interface CreateEventInput {
   channelId?: string;
   /** Discordチャンネル名 */
   channelName?: string;
+  /** 通知設定 */
+  notifications?: NotificationSetting[];
 }
 
 /**
@@ -145,6 +148,8 @@ export interface UpdateEventInput {
   color?: string;
   /** 場所情報 */
   location?: string;
+  /** 通知設定 */
+  notifications?: NotificationSetting[];
 }
 
 /**
@@ -200,17 +205,6 @@ function classifySupabaseError(
   error: { message: string; code?: string; details?: string; hint?: string },
   operation: "fetch" | "create" | "update" | "delete" = "fetch"
 ): CalendarErrorCode {
-  // デバッグ用: エラー情報をログに出力
-  if (typeof window !== "undefined") {
-    console.error("[EventService] Supabase error:", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      operation,
-    });
-  }
-
   // PostgreSQL permission denied error (42501)
   // PostgREST RLS policy violation (PGRST116)
   // PostgREST schema cache error (PGRST301) - 認証関連の可能性
@@ -363,51 +357,10 @@ export function createEventService(
         location,
         channelId,
         channelName,
+        notifications,
       } = input;
 
       try {
-        // 認証状態を確認し、必要に応じてセッションを再取得
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          // セッションがない場合は、ユーザーに再取得を試みる
-          const {
-            data: { session: refreshedSession },
-            error: refreshError,
-          } = await supabase.auth.refreshSession();
-
-          if (!refreshedSession) {
-            console.error(
-              "[EventService] No active session found for createEvent",
-              sessionError || refreshError,
-            );
-            return {
-              success: false,
-              error: {
-                code: "UNAUTHORIZED",
-                message: "セッションが無効です。再度ログインしてください。",
-                details:
-                  sessionError?.message ||
-                  refreshError?.message ||
-                  "No active session found",
-              },
-            };
-          }
-
-          console.log("[EventService] Session refreshed for createEvent:", {
-            userId: refreshedSession.user.id,
-            expiresAt: refreshedSession.expires_at,
-          });
-        } else {
-          console.log("[EventService] Session found for createEvent:", {
-            userId: session.user.id,
-            expiresAt: session.expires_at,
-          });
-        }
-
         // バリデーション: 必須フィールドのチェック
         if (!title || title.trim().length === 0) {
           return {
@@ -455,22 +408,8 @@ export function createEventService(
           location: location?.trim() || null,
           channel_id: channelId || null,
           channel_name: channelName || null,
+          notifications: notifications ?? [],
         };
-
-        // 認証状態を確認するために、ユーザー情報を取得
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        // ユーザーが認証されていない場合はエラーを返す
-        if (!user) {
-          return {
-            success: false,
-            error: {
-              code: "UNAUTHORIZED",
-              message: "認証が必要です。再度ログインしてください。",
-              details: userError?.message || "User not authenticated",
-            },
-          };
-        }
 
         const { data, error } = await supabase
           .from("events")
@@ -523,6 +462,7 @@ export function createEventService(
         isAllDay,
         color,
         location,
+        notifications,
       } = input;
 
       try {
@@ -588,6 +528,9 @@ export function createEventService(
         }
         if (location !== undefined) {
           updateData.location = location.trim() || null;
+        }
+        if (notifications !== undefined) {
+          updateData.notifications = notifications;
         }
 
         // SupabaseへのUPDATE操作

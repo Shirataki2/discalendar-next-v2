@@ -24,6 +24,7 @@ import {
   useEventForm,
 } from "@/hooks/calendar/use-event-form";
 import { cn } from "@/lib/utils";
+import { NotificationField } from "./notification-field";
 
 /**
  * EventFormコンポーネントのProps
@@ -269,6 +270,11 @@ export function EventForm({
       <DescriptionField form={form} isSubmitting={isSubmitting} />
       <ColorField form={form} isSubmitting={isSubmitting} />
       <LocationField form={form} isSubmitting={isSubmitting} />
+      <NotificationField
+        notifications={form.values.notifications}
+        onAdd={form.addNotification}
+        onRemove={form.removeNotification}
+      />
 
       <div className="flex justify-end space-x-2 pt-4">
         <Button
