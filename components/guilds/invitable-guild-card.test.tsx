@@ -25,7 +25,7 @@ const mockGuildWithAvatar: InvitableGuild = {
 const botInviteUrl =
   "https://discord.com/oauth2/authorize?client_id=12345&permissions=0&scope=bot";
 
-const INVITE_LINK_PATTERN = /BOT を招待/i;
+const INVITE_LINK_PATTERN = /招待/i;
 
 describe("InvitableGuildCard", () => {
   describe("表示", () => {

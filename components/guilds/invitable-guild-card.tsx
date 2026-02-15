@@ -64,7 +64,7 @@ export function InvitableGuildCard({
         {/* ギルド名 + バッジ */}
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-sm">{guild.name}</p>
-          <Badge className="mt-1" variant="outline">
+          <Badge className="mt-1 whitespace-nowrap" variant="outline">
             BOT 未参加
           </Badge>
         </div>
@@ -77,7 +77,7 @@ export function InvitableGuildCard({
             rel="noopener noreferrer"
             target="_blank"
           >
-            BOT を招待
+            招待
             <ExternalLink className="h-3 w-3" />
           </a>
         ) : null}
