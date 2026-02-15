@@ -14,7 +14,13 @@
  *
  * Requirements: 5.1, 5.2, 5.3, 5.4
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // EventServiceのモック
@@ -54,9 +60,17 @@ vi.mock("@/components/calendar/calendar-container", () => ({
   ),
 }));
 
+// refreshGuilds Server Action モック
+const mockRefreshGuilds = vi.fn();
+vi.mock("@/app/dashboard/actions", () => ({
+  refreshGuilds: (...args: unknown[]) => mockRefreshGuilds(...args),
+}));
+
 // 動的インポート
-import type { Guild } from "@/lib/guilds/types";
+import type { Guild, InvitableGuild } from "@/lib/guilds/types";
 import { DashboardWithCalendar } from "./dashboard-with-calendar";
+
+const INVITABLE_SECTION_PATTERN = /BOT 未参加サーバー/;
 
 // matchMediaのモック
 const createMatchMediaMock = () =>
@@ -237,5 +251,278 @@ describe("Task 10.2: ローディングとエラー状態のUI実装", () => {
       const errorMessages = screen.getAllByText("サーバーエラー");
       expect(errorMessages.length).toBeGreaterThan(0);
     });
+  });
+});
+
+// ──────────────────────────────────────────────
+// bot-invite-flow Task 5.1 & 5.2
+// ──────────────────────────────────────────────
+
+const mockInvitableGuilds: InvitableGuild[] = [
+  {
+    guildId: "inv-1",
+    name: "Invitable Server A",
+    avatarUrl: null,
+  },
+  {
+    guildId: "inv-2",
+    name: "Invitable Server B",
+    avatarUrl: "https://example.com/icon2.png",
+  },
+];
+
+describe("Task 5.1: Props 拡張と未参加ギルドセクション", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: createMatchMediaMock(),
+    });
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      value: 1200,
+    });
+    mockFetchEvents.mockResolvedValue({ success: true, data: [] });
+  });
+
+  it("invitableGuilds が渡された場合「BOT 未参加サーバー」セクションが表示される", () => {
+    render(
+      <DashboardWithCalendar
+        guilds={mockGuilds}
+        invitableGuilds={mockInvitableGuilds}
+      />
+    );
+
+    // モバイル（折りたたみトリガー）+ デスクトップ（見出し）の両ビューに表示される
+    const headings = screen.getAllByText(INVITABLE_SECTION_PATTERN);
+    expect(headings.length).toBeGreaterThanOrEqual(1);
+    // デスクトップ側は常に展開: 2カード表示
+    // モバイル側はデフォルト折りたたみ: DOM上は非表示
+    const invitableCards = screen.getAllByTestId("invitable-guild-card");
+    expect(invitableCards).toHaveLength(2);
+  });
+
+  it("invitableGuilds が空の場合は未参加セクションを非表示にする", () => {
+    render(<DashboardWithCalendar guilds={mockGuilds} invitableGuilds={[]} />);
+
+    expect(screen.queryByText("BOT 未参加サーバー")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("invitable-guild-card")
+    ).not.toBeInTheDocument();
+  });
+
+  it("invitableGuilds が未指定の場合は未参加セクションを非表示にする", () => {
+    render(<DashboardWithCalendar guilds={mockGuilds} />);
+
+    expect(screen.queryByText("BOT 未参加サーバー")).not.toBeInTheDocument();
+  });
+
+  it("デスクトップサイドバーで参加済みギルドが先頭に、未参加が後に表示される", () => {
+    const { container } = render(
+      <DashboardWithCalendar
+        guilds={mockGuilds}
+        invitableGuilds={mockInvitableGuilds}
+      />
+    );
+
+    // デスクトップサイドバー内で確認
+    // biome-ignore lint/style/noNonNullAssertion: テスト内でのDOM要素取得
+    const sidebar = container.querySelector("aside")!;
+
+    const joinedCards = sidebar.querySelectorAll('[data-testid="guild-card"]');
+    const invitableCards = sidebar.querySelectorAll(
+      '[data-testid="invitable-guild-card"]'
+    );
+
+    expect(joinedCards.length).toBe(2);
+    expect(invitableCards.length).toBe(2);
+
+    // DOM 上で参加済みが先に来ることを確認
+    const allCards = sidebar.querySelectorAll(
+      '[data-testid="guild-card"], [data-testid="invitable-guild-card"]'
+    );
+    const firstJoinedIdx = Array.from(allCards).indexOf(joinedCards[0]);
+    const firstInvitableIdx = Array.from(allCards).indexOf(invitableCards[0]);
+    expect(firstJoinedIdx).toBeLessThan(firstInvitableIdx);
+  });
+
+  it("各グループ内はギルド名のアルファベット順にソートされる", () => {
+    const unsortedGuilds: Guild[] = [
+      {
+        id: 2,
+        guildId: "g2",
+        name: "Zebra Server",
+        avatarUrl: null,
+        locale: "ja",
+      },
+      {
+        id: 1,
+        guildId: "g1",
+        name: "Alpha Server",
+        avatarUrl: null,
+        locale: "ja",
+      },
+    ];
+    const unsortedInvitable: InvitableGuild[] = [
+      { guildId: "i2", name: "Zebra Invite", avatarUrl: null },
+      { guildId: "i1", name: "Alpha Invite", avatarUrl: null },
+    ];
+
+    render(
+      <DashboardWithCalendar
+        guilds={unsortedGuilds}
+        invitableGuilds={unsortedInvitable}
+      />
+    );
+
+    // 参加済みギルドがアルファベット順
+    const joinedCards = screen.getAllByTestId("guild-card");
+    expect(joinedCards[0]).toHaveTextContent("Alpha Server");
+    expect(joinedCards[1]).toHaveTextContent("Zebra Server");
+
+    // 未参加ギルドもアルファベット順
+    const invitableCards = screen.getAllByTestId("invitable-guild-card");
+    expect(invitableCards[0]).toHaveTextContent("Alpha Invite");
+    expect(invitableCards[1]).toHaveTextContent("Zebra Invite");
+  });
+});
+
+describe("Task 5.2: useGuildRefresh の統合", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: createMatchMediaMock(),
+    });
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      value: 1200,
+    });
+    mockFetchEvents.mockResolvedValue({ success: true, data: [] });
+  });
+
+  it("invitableGuilds 存在時にタブ復帰で guilds が更新される", async () => {
+    mockRefreshGuilds.mockResolvedValueOnce({
+      guilds: [
+        {
+          id: 1,
+          guildId: "guild-1",
+          name: "Test Server 1",
+          avatarUrl: null,
+          locale: "ja",
+        },
+        {
+          id: 3,
+          guildId: "inv-1",
+          name: "Invitable Server A",
+          avatarUrl: null,
+          locale: "ja",
+        },
+      ],
+      invitableGuilds: [
+        {
+          guildId: "inv-2",
+          name: "Invitable Server B",
+          avatarUrl: "https://example.com/icon2.png",
+        },
+      ],
+      guildPermissions: {},
+    });
+
+    const { container } = render(
+      <DashboardWithCalendar
+        guilds={mockGuilds}
+        invitableGuilds={mockInvitableGuilds}
+      />
+    );
+
+    // 初期状態（デスクトップサイドバー内で確認）
+    // biome-ignore lint/style/noNonNullAssertion: テスト内でのDOM要素取得
+    const sidebar = container.querySelector("aside")!;
+    expect(sidebar.querySelectorAll('[data-testid="guild-card"]')).toHaveLength(
+      2
+    );
+    expect(
+      sidebar.querySelectorAll('[data-testid="invitable-guild-card"]')
+    ).toHaveLength(2);
+
+    // タブ復帰をシミュレート
+    Object.defineProperty(document, "visibilityState", {
+      value: "visible",
+      writable: true,
+    });
+    // biome-ignore lint/suspicious/useAwait: React act() requires async callback
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    // 更新後: 参加済み2 + 未参加1（inv-1 が参加済みに移動）
+    await waitFor(() => {
+      expect(
+        sidebar.querySelectorAll('[data-testid="guild-card"]')
+      ).toHaveLength(2);
+      expect(
+        sidebar.querySelectorAll('[data-testid="invitable-guild-card"]')
+      ).toHaveLength(1);
+    });
+  });
+
+  it("invitableGuilds が空の場合はリフレッシュフックを無効化する", () => {
+    const addEventListenerSpy = vi.spyOn(document, "addEventListener");
+
+    render(<DashboardWithCalendar guilds={mockGuilds} invitableGuilds={[]} />);
+
+    // visibilitychange リスナーが登録されていないこと
+    expect(addEventListenerSpy).not.toHaveBeenCalledWith(
+      "visibilitychange",
+      expect.any(Function)
+    );
+
+    addEventListenerSpy.mockRestore();
+  });
+
+  it("再取得中にローディングインジケーターが表示される", async () => {
+    let resolveRefresh: (value: unknown) => void;
+    mockRefreshGuilds.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRefresh = resolve;
+      })
+    );
+
+    render(
+      <DashboardWithCalendar
+        guilds={mockGuilds}
+        invitableGuilds={mockInvitableGuilds}
+      />
+    );
+
+    // タブ復帰を開始
+    Object.defineProperty(document, "visibilityState", {
+      value: "visible",
+      writable: true,
+    });
+    // biome-ignore lint/suspicious/useAwait: React act() requires async callback
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    // ローディングインジケーターが表示される
+    await waitFor(() => {
+      expect(screen.getByText("更新中...")).toBeInTheDocument();
+    });
+
+    // resolve して完了
+    // biome-ignore lint/suspicious/useAwait: React act() requires async callback
+    await act(async () => {
+      // biome-ignore lint/style/noNonNullAssertion: テスト内のPromise resolve
+      resolveRefresh!({
+        guilds: mockGuilds,
+        invitableGuilds: mockInvitableGuilds,
+        guildPermissions: {},
+      });
+    });
+
+    // ローディングインジケーターが消える
+    expect(screen.queryByText("更新中...")).not.toBeInTheDocument();
   });
 });

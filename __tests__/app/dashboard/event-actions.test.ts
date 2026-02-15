@@ -68,40 +68,46 @@ import {
 
 /** テスト用ヘルパー: 権限なしのキャッシュを設定 */
 function setupCacheWithNoPermissions(guildId: string) {
-  mockGetCachedGuilds.mockReturnValueOnce([
-    {
-      guildId,
-      name: "Test Guild",
-      permissions: {
-        administrator: false,
-        manageGuild: false,
-        manageChannels: false,
-        manageMessages: false,
-        manageRoles: false,
-        manageEvents: false,
-        raw: 0n,
+  mockGetCachedGuilds.mockReturnValueOnce({
+    guilds: [
+      {
+        guildId,
+        name: "Test Guild",
+        permissions: {
+          administrator: false,
+          manageGuild: false,
+          manageChannels: false,
+          manageMessages: false,
+          manageRoles: false,
+          manageEvents: false,
+          raw: 0n,
+        },
       },
-    },
-  ]);
+    ],
+    invitableGuilds: [],
+  });
 }
 
 /** テスト用ヘルパー: ADMINISTRATOR 権限ありのキャッシュを設定 */
 function setupCacheWithAdminPermissions(guildId: string) {
-  mockGetCachedGuilds.mockReturnValueOnce([
-    {
-      guildId,
-      name: "Test Guild",
-      permissions: {
-        administrator: true,
-        manageGuild: false,
-        manageChannels: false,
-        manageMessages: false,
-        manageRoles: false,
-        manageEvents: false,
-        raw: 8n,
+  mockGetCachedGuilds.mockReturnValueOnce({
+    guilds: [
+      {
+        guildId,
+        name: "Test Guild",
+        permissions: {
+          administrator: true,
+          manageGuild: false,
+          manageChannels: false,
+          manageMessages: false,
+          manageRoles: false,
+          manageEvents: false,
+          raw: 8n,
+        },
       },
-    },
-  ]);
+    ],
+    invitableGuilds: [],
+  });
 }
 
 describe("createEventAction", () => {

@@ -58,6 +58,23 @@ export interface GuildWithPermissions extends Guild {
 }
 
 /**
+ * BOT 未参加（招待対象）ギルド
+ *
+ * Discord API レスポンスから生成され、DB には永続化しない。
+ * MANAGE_GUILD または ADMINISTRATOR 権限を持つギルドのみ対象。
+ *
+ * Requirements: bot-invite-flow 3.2
+ */
+export interface InvitableGuild {
+  /** Discord ギルド ID (snowflake) */
+  guildId: string;
+  /** ギルド表示名 */
+  name: string;
+  /** アイコン URL (Discord CDN) */
+  avatarUrl: string | null;
+}
+
+/**
  * ギルド一覧UIで使用するエラー型
  * design.mdの"GuildListError"に基づく
  */

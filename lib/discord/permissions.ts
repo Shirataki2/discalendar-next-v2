@@ -73,6 +73,19 @@ export function parsePermissions(
 }
 
 /**
+ * BOT 招待権限の有無を判定する
+ *
+ * ADMINISTRATOR または MANAGE_GUILD のいずれかが true の場合に true を返す。
+ * canManageGuild との違い: MANAGE_MESSAGES / MANAGE_ROLES は含まない。
+ *
+ * @param permissions 解析済み権限オブジェクト
+ * @returns BOT 招待権限の有無
+ */
+export function canInviteBot(permissions: DiscordPermissions): boolean {
+  return permissions.administrator || permissions.manageGuild;
+}
+
+/**
  * 管理権限の有無を判定する
  *
  * administrator / manageGuild / manageMessages / manageRoles の
