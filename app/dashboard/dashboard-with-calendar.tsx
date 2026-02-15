@@ -9,7 +9,12 @@
  */
 "use client";
 
-import { Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  ChevronRight,
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
@@ -17,6 +22,11 @@ import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
 import { InvitableGuildCard } from "@/components/guilds/invitable-guild-card";
 import { SelectableGuildCard } from "@/components/guilds/selectable-guild-card";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -119,30 +129,51 @@ function EmptyState() {
 }
 
 /**
- * BOT 未参加ギルドセクション（デスクトップ展開時用）
+ * BOT 未参加ギルドセクション
+ *
+ * collapsible=true の場合、折りたたみ可能なセクションとして表示（モバイル向け）。
+ * collapsible=false の場合、常に展開された状態で表示（デスクトップ向け）。
  */
 function InvitableGuildSection({
   invitableGuilds,
+  collapsible = false,
 }: {
   invitableGuilds: InvitableGuild[];
+  collapsible?: boolean;
 }) {
   if (invitableGuilds.length === 0) {
     return null;
   }
 
+  const cards = invitableGuilds.map((guild) => (
+    <InvitableGuildCard
+      botInviteUrl={BOT_INVITE_URL}
+      guild={guild}
+      key={guild.guildId}
+    />
+  ));
+
+  if (!collapsible) {
+    return (
+      <div className="space-y-2">
+        <h4 className="font-medium text-muted-foreground text-xs">
+          BOT 未参加サーバー
+        </h4>
+        {cards}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-2">
-      <h4 className="font-medium text-muted-foreground text-xs">
-        BOT 未参加サーバー
-      </h4>
-      {invitableGuilds.map((guild) => (
-        <InvitableGuildCard
-          botInviteUrl={BOT_INVITE_URL}
-          guild={guild}
-          key={guild.guildId}
-        />
-      ))}
-    </div>
+    <Collapsible defaultOpen={false}>
+      <CollapsibleTrigger className="flex w-full items-center gap-1 font-medium text-muted-foreground text-xs [&[data-state=open]>svg]:rotate-90">
+        <ChevronRight className="h-3.5 w-3.5 transition-transform" />
+        BOT 未参加サーバー ({invitableGuilds.length})
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mt-2 space-y-2">{cards}</div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -191,8 +222,8 @@ function MobileGuildSelector({
           </Select>
         ) : null}
 
-        {/* bot-invite-flow: モバイル用未参加ギルドセクション */}
-        <InvitableGuildSection invitableGuilds={invitableGuilds} />
+        {/* bot-invite-flow: モバイル用未参加ギルドセクション（折りたたみ可能） */}
+        <InvitableGuildSection collapsible invitableGuilds={invitableGuilds} />
       </section>
     </div>
   );

@@ -70,6 +70,8 @@ vi.mock("@/app/dashboard/actions", () => ({
 import type { Guild, InvitableGuild } from "@/lib/guilds/types";
 import { DashboardWithCalendar } from "./dashboard-with-calendar";
 
+const INVITABLE_SECTION_PATTERN = /BOT 未参加サーバー/;
+
 // matchMediaのモック
 const createMatchMediaMock = () =>
   vi.fn().mockImplementation((query: string) => ({
@@ -291,12 +293,13 @@ describe("Task 5.1: Props 拡張と未参加ギルドセクション", () => {
       />
     );
 
-    // モバイル + デスクトップの両ビューに表示される
-    const headings = screen.getAllByText("BOT 未参加サーバー");
+    // モバイル（折りたたみトリガー）+ デスクトップ（見出し）の両ビューに表示される
+    const headings = screen.getAllByText(INVITABLE_SECTION_PATTERN);
     expect(headings.length).toBeGreaterThanOrEqual(1);
-    // 2ギルド × 2ビュー(モバイル+デスクトップ) = 4カード
+    // デスクトップ側は常に展開: 2カード表示
+    // モバイル側はデフォルト折りたたみ: DOM上は非表示
     const invitableCards = screen.getAllByTestId("invitable-guild-card");
-    expect(invitableCards).toHaveLength(4);
+    expect(invitableCards).toHaveLength(2);
   });
 
   it("invitableGuilds が空の場合は未参加セクションを非表示にする", () => {
