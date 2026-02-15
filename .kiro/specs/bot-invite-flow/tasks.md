@@ -17,7 +17,7 @@
   - fetchGuilds 拡張の単体テストを作成する（正常系: 分類の正確性、エラー系: フォールバック、空配列ケース）
   - _Requirements: 1.1, 3.1, 3.2, 3.3_
 
-- [ ] 3. (P) InvitableGuildCard コンポーネントの作成
+- [x] 3. (P) InvitableGuildCard コンポーネントの作成
   - BOT 未参加ギルドのカード UI を作成する（ギルド名、アイコン、未参加バッジ）
   - 既存の SelectableGuildCard のレイアウトに準拠しつつ、選択機能の代わりに「BOT を招待」ボタンを配置する
   - ボタンクリック時に招待 URL を新タブで開く（guild_id パラメータ付加でギルド事前選択）
