@@ -71,6 +71,8 @@ export function useGuildRefresh({
           guildPermissions: result.guildPermissions,
         });
       }
+    } catch {
+      // ネットワークエラー等で reject した場合は無視し、現在の表示を維持
     } finally {
       setIsRefreshing(false);
     }
