@@ -2,22 +2,19 @@
  * DashboardWithCalendar - ダッシュボードとカレンダー統合コンポーネント
  *
  * Task 10.1: ダッシュボードページへのカレンダー統合
- * - ダッシュボードページにCalendarContainerを配置する
- * - ギルドセレクターとカレンダーを連携させる
- * - ギルド選択変更時にカレンダーを更新する
- * - 初期ロード時のデータ取得フローを確立する
- * - デスクトップ: サイドバー折りたたみ/展開切り替え可能
- * - モバイル: ドロップダウン形式でサーバー選択
+ * Task 5.1 (bot-invite-flow): Props 拡張と未参加ギルドセクションの追加
+ * Task 5.2 (bot-invite-flow): useGuildRefresh の統合
  *
- * Requirements: 5.1, 5.2
+ * Requirements: 5.1, 5.2, bot-invite-flow 1.1, 1.2, 1.4, 4.1, 4.2, 5.1, 5.2
  */
 "use client";
 
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
 import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
+import { InvitableGuildCard } from "@/components/guilds/invitable-guild-card";
 import { SelectableGuildCard } from "@/components/guilds/selectable-guild-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +25,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGuildPermissions } from "@/hooks/guilds/use-guild-permissions";
+import { useGuildRefresh } from "@/hooks/guilds/use-guild-refresh";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import type { Guild, GuildListError } from "@/lib/guilds/types";
+import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
 import { cn } from "@/lib/utils";
+
+/** BOT 招待ベース URL（環境変数から取得） */
+const BOT_INVITE_URL = process.env.NEXT_PUBLIC_BOT_INVITE_URL ?? null;
 
 /**
  * ギルドごとの権限情報（Server Component からシリアライズ可能な形式）
@@ -48,11 +49,20 @@ export type GuildPermissionInfo = {
 export type DashboardWithCalendarProps = {
   /** ユーザーが所属するギルド一覧 */
   guilds: Guild[];
+  /** BOT 未参加（招待対象）ギルド一覧 */
+  invitableGuilds?: InvitableGuild[];
   /** ギルド取得時のエラー（オプション） */
   guildError?: GuildListError;
   /** ギルドごとの権限情報マップ（guildId → 権限情報） */
   guildPermissions?: Record<string, GuildPermissionInfo>;
 };
+
+/**
+ * ギルド名のアルファベット順でソートする
+ */
+function sortByName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 /**
  * エラーメッセージを取得する
@@ -109,15 +119,45 @@ function EmptyState() {
 }
 
 /**
+ * BOT 未参加ギルドセクション（デスクトップ展開時用）
+ */
+function InvitableGuildSection({
+  invitableGuilds,
+}: {
+  invitableGuilds: InvitableGuild[];
+}) {
+  if (invitableGuilds.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      <h4 className="font-medium text-muted-foreground text-xs">
+        BOT 未参加サーバー
+      </h4>
+      {invitableGuilds.map((guild) => (
+        <InvitableGuildCard
+          botInviteUrl={BOT_INVITE_URL}
+          guild={guild}
+          key={guild.guildId}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
  * モバイル用ギルド選択コンポーネント
  */
 function MobileGuildSelector({
   guilds,
+  invitableGuilds,
   guildError,
   selectedGuildId,
   onGuildSelect,
 }: {
   guilds: Guild[];
+  invitableGuilds: InvitableGuild[];
   guildError?: GuildListError;
   selectedGuildId: string | null;
   onGuildSelect: (guildId: string) => void;
@@ -150,6 +190,9 @@ function MobileGuildSelector({
             </SelectContent>
           </Select>
         ) : null}
+
+        {/* bot-invite-flow: モバイル用未参加ギルドセクション */}
+        <InvitableGuildSection invitableGuilds={invitableGuilds} />
       </section>
     </div>
   );
@@ -203,16 +246,20 @@ function SidebarHeader({
  */
 function DesktopGuildSidebar({
   guilds,
+  invitableGuilds,
   guildError,
   selectedGuildId,
   isCollapsed,
+  isRefreshing,
   onGuildSelect,
   onToggleCollapse,
 }: {
   guilds: Guild[];
+  invitableGuilds: InvitableGuild[];
   guildError?: GuildListError;
   selectedGuildId: string | null;
   isCollapsed: boolean;
+  isRefreshing: boolean;
   onGuildSelect: (guildId: string) => void;
   onToggleCollapse: () => void;
 }) {
@@ -266,6 +313,19 @@ function DesktopGuildSidebar({
             ))}
           </div>
         ) : null}
+
+        {/* bot-invite-flow: デスクトップ用未参加ギルドセクション */}
+        {isCollapsed ? null : (
+          <InvitableGuildSection invitableGuilds={invitableGuilds} />
+        )}
+
+        {/* bot-invite-flow: 再取得中ローディング */}
+        {isRefreshing ? (
+          <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground text-xs">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>更新中...</span>
+          </div>
+        ) : null}
       </section>
     </aside>
   );
@@ -316,15 +376,19 @@ function CalendarArea({
  * ギルドカードをクリックすることでカレンダーに表示するギルドを切り替える。
  * デスクトップではサイドバーの折りたたみ/展開が可能、モバイルではドロップダウン形式。
  *
- * guild-permissions Task 7.2:
- * - useGuildPermissions Hook で権限状態を管理
- * - canEditEvents に基づいてカレンダー操作を制御
- * - canManageGuild に基づいて GuildSettingsPanel の表示/非表示を制御
+ * bot-invite-flow Task 5.1:
+ * - invitableGuilds を受け取り、未参加ギルドセクションを表示
+ * - 参加済みギルド → 未参加ギルドの順で表示
+ * - 各グループ内はギルド名のアルファベット順
+ *
+ * bot-invite-flow Task 5.2:
+ * - useGuildRefresh で招待後の状態更新に対応
  */
 export function DashboardWithCalendar({
-  guilds,
+  guilds: initialGuilds,
+  invitableGuilds: initialInvitableGuilds,
   guildError,
-  guildPermissions,
+  guildPermissions: initialGuildPermissions,
 }: DashboardWithCalendarProps) {
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
@@ -332,9 +396,47 @@ export function DashboardWithCalendar({
     false
   );
 
+  // bot-invite-flow 5.2: リフレッシュ可能な状態管理
+  const [currentGuilds, setCurrentGuilds] = useState(initialGuilds);
+  const [currentInvitableGuilds, setCurrentInvitableGuilds] = useState(
+    initialInvitableGuilds ?? []
+  );
+  const [currentGuildPermissions, setCurrentGuildPermissions] = useState(
+    initialGuildPermissions
+  );
+
+  // Req 4.1, 4.2: ソート済みギルド（参加済みが先、各グループ内アルファベット順）
+  const sortedGuilds = useMemo(
+    () => sortByName(currentGuilds),
+    [currentGuilds]
+  );
+  const sortedInvitableGuilds = useMemo(
+    () => sortByName(currentInvitableGuilds),
+    [currentInvitableGuilds]
+  );
+
+  // bot-invite-flow 5.2: タブ復帰時のギルド再取得
+  const handleGuildRefresh = useCallback(
+    (result: {
+      guilds: Guild[];
+      invitableGuilds: InvitableGuild[];
+      guildPermissions: Record<string, GuildPermissionInfo>;
+    }) => {
+      setCurrentGuilds(result.guilds);
+      setCurrentInvitableGuilds(result.invitableGuilds);
+      setCurrentGuildPermissions(result.guildPermissions);
+    },
+    []
+  );
+
+  const { isRefreshing } = useGuildRefresh({
+    onRefresh: handleGuildRefresh,
+    enabled: currentInvitableGuilds.length > 0,
+  });
+
   // 選択中ギルドの権限情報を取得
   const selectedPermInfo = selectedGuildId
-    ? guildPermissions?.[selectedGuildId]
+    ? currentGuildPermissions?.[selectedGuildId]
     : undefined;
 
   // guild-permissions: 権限状態を計算
@@ -363,14 +465,17 @@ export function DashboardWithCalendar({
     <div className="flex flex-1 flex-col gap-8 lg:flex-row lg:gap-6">
       <MobileGuildSelector
         guildError={guildError}
-        guilds={guilds}
+        guilds={sortedGuilds}
+        invitableGuilds={sortedInvitableGuilds}
         onGuildSelect={handleGuildSelect}
         selectedGuildId={selectedGuildId}
       />
       <DesktopGuildSidebar
         guildError={guildError}
-        guilds={guilds}
+        guilds={sortedGuilds}
+        invitableGuilds={sortedInvitableGuilds}
         isCollapsed={sidebarCollapsed}
+        isRefreshing={isRefreshing}
         onGuildSelect={handleGuildSelect}
         onToggleCollapse={handleToggleCollapse}
         selectedGuildId={selectedGuildId}

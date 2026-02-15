@@ -54,6 +54,8 @@ export type DashboardPageClientProps = {
   user: DashboardUser;
   /** ユーザーが所属するDiscalendar登録済みギルド一覧 */
   guilds: Guild[];
+  /** BOT 未参加（招待対象）ギルド一覧 */
+  invitableGuilds: InvitableGuild[];
   /** ギルド取得時のエラー（オプション） */
   guildError?: GuildListError;
   /** ギルドごとの権限情報マップ（guildId → 権限情報） */
@@ -87,6 +89,7 @@ function getUserInitials(dashboardUser: DashboardUser): string {
 export function DashboardPageClient({
   user,
   guilds,
+  invitableGuilds,
   guildError,
   guildPermissions,
 }: DashboardPageClientProps) {
@@ -141,6 +144,7 @@ export function DashboardPageClient({
             guildError={guildError}
             guildPermissions={guildPermissions}
             guilds={guilds}
+            invitableGuilds={invitableGuilds}
           />
         </div>
       </main>
@@ -439,10 +443,11 @@ export default async function DashboardPage() {
   };
 
   // ギルド一覧を取得（ユーザーIDをキーとしてキャッシュを使用）
-  const { guilds, error: guildError } = await fetchGuilds(
-    user.id,
-    providerToken
-  );
+  const {
+    guilds,
+    invitableGuilds,
+    error: guildError,
+  } = await fetchGuilds(user.id, providerToken);
 
   // guild-permissions 7.2: ギルド権限情報マップを構築
   const guildPermissions = await buildGuildPermissions(guilds, supabase);
@@ -452,6 +457,7 @@ export default async function DashboardPage() {
       guildError={guildError}
       guildPermissions={guildPermissions}
       guilds={guilds}
+      invitableGuilds={invitableGuilds}
       user={dashboardUser}
     />
   );

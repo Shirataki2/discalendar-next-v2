@@ -44,8 +44,8 @@
   - 単体テストを作成する（visibilitychange 発火、インターバル制御、enabled 切替）
   - _Requirements: 5.1, 5.2_
 
-- [ ] 5. DashboardWithCalendar 拡張と統合
-- [ ] 5.1 Props 拡張と未参加ギルドセクションの追加
+- [x] 5. DashboardWithCalendar 拡張と統合
+- [x] 5.1 Props 拡張と未参加ギルドセクションの追加
   - DashboardWithCalendar の Props に招待対象ギルドリストを追加する
   - DashboardPage（Server Component）から招待対象ギルドを渡すよう接続する
   - デスクトップサイドバーに「BOT 未参加サーバー」セクションを追加し、InvitableGuildCard を表示する
@@ -55,7 +55,7 @@
   - 環境変数 NEXT_PUBLIC_BOT_INVITE_URL を InvitableGuildCard に渡す
   - _Requirements: 1.1, 1.2, 1.4, 4.1, 4.2_
 
-- [ ] 5.2 useGuildRefresh の統合
+- [x] 5.2 useGuildRefresh の統合
   - DashboardWithCalendar に useGuildRefresh Hook を統合する
   - タブ復帰時に guilds、invitableGuilds、guildPermissions の状態を更新する
   - BOT 参加状態が変わったギルドを参加済みセクションに移動する
