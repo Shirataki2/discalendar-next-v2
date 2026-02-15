@@ -418,7 +418,7 @@ export function useEventForm(
             key:
               typeof crypto !== "undefined" && crypto.randomUUID
                 ? crypto.randomUUID()
-                : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}-${performance.now()}`,
           },
         ],
       }));

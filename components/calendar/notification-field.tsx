@@ -33,6 +33,8 @@ import {
 } from "@/lib/calendar/types";
 
 const DEFAULT_MAX_NOTIFICATIONS = 10;
+const MIN_NOTIFICATION_NUM = 1;
+const MAX_NOTIFICATION_NUM = 99;
 const DEFAULT_NUM = 10;
 const DEFAULT_UNIT: NotificationUnit = "minutes";
 
@@ -69,19 +71,26 @@ export function NotificationField({
 
   const isAtLimit = notifications.length >= maxNotifications;
 
-  function handleAdd() {
-    // Range validation
-    if (inputNum < 1 || inputNum > 99) {
-      setValidationError("数値は1以上99以下で入力してください");
-      return;
+  function validateNotification(
+    num: number,
+    unit: NotificationUnit
+  ): string | null {
+    if (num < MIN_NOTIFICATION_NUM || num > MAX_NOTIFICATION_NUM) {
+      return `数値は${MIN_NOTIFICATION_NUM}以上${MAX_NOTIFICATION_NUM}以下で入力してください`;
     }
-
-    // Duplicate check
     const isDuplicate = notifications.some(
-      (n) => n.num === inputNum && n.unit === inputUnit
+      (n) => n.num === num && n.unit === unit
     );
     if (isDuplicate) {
-      setValidationError("同じ通知設定が既に存在します");
+      return "同じ通知設定が既に存在します";
+    }
+    return null;
+  }
+
+  function handleAdd() {
+    const validationResult = validateNotification(inputNum, inputUnit);
+    if (validationResult) {
+      setValidationError(validationResult);
       return;
     }
 
@@ -120,8 +129,8 @@ export function NotificationField({
           <Input
             aria-label="通知の数値"
             className="w-20"
-            max={99}
-            min={1}
+            max={MAX_NOTIFICATION_NUM}
+            min={MIN_NOTIFICATION_NUM}
             onChange={(e) => {
               setInputNum(Number(e.target.value));
               setValidationError("");

@@ -132,15 +132,23 @@ export function toCalendarEvent(record: EventRecord): CalendarEvent {
     location: record.location ?? undefined,
     channel,
     notifications: Array.isArray(record.notifications)
-      ? record.notifications.filter(
-          (n): n is NotificationSetting =>
-            typeof n === "object" &&
-            n !== null &&
-            "num" in n &&
-            "unit" in n &&
-            typeof n.num === "number" &&
-            typeof n.unit === "string",
-        )
+      ? record.notifications
+          .filter(
+            (n): n is NotificationSetting & { key?: string } =>
+              typeof n === "object" &&
+              n !== null &&
+              "num" in n &&
+              "unit" in n &&
+              typeof n.num === "number" &&
+              typeof n.unit === "string",
+          )
+          .map((n) => ({
+            ...n,
+            key:
+              typeof n.key === "string" && n.key.length > 0
+                ? n.key
+                : `db-${n.num}-${n.unit}-${Math.random().toString(36).slice(2, 9)}`,
+          }))
       : [],
   };
 }

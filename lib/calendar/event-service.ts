@@ -440,21 +440,6 @@ export function createEventService(
           notifications: notifications ?? [],
         };
 
-        // 認証状態を確認するために、ユーザー情報を取得
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        // ユーザーが認証されていない場合はエラーを返す
-        if (!user) {
-          return {
-            success: false,
-            error: {
-              code: "UNAUTHORIZED",
-              message: "認証が必要です。再度ログインしてください。",
-              details: userError?.message || "User not authenticated",
-            },
-          };
-        }
-
         const { data, error } = await supabase
           .from("events")
           .insert(insertData)
