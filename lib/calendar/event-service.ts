@@ -361,35 +361,6 @@ export function createEventService(
       } = input;
 
       try {
-        // 認証状態を確認し、必要に応じてセッションを再取得
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          // セッションがない場合は、ユーザーに再取得を試みる
-          const {
-            data: { session: refreshedSession },
-            error: refreshError,
-          } = await supabase.auth.refreshSession();
-
-          if (!refreshedSession) {
-            return {
-              success: false,
-              error: {
-                code: "UNAUTHORIZED",
-                message: "セッションが無効です。再度ログインしてください。",
-                details:
-                  sessionError?.message ||
-                  refreshError?.message ||
-                  "No active session found",
-              },
-            };
-          }
-
-        }
-
         // バリデーション: 必須フィールドのチェック
         if (!title || title.trim().length === 0) {
           return {

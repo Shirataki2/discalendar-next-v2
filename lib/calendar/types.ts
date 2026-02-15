@@ -37,6 +37,16 @@ export const NOTIFICATION_UNIT_LABELS: Record<NotificationUnit, string> = {
 };
 
 /**
+ * 通知設定の一意キーを生成する
+ */
+export function generateNotificationKey(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
  * Supabaseから取得するイベントレコード型
  * eventsテーブルのカラム構造に対応
  */
@@ -147,7 +157,7 @@ export function toCalendarEvent(record: EventRecord): CalendarEvent {
             key:
               typeof n.key === "string" && n.key.length > 0
                 ? n.key
-                : `db-${n.num}-${n.unit}-${Math.random().toString(36).slice(2, 9)}`,
+                : generateNotificationKey(),
           }))
       : [],
   };

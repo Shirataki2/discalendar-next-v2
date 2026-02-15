@@ -10,7 +10,10 @@
  * Requirements: 1.6, 3.5
  */
 import { useCallback, useMemo, useState } from "react";
-import type { NotificationSetting } from "@/lib/calendar/types";
+import {
+  type NotificationSetting,
+  generateNotificationKey,
+} from "@/lib/calendar/types";
 
 /**
  * 予定入力フォームデータの型定義
@@ -413,13 +416,7 @@ export function useEventForm(
         ...prev,
         notifications: [
           ...prev.notifications,
-          {
-            ...notification,
-            key:
-              typeof crypto !== "undefined" && crypto.randomUUID
-                ? crypto.randomUUID()
-                : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}-${performance.now()}`,
-          },
+          { ...notification, key: generateNotificationKey() },
         ],
       }));
       return true;
