@@ -28,14 +28,14 @@
   - _Requirements: 1.3, 2.1, 2.2, 2.3, 2.4_
 
 - [ ] 4. refreshGuilds Server Action と useGuildRefresh Hook の追加
-- [ ] 4.1 refreshGuilds Server Action の追加
+- [x] 4.1 refreshGuilds Server Action の追加
   - キャッシュを無効化して fetchGuilds を再実行し、最新のギルド一覧を返す Server Action を作成する
   - 認証済みセッションからアクセストークンを取得し、未認証時はエラーを返す
   - 戻り値には参加済みギルド、招待対象ギルド、権限情報マップを含める
   - 単体テストを作成する（キャッシュクリア呼び出し、戻り値構造の検証）
   - _Requirements: 5.1_
 
-- [ ] 4.2 useGuildRefresh Hook の作成
+- [x] 4.2 useGuildRefresh Hook の作成
   - Page Visibility API の visibilitychange イベントでタブ復帰を検知するカスタムフックを作成する
   - タブが visible に戻った時に refreshGuilds Server Action を呼び出してデータを再取得する
   - 連続再取得防止のため最低 30 秒のインターバルを設ける
