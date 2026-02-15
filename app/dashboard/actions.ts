@@ -79,9 +79,9 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
   }
 
   // 1. キャッシュから権限を検索
-  const cachedGuilds = getCachedGuilds(user.id);
-  if (cachedGuilds) {
-    const guild = cachedGuilds.find((g) => g.guildId === guildId);
+  const cached = getCachedGuilds(user.id);
+  if (cached) {
+    const guild = cached.guilds.find((g) => g.guildId === guildId);
     if (guild) {
       return {
         success: true,

@@ -7,7 +7,7 @@
   - canInviteBot の単体テストを作成する（各権限フラグの組み合わせ、境界値）
   - _Requirements: 3.2_
 
-- [ ] 2. (P) fetchGuilds 拡張 — BOT 未参加ギルドの識別と返却
+- [x] 2. (P) fetchGuilds 拡張 — BOT 未参加ギルドの識別と返却
   - fetchGuilds の戻り値に招待対象ギルドリストを追加する
   - Discord API レスポンスと DB 照合結果を比較し、DB に存在しないギルドを抽出する
   - 抽出したギルドのうち招待権限を持つものだけをフィルタリングする

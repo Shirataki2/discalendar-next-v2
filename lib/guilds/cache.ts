@@ -23,7 +23,13 @@
 
 import { randomUUID } from "node:crypto";
 
-import type { GuildWithPermissions } from "./types";
+import type { GuildWithPermissions, InvitableGuild } from "./types";
+
+/** fetchGuilds の結果データ（キャッシュ・pending request で共有） */
+export interface FetchGuildsData {
+  guilds: GuildWithPermissions[];
+  invitableGuilds: InvitableGuild[];
+}
 
 /**
  * キャッシュエントリ
@@ -31,6 +37,8 @@ import type { GuildWithPermissions } from "./types";
 interface CacheEntry {
   /** キャッシュされたギルド一覧 */
   guilds: GuildWithPermissions[];
+  /** キャッシュされた招待対象ギルド一覧 */
+  invitableGuilds: InvitableGuild[];
   /** キャッシュの有効期限（Unixタイムスタンプ、ミリ秒） */
   expiresAt: number;
 }
@@ -40,7 +48,7 @@ interface CacheEntry {
  */
 interface PendingRequest {
   /** Promise */
-  promise: Promise<{ guilds: GuildWithPermissions[] }>;
+  promise: Promise<FetchGuildsData>;
   /** リクエスト開始時刻 */
   startedAt: number;
   /** リクエストID（一意の識別子） */
@@ -81,9 +89,9 @@ const CLEANUP_INTERVAL_MS = CACHE_TTL_MS;
  * キャッシュを取得
  *
  * @param userId ユーザーID
- * @returns キャッシュされたギルド一覧、またはnull（キャッシュがない/期限切れの場合）
+ * @returns キャッシュされたギルドデータ、またはnull（キャッシュがない/期限切れの場合）
  */
-export function getCachedGuilds(userId: string): GuildWithPermissions[] | null {
+export function getCachedGuilds(userId: string): FetchGuildsData | null {
   const entry = cache.get(userId);
 
   if (!entry) {
@@ -96,19 +104,19 @@ export function getCachedGuilds(userId: string): GuildWithPermissions[] | null {
     return null;
   }
 
-  return entry.guilds;
+  return { guilds: entry.guilds, invitableGuilds: entry.invitableGuilds };
 }
 
 /**
  * キャッシュに保存
  *
  * @param userId ユーザーID
- * @param guilds ギルド一覧
+ * @param data ギルドデータ（参加済み + 招待対象）
  * @param requestId リクエストID（指定した場合、現在のpending requestのIDと一致する場合のみキャッシュ）
  */
 export function setCachedGuilds(
   userId: string,
-  guilds: GuildWithPermissions[],
+  data: FetchGuildsData,
   requestId?: string
 ): void {
   // リクエストIDが指定されている場合、現在のpending requestのIDと照合
@@ -139,7 +147,11 @@ export function setCachedGuilds(
   }
 
   const expiresAt = Date.now() + CACHE_TTL_MS;
-  cache.set(userId, { guilds, expiresAt });
+  cache.set(userId, {
+    guilds: data.guilds,
+    invitableGuilds: data.invitableGuilds,
+    expiresAt,
+  });
 }
 
 /**
@@ -165,7 +177,7 @@ export function clearCache(userId?: string): void {
  */
 export function getPendingRequest(
   userId: string
-): Promise<{ guilds: GuildWithPermissions[] }> | null {
+): Promise<FetchGuildsData> | null {
   const request = pendingRequests.get(userId);
 
   if (!request) {
@@ -191,7 +203,7 @@ export function getPendingRequest(
  */
 export function setPendingRequest(
   userId: string,
-  promise: Promise<{ guilds: GuildWithPermissions[] }>,
+  promise: Promise<FetchGuildsData>,
   requestId?: string
 ): string {
   const finalRequestId =
@@ -226,8 +238,8 @@ export function setPendingRequest(
  */
 export function getOrSetPendingRequest(
   userId: string,
-  factory: (requestId: string) => Promise<{ guilds: GuildWithPermissions[] }>
-): Promise<{ guilds: GuildWithPermissions[] }> {
+  factory: (requestId: string) => Promise<FetchGuildsData>
+): Promise<FetchGuildsData> {
   // 既存のpending requestをチェック
   const existing = getPendingRequest(userId);
   if (existing) {
