@@ -101,7 +101,9 @@ export function NotificationField({
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleAdd();
+      if (!isAtLimit) {
+        handleAdd();
+      }
     }
   }
 

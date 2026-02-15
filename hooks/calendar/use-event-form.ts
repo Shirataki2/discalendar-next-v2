@@ -413,7 +413,13 @@ export function useEventForm(
         ...prev,
         notifications: [
           ...prev.notifications,
-          { ...notification, key: crypto.randomUUID() },
+          {
+            ...notification,
+            key:
+              typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          },
         ],
       }));
       return true;

@@ -561,6 +561,7 @@ export function CalendarContainer({
         color: event.color,
         description: event.description ?? "",
         location: event.location ?? "",
+        notifications: event.notifications ?? [],
       };
       openEditDialog(event.id, formData);
       closePopover();

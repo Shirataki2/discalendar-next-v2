@@ -131,7 +131,17 @@ export function toCalendarEvent(record: EventRecord): CalendarEvent {
     description: record.description ?? undefined,
     location: record.location ?? undefined,
     channel,
-    notifications: record.notifications,
+    notifications: Array.isArray(record.notifications)
+      ? record.notifications.filter(
+          (n): n is NotificationSetting =>
+            typeof n === "object" &&
+            n !== null &&
+            "num" in n &&
+            "unit" in n &&
+            typeof n.num === "number" &&
+            typeof n.unit === "string",
+        )
+      : [],
   };
 }
 

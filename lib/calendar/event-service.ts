@@ -205,17 +205,6 @@ function classifySupabaseError(
   error: { message: string; code?: string; details?: string; hint?: string },
   operation: "fetch" | "create" | "update" | "delete" = "fetch"
 ): CalendarErrorCode {
-  // デバッグ用: エラー情報をログに出力
-  if (typeof window !== "undefined") {
-    console.error("[EventService] Supabase error:", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      operation,
-    });
-  }
-
   // PostgreSQL permission denied error (42501)
   // PostgREST RLS policy violation (PGRST116)
   // PostgREST schema cache error (PGRST301) - 認証関連の可能性
@@ -386,10 +375,6 @@ export function createEventService(
           } = await supabase.auth.refreshSession();
 
           if (!refreshedSession) {
-            console.error(
-              "[EventService] No active session found for createEvent",
-              sessionError || refreshError,
-            );
             return {
               success: false,
               error: {
@@ -403,15 +388,6 @@ export function createEventService(
             };
           }
 
-          console.log("[EventService] Session refreshed for createEvent:", {
-            userId: refreshedSession.user.id,
-            expiresAt: refreshedSession.expires_at,
-          });
-        } else {
-          console.log("[EventService] Session found for createEvent:", {
-            userId: session.user.id,
-            expiresAt: session.expires_at,
-          });
         }
 
         // バリデーション: 必須フィールドのチェック
