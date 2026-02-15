@@ -5,6 +5,7 @@
  *
  * Task 6.1: ギルド設定更新の Server Action
  * Task 6.2: イベント操作の Server Actions に権限チェックを追加
+ * Task 4.1 (bot-invite-flow): ギルド再取得の Server Action
  *
  * セキュリティ: クライアントから送信された permissionsBitfield を信頼せず、
  * サーバー側で Discord API / キャッシュから権限を解決する。
@@ -79,9 +80,9 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
   }
 
   // 1. キャッシュから権限を検索
-  const cachedGuilds = getCachedGuilds(user.id);
-  if (cachedGuilds) {
-    const guild = cachedGuilds.find((g) => g.guildId === guildId);
+  const cached = getCachedGuilds(user.id);
+  if (cached) {
+    const guild = cached.guilds.find((g) => g.guildId === guildId);
     if (guild) {
       return {
         success: true,
@@ -332,4 +333,111 @@ export async function deleteEventAction(
 
   const eventService = createEventService(auth.supabase);
   return eventService.deleteEvent(input.eventId);
+}
+
+// ──────────────────────────────────────────────
+// Task 4.1 (bot-invite-flow): ギルド再取得
+// ──────────────────────────────────────────────
+
+import { fetchGuilds } from "@/app/dashboard/page";
+import { clearCache } from "@/lib/guilds/cache";
+import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
+import type { GuildPermissionInfo } from "./dashboard-with-calendar";
+
+/** refreshGuilds の戻り値型 */
+export type RefreshGuildsResult = {
+  guilds: Guild[];
+  invitableGuilds: InvitableGuild[];
+  guildPermissions: Record<string, GuildPermissionInfo>;
+  error?: GuildListError;
+};
+
+/**
+ * ギルド一覧を再取得する Server Action
+ *
+ * キャッシュを無効化して最新データを取得する。
+ * タブ復帰時の自動更新で使用される。
+ *
+ * Requirements: bot-invite-flow 5.1, 5.2
+ */
+export async function refreshGuilds(): Promise<RefreshGuildsResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      guilds: [],
+      invitableGuilds: [],
+      guildPermissions: {},
+      error: { type: "no_token" },
+    };
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const providerToken = session?.provider_token;
+
+  if (!providerToken) {
+    return {
+      guilds: [],
+      invitableGuilds: [],
+      guildPermissions: {},
+      error: { type: "no_token" },
+    };
+  }
+
+  // キャッシュを無効化して再取得
+  clearCache(user.id);
+  const result = await fetchGuilds(user.id, providerToken);
+
+  if (result.error) {
+    return {
+      guilds: [],
+      invitableGuilds: [],
+      guildPermissions: {},
+      error: result.error,
+    };
+  }
+
+  // GuildWithPermissions -> Guild にマッピング（BigInt シリアライズ対策）
+  // guildPermissions マップに権限情報を移動
+  const guildPermissions: Record<string, GuildPermissionInfo> = {};
+
+  // guild_config テーブルから restricted フラグを一括取得
+  const guildIds = result.guilds.map((g) => g.guildId);
+  const restrictedMap = new Map<string, boolean>();
+
+  if (guildIds.length > 0) {
+    const { data, error } = await supabase
+      .from("guild_config")
+      .select("guild_id, restricted")
+      .in("guild_id", guildIds);
+
+    if (!error && data) {
+      for (const row of data) {
+        restrictedMap.set(String(row.guild_id), Boolean(row.restricted));
+      }
+    }
+  }
+
+  for (const guild of result.guilds) {
+    guildPermissions[guild.guildId] = {
+      permissionsBitfield: guild.permissions.raw.toString(),
+      restricted: restrictedMap.get(guild.guildId) ?? false,
+    };
+  }
+
+  // permissions フィールドを除外して Guild[] に変換
+  const guilds: Guild[] = result.guilds.map(
+    ({ permissions: _permissions, ...guild }) => guild
+  );
+
+  return {
+    guilds,
+    invitableGuilds: result.invitableGuilds,
+    guildPermissions,
+  };
 }

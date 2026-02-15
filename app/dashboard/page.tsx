@@ -3,8 +3,11 @@ import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { getUserGuilds } from "@/lib/discord/client";
-import { parsePermissions } from "@/lib/discord/permissions";
+import { canInviteBot, parsePermissions } from "@/lib/discord/permissions";
+import type { DiscordGuild } from "@/lib/discord/types";
+import { getGuildIconUrl } from "@/lib/discord/types";
 import {
+  type FetchGuildsData,
   getCachedGuilds,
   getOrSetPendingRequest,
   setCachedGuilds,
@@ -14,6 +17,7 @@ import type {
   Guild,
   GuildListError,
   GuildWithPermissions,
+  InvitableGuild,
 } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -50,6 +54,8 @@ export type DashboardPageClientProps = {
   user: DashboardUser;
   /** ユーザーが所属するDiscalendar登録済みギルド一覧 */
   guilds: Guild[];
+  /** BOT 未参加（招待対象）ギルド一覧 */
+  invitableGuilds: InvitableGuild[];
   /** ギルド取得時のエラー（オプション） */
   guildError?: GuildListError;
   /** ギルドごとの権限情報マップ（guildId → 権限情報） */
@@ -83,6 +89,7 @@ function getUserInitials(dashboardUser: DashboardUser): string {
 export function DashboardPageClient({
   user,
   guilds,
+  invitableGuilds,
   guildError,
   guildPermissions,
 }: DashboardPageClientProps) {
@@ -137,6 +144,7 @@ export function DashboardPageClient({
             guildError={guildError}
             guildPermissions={guildPermissions}
             guilds={guilds}
+            invitableGuilds={invitableGuilds}
           />
         </div>
       </main>
@@ -160,19 +168,27 @@ export function DashboardPageClient({
 export async function fetchGuilds(
   userId: string,
   providerToken: string | null | undefined
-): Promise<{ guilds: GuildWithPermissions[]; error?: GuildListError }> {
+): Promise<{
+  guilds: GuildWithPermissions[];
+  invitableGuilds: InvitableGuild[];
+  error?: GuildListError;
+}> {
   // provider_tokenが存在しない場合
   if (!providerToken) {
     return {
       guilds: [],
+      invitableGuilds: [],
       error: { type: "no_token" },
     };
   }
 
   // キャッシュをチェック
-  const cachedGuilds = getCachedGuilds(userId);
-  if (cachedGuilds !== null) {
-    return { guilds: cachedGuilds };
+  const cached = getCachedGuilds(userId);
+  if (cached !== null) {
+    return {
+      guilds: cached.guilds,
+      invitableGuilds: cached.invitableGuilds,
+    };
   }
 
   // エラー情報を保持する変数（factory関数内で設定される）
@@ -195,7 +211,7 @@ export async function fetchGuilds(
           };
         }
         // エラー時はキャッシュせずに空配列を返す
-        return { guilds: [] };
+        return { guilds: [], invitableGuilds: [] };
       }
 
       // Discord ギルドごとの権限ビットフィールドをマップに保持
@@ -208,10 +224,13 @@ export async function fetchGuilds(
       const guildIds = discordResult.data.map((guild) => guild.id);
 
       if (guildIds.length === 0) {
-        const emptyGuilds: GuildWithPermissions[] = [];
+        const emptyData: FetchGuildsData = {
+          guilds: [],
+          invitableGuilds: [],
+        };
         // 空配列もキャッシュする（リクエストIDを渡して一貫性を保つ）
-        setCachedGuilds(userId, emptyGuilds, requestId);
-        return { guilds: emptyGuilds };
+        setCachedGuilds(userId, emptyData, requestId);
+        return emptyData;
       }
 
       // DB照合を実行
@@ -224,9 +243,22 @@ export async function fetchGuilds(
           permissionsMap
         );
 
+        // DB に存在しないギルドを招待対象として抽出
+        const joinedGuildIds = new Set(joinedGuilds.map((g) => g.guildId));
+        const invitableGuilds = buildInvitableGuilds(
+          discordResult.data,
+          joinedGuildIds,
+          permissionsMap
+        );
+
+        const data: FetchGuildsData = {
+          guilds: guildsWithPermissions,
+          invitableGuilds,
+        };
+
         // 成功時のみキャッシュに保存（リクエストIDを渡して古いリクエストの結果で上書きされないようにする）
-        setCachedGuilds(userId, guildsWithPermissions, requestId);
-        return { guilds: guildsWithPermissions };
+        setCachedGuilds(userId, data, requestId);
+        return data;
       } catch (dbError) {
         console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
         // DBエラー情報を保持
@@ -235,7 +267,7 @@ export async function fetchGuilds(
           message: "ギルド情報の取得に失敗しました。",
         };
         // DBエラー時も空配列を返す
-        return { guilds: [] };
+        return { guilds: [], invitableGuilds: [] };
       }
     });
 
@@ -243,6 +275,7 @@ export async function fetchGuilds(
     if (errorInfo) {
       return {
         guilds: result.guilds,
+        invitableGuilds: result.invitableGuilds,
         error: errorInfo,
       };
     }
@@ -257,6 +290,7 @@ export async function fetchGuilds(
         : "ギルド情報の取得に失敗しました。";
     return {
       guilds: [],
+      invitableGuilds: [],
       error: { type: "api_error", message: errorMessage },
     };
   }
@@ -279,6 +313,43 @@ function mergePermissions(
     ...guild,
     permissions: parsePermissions(permissionsMap.get(guild.guildId) ?? ""),
   }));
+}
+
+/**
+ * DB に存在しないギルドから招待対象ギルドを構築する
+ *
+ * Discord API レスポンスのうち DB に存在せず、かつ BOT 招待権限
+ * (ADMINISTRATOR or MANAGE_GUILD) を持つギルドを InvitableGuild に変換する。
+ *
+ * Requirements: bot-invite-flow 3.1, 3.2
+ */
+function buildInvitableGuilds(
+  discordGuilds: DiscordGuild[],
+  joinedGuildIds: Set<string>,
+  permissionsMap: Map<string, string>
+): InvitableGuild[] {
+  const invitable: InvitableGuild[] = [];
+
+  for (const dg of discordGuilds) {
+    // DB に存在するギルドはスキップ
+    if (joinedGuildIds.has(dg.id)) {
+      continue;
+    }
+
+    // 権限チェック: BOT 招待権限がないギルドはスキップ
+    const permissions = parsePermissions(permissionsMap.get(dg.id) ?? "");
+    if (!canInviteBot(permissions)) {
+      continue;
+    }
+
+    invitable.push({
+      guildId: dg.id,
+      name: dg.name,
+      avatarUrl: getGuildIconUrl(dg.id, dg.icon),
+    });
+  }
+
+  return invitable;
 }
 
 /**
@@ -372,10 +443,11 @@ export default async function DashboardPage() {
   };
 
   // ギルド一覧を取得（ユーザーIDをキーとしてキャッシュを使用）
-  const { guilds, error: guildError } = await fetchGuilds(
-    user.id,
-    providerToken
-  );
+  const {
+    guilds,
+    invitableGuilds,
+    error: guildError,
+  } = await fetchGuilds(user.id, providerToken);
 
   // guild-permissions 7.2: ギルド権限情報マップを構築
   const guildPermissions = await buildGuildPermissions(guilds, supabase);
@@ -385,6 +457,7 @@ export default async function DashboardPage() {
       guildError={guildError}
       guildPermissions={guildPermissions}
       guilds={guilds}
+      invitableGuilds={invitableGuilds}
       user={dashboardUser}
     />
   );

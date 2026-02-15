@@ -85,21 +85,24 @@ describe("updateGuildConfig Server Action", () => {
       error: null,
     });
     // キャッシュに権限なしのギルドを返す
-    mockGetCachedGuilds.mockReturnValueOnce([
-      {
-        guildId: "guild-1",
-        name: "Test Guild",
-        permissions: {
-          administrator: false,
-          manageGuild: false,
-          manageChannels: false,
-          manageMessages: false,
-          manageRoles: false,
-          manageEvents: false,
-          raw: 0n,
+    mockGetCachedGuilds.mockReturnValueOnce({
+      guilds: [
+        {
+          guildId: "guild-1",
+          name: "Test Guild",
+          permissions: {
+            administrator: false,
+            manageGuild: false,
+            manageChannels: false,
+            manageMessages: false,
+            manageRoles: false,
+            manageEvents: false,
+            raw: 0n,
+          },
         },
-      },
-    ]);
+      ],
+      invitableGuilds: [],
+    });
 
     const result = await updateGuildConfig({
       guildId: "guild-1",
@@ -120,21 +123,24 @@ describe("updateGuildConfig Server Action", () => {
       error: null,
     });
     // キャッシュにADMINISTRATOR権限ありのギルドを返す
-    mockGetCachedGuilds.mockReturnValueOnce([
-      {
-        guildId: "guild-1",
-        name: "Test Guild",
-        permissions: {
-          administrator: true,
-          manageGuild: false,
-          manageChannels: false,
-          manageMessages: false,
-          manageRoles: false,
-          manageEvents: false,
-          raw: 8n,
+    mockGetCachedGuilds.mockReturnValueOnce({
+      guilds: [
+        {
+          guildId: "guild-1",
+          name: "Test Guild",
+          permissions: {
+            administrator: true,
+            manageGuild: false,
+            manageChannels: false,
+            manageMessages: false,
+            manageRoles: false,
+            manageEvents: false,
+            raw: 8n,
+          },
         },
-      },
-    ]);
+      ],
+      invitableGuilds: [],
+    });
     mockUpsertGuildConfig.mockResolvedValueOnce({
       success: true,
       data: { guildId: "guild-1", restricted: true },
@@ -210,21 +216,24 @@ describe("updateGuildConfig Server Action", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    mockGetCachedGuilds.mockReturnValueOnce([
-      {
-        guildId: "guild-1",
-        name: "Test Guild",
-        permissions: {
-          administrator: true,
-          manageGuild: false,
-          manageChannels: false,
-          manageMessages: false,
-          manageRoles: false,
-          manageEvents: false,
-          raw: 8n,
+    mockGetCachedGuilds.mockReturnValueOnce({
+      guilds: [
+        {
+          guildId: "guild-1",
+          name: "Test Guild",
+          permissions: {
+            administrator: true,
+            manageGuild: false,
+            manageChannels: false,
+            manageMessages: false,
+            manageRoles: false,
+            manageEvents: false,
+            raw: 8n,
+          },
         },
-      },
-    ]);
+      ],
+      invitableGuilds: [],
+    });
     mockUpsertGuildConfig.mockResolvedValueOnce({
       success: true,
       data: { guildId: "guild-1", restricted: true },
@@ -243,21 +252,24 @@ describe("updateGuildConfig Server Action", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    mockGetCachedGuilds.mockReturnValueOnce([
-      {
-        guildId: "guild-1",
-        name: "Test Guild",
-        permissions: {
-          administrator: true,
-          manageGuild: false,
-          manageChannels: false,
-          manageMessages: false,
-          manageRoles: false,
-          manageEvents: false,
-          raw: 8n,
+    mockGetCachedGuilds.mockReturnValueOnce({
+      guilds: [
+        {
+          guildId: "guild-1",
+          name: "Test Guild",
+          permissions: {
+            administrator: true,
+            manageGuild: false,
+            manageChannels: false,
+            manageMessages: false,
+            manageRoles: false,
+            manageEvents: false,
+            raw: 8n,
+          },
         },
-      },
-    ]);
+      ],
+      invitableGuilds: [],
+    });
     mockUpsertGuildConfig.mockResolvedValueOnce({
       success: false,
       error: {

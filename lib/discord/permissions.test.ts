@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   DISCORD_PERMISSION_FLAGS,
   type DiscordPermissions,
+  canInviteBot,
   canManageGuild,
   parsePermissions,
 } from "./permissions";
@@ -208,6 +209,66 @@ describe("canManageGuild", () => {
         manageGuild: true,
       })
     ).toBe(true);
+  });
+});
+
+describe("canInviteBot", () => {
+  const basePermissions: DiscordPermissions = {
+    administrator: false,
+    manageGuild: false,
+    manageChannels: false,
+    manageMessages: false,
+    manageRoles: false,
+    manageEvents: false,
+    raw: 0n,
+  };
+
+  it("administrator が true の場合に true を返す", () => {
+    expect(canInviteBot({ ...basePermissions, administrator: true })).toBe(
+      true
+    );
+  });
+
+  it("manageGuild が true の場合に true を返す", () => {
+    expect(canInviteBot({ ...basePermissions, manageGuild: true })).toBe(true);
+  });
+
+  it("administrator と manageGuild の両方が true の場合に true を返す", () => {
+    expect(
+      canInviteBot({
+        ...basePermissions,
+        administrator: true,
+        manageGuild: true,
+      })
+    ).toBe(true);
+  });
+
+  it("すべての権限が false の場合に false を返す", () => {
+    expect(canInviteBot(basePermissions)).toBe(false);
+  });
+
+  it("manageMessages のみ true でも false を返す（招待権限に含まれない）", () => {
+    expect(canInviteBot({ ...basePermissions, manageMessages: true })).toBe(
+      false
+    );
+  });
+
+  it("manageRoles のみ true でも false を返す（招待権限に含まれない）", () => {
+    expect(canInviteBot({ ...basePermissions, manageRoles: true })).toBe(
+      false
+    );
+  });
+
+  it("manageChannels のみ true でも false を返す（招待権限に含まれない）", () => {
+    expect(canInviteBot({ ...basePermissions, manageChannels: true })).toBe(
+      false
+    );
+  });
+
+  it("manageEvents のみ true でも false を返す（招待権限に含まれない）", () => {
+    expect(canInviteBot({ ...basePermissions, manageEvents: true })).toBe(
+      false
+    );
   });
 });
 
