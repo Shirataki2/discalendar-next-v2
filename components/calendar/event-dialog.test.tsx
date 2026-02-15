@@ -430,6 +430,135 @@ describe("EventDialog", () => {
     });
   });
 
+  // Task 5: 通知データの受け渡し
+  describe("Task 5: 通知データの受け渡し", () => {
+    it("新規作成時にnotificationsがcreateEventに渡される (Req 2.1)", async () => {
+      const user = userEvent.setup();
+      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+
+      const initialData = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00:00"),
+        endAt: new Date("2025-12-10T11:00:00"),
+        notifications: [
+          { key: "n1", num: 10, unit: "minutes" as const },
+          { key: "n2", num: 1, unit: "hours" as const },
+        ],
+      };
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={initialData}
+          mode="create"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            notifications: expect.arrayContaining([
+              expect.objectContaining({ num: 10, unit: "minutes" }),
+              expect.objectContaining({ num: 1, unit: "hours" }),
+            ]),
+          })
+        );
+      });
+    });
+
+    it("編集時にnotificationsがupdateEventに渡される (Req 2.3)", async () => {
+      const user = userEvent.setup();
+      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+
+      const initialData = {
+        title: "既存の予定",
+        startAt: new Date("2025-12-10T10:00:00"),
+        endAt: new Date("2025-12-10T11:00:00"),
+        notifications: [{ key: "n1", num: 3, unit: "days" as const }],
+      };
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          eventId="event-123"
+          initialData={initialData}
+          mode="edit"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEventService.updateEvent).toHaveBeenCalledWith(
+          "event-123",
+          expect.objectContaining({
+            notifications: expect.arrayContaining([
+              expect.objectContaining({ num: 3, unit: "days" }),
+            ]),
+          })
+        );
+      });
+    });
+
+    it("通知なしで保存時にnotificationsが空配列として渡される (Req 2.4)", async () => {
+      const user = userEvent.setup();
+      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+
+      const initialData = {
+        title: "通知なし予定",
+        startAt: new Date("2025-12-10T10:00:00"),
+        endAt: new Date("2025-12-10T11:00:00"),
+      };
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={initialData}
+          mode="create"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            notifications: [],
+          })
+        );
+      });
+    });
+
+    it("編集モードで保存済み通知がフォームに復元表示される (Req 2.2)", () => {
+      const initialData = {
+        title: "既存の予定",
+        startAt: new Date("2025-12-10T10:00:00"),
+        endAt: new Date("2025-12-10T11:00:00"),
+        notifications: [
+          { key: "n1", num: 10, unit: "minutes" as const },
+          { key: "n2", num: 1, unit: "hours" as const },
+        ],
+      };
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          eventId="event-123"
+          initialData={initialData}
+          mode="edit"
+        />
+      );
+
+      expect(screen.getByText("10分前")).toBeInTheDocument();
+      expect(screen.getByText("1時間前")).toBeInTheDocument();
+    });
+  });
+
   // アクセシビリティ
   describe("アクセシビリティ", () => {
     it("ダイアログに適切なrole属性が設定されている", () => {

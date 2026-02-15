@@ -273,6 +273,9 @@ export function useEventForm(
           }
         } else if (field === "isAllDay") {
           newValues[field] = Boolean(value);
+        } else if (field === "notifications") {
+          // notifications は addNotification/removeNotification で管理
+          // handleChange では何もしない
         } else {
           // 文字列フィールド
           newValues[field] = String(value ?? "");

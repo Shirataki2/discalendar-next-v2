@@ -176,3 +176,29 @@ export const LongText: Story = {
     isSubmitting: false,
   },
 };
+
+/**
+ * 通知設定付き
+ * 複数の通知タイミングが設定された編集モードのフォーム
+ */
+export const WithNotifications: Story = {
+  args: {
+    defaultValues: {
+      title: "週次ミーティング",
+      startAt: new Date(2025, 11, 10, 10, 0),
+      endAt: new Date(2025, 11, 10, 11, 0),
+      description: "チーム定例会議",
+      isAllDay: false,
+      color: "#3B82F6",
+      location: "会議室B",
+      notifications: [
+        { key: "n1", num: 10, unit: "minutes" },
+        { key: "n2", num: 1, unit: "hours" },
+        { key: "n3", num: 1, unit: "days" },
+      ],
+    },
+    onSubmit: fn(),
+    onCancel: fn(),
+    isSubmitting: false,
+  },
+};
