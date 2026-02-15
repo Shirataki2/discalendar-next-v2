@@ -10,6 +10,7 @@
  * Requirements: 1.6, 3.5
  */
 import { useCallback, useMemo, useState } from "react";
+import type { NotificationSetting } from "@/lib/calendar/types";
 
 /**
  * 予定入力フォームデータの型定義
@@ -29,6 +30,8 @@ export interface EventFormData {
   color: string;
   /** 場所情報 */
   location: string;
+  /** 通知設定 */
+  notifications: NotificationSetting[];
 }
 
 /**
@@ -61,7 +64,13 @@ export interface UseEventFormReturn {
   validate: () => boolean;
   /** フォームの状態をリセットする */
   reset: (values?: Partial<EventFormData>) => void;
+  /** 通知を追加する（重複・上限チェック後にkeyを自動生成） */
+  addNotification: (notification: Omit<NotificationSetting, "key">) => boolean;
+  /** 通知を削除する */
+  removeNotification: (key: string) => void;
 }
+
+const MAX_NOTIFICATIONS = 10;
 
 /**
  * デフォルトのフォーム値
@@ -74,6 +83,7 @@ const DEFAULT_FORM_VALUES: EventFormData = {
   isAllDay: false,
   color: "#3B82F6",
   location: "",
+  notifications: [],
 };
 
 /**
@@ -236,6 +246,7 @@ export function useEventForm(
     isAllDay: false,
     color: false,
     location: false,
+    notifications: false,
   });
 
   // バリデーションエラー
@@ -333,6 +344,7 @@ export function useEventForm(
       isAllDay: true,
       color: true,
       location: true,
+      notifications: true,
     });
 
     return Object.keys(newErrors).length === 0;
@@ -370,7 +382,52 @@ export function useEventForm(
       isAllDay: false,
       color: false,
       location: false,
+      notifications: false,
     });
+  }, []);
+
+  /**
+   * 通知を追加する
+   * 重複チェック・上限チェック後、keyを自動生成して配列に追加
+   *
+   * @returns 追加成功時true、失敗時false
+   */
+  const addNotification = useCallback(
+    (notification: Omit<NotificationSetting, "key">): boolean => {
+      const current = values.notifications;
+      // 上限チェック
+      if (current.length >= MAX_NOTIFICATIONS) {
+        return false;
+      }
+      // 重複チェック
+      const isDuplicate = current.some(
+        (n) => n.num === notification.num && n.unit === notification.unit
+      );
+      if (isDuplicate) {
+        return false;
+      }
+      setValues((prev) => ({
+        ...prev,
+        notifications: [
+          ...prev.notifications,
+          { ...notification, key: crypto.randomUUID() },
+        ],
+      }));
+      return true;
+    },
+    [values.notifications]
+  );
+
+  /**
+   * 通知を削除する
+   *
+   * @param key - 削除する通知の一意キー
+   */
+  const removeNotification = useCallback((key: string) => {
+    setValues((prev) => ({
+      ...prev,
+      notifications: prev.notifications.filter((n) => n.key !== key),
+    }));
   }, []);
 
   // フォーム全体が有効かどうか（エラーがない場合）
@@ -387,5 +444,7 @@ export function useEventForm(
     handleBlur,
     validate,
     reset,
+    addNotification,
+    removeNotification,
   };
 }

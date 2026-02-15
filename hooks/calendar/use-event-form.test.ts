@@ -9,7 +9,8 @@
  * Requirements: 1.6, 3.5
  */
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { NotificationSetting } from "@/lib/calendar/types";
 import { useEventForm } from "./use-event-form";
 
 describe("useEventForm", () => {
@@ -723,6 +724,192 @@ describe("useEventForm", () => {
       rerender();
 
       expect(result.current.isValid).toBe(true);
+    });
+  });
+
+  describe("通知設定 - 初期状態 (Req 1.2, 2.2)", () => {
+    it("should initialize notifications as empty array by default", () => {
+      const { result } = renderHook(() => useEventForm());
+
+      expect(result.current.values.notifications).toEqual([]);
+    });
+
+    it("should initialize with provided notifications", () => {
+      const notifications: NotificationSetting[] = [
+        { key: "a1", num: 10, unit: "minutes" },
+        { key: "b2", num: 1, unit: "hours" },
+      ];
+      const { result } = renderHook(() => useEventForm({ notifications }));
+
+      expect(result.current.values.notifications).toEqual(notifications);
+    });
+  });
+
+  describe("addNotification - 通知追加 (Req 1.2, 1.6, 5.1)", () => {
+    it("should add a notification with auto-generated key", () => {
+      vi.spyOn(crypto, "randomUUID").mockReturnValue("mock-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+      const { result } = renderHook(() => useEventForm());
+
+      let success: boolean;
+      act(() => {
+        success = result.current.addNotification({ num: 10, unit: "minutes" });
+      });
+
+      expect(success!).toBe(true);
+      expect(result.current.values.notifications).toHaveLength(1);
+      expect(result.current.values.notifications[0]).toEqual({
+        key: "mock-uuid-1",
+        num: 10,
+        unit: "minutes",
+      });
+
+      vi.restoreAllMocks();
+    });
+
+    it("should reject duplicate notification (same num and unit)", () => {
+      const { result } = renderHook(() =>
+        useEventForm({
+          notifications: [{ key: "a1", num: 10, unit: "minutes" }],
+        })
+      );
+
+      let success: boolean;
+      act(() => {
+        success = result.current.addNotification({ num: 10, unit: "minutes" });
+      });
+
+      expect(success!).toBe(false);
+      expect(result.current.values.notifications).toHaveLength(1);
+    });
+
+    it("should allow same num with different unit", () => {
+      const { result } = renderHook(() =>
+        useEventForm({
+          notifications: [{ key: "a1", num: 10, unit: "minutes" }],
+        })
+      );
+
+      let success: boolean;
+      act(() => {
+        success = result.current.addNotification({ num: 10, unit: "hours" });
+      });
+
+      expect(success!).toBe(true);
+      expect(result.current.values.notifications).toHaveLength(2);
+    });
+
+    it("should reject when at max limit (10)", () => {
+      const notifications: NotificationSetting[] = Array.from({ length: 10 }, (_, i) => ({
+        key: `key-${i}`,
+        num: i + 1,
+        unit: "minutes" as const,
+      }));
+      const { result } = renderHook(() => useEventForm({ notifications }));
+
+      let success: boolean;
+      act(() => {
+        success = result.current.addNotification({ num: 30, unit: "hours" });
+      });
+
+      expect(success!).toBe(false);
+      expect(result.current.values.notifications).toHaveLength(10);
+    });
+
+    it("should add multiple different notifications", () => {
+      const { result } = renderHook(() => useEventForm());
+
+      act(() => {
+        result.current.addNotification({ num: 10, unit: "minutes" });
+      });
+      act(() => {
+        result.current.addNotification({ num: 1, unit: "hours" });
+      });
+      act(() => {
+        result.current.addNotification({ num: 3, unit: "days" });
+      });
+
+      expect(result.current.values.notifications).toHaveLength(3);
+    });
+  });
+
+  describe("removeNotification - 通知削除 (Req 1.4)", () => {
+    it("should remove notification by key", () => {
+      const notifications: NotificationSetting[] = [
+        { key: "a1", num: 10, unit: "minutes" },
+        { key: "b2", num: 1, unit: "hours" },
+      ];
+      const { result } = renderHook(() => useEventForm({ notifications }));
+
+      act(() => {
+        result.current.removeNotification("a1");
+      });
+
+      expect(result.current.values.notifications).toHaveLength(1);
+      expect(result.current.values.notifications[0].key).toBe("b2");
+    });
+
+    it("should do nothing when key does not exist", () => {
+      const notifications: NotificationSetting[] = [
+        { key: "a1", num: 10, unit: "minutes" },
+      ];
+      const { result } = renderHook(() => useEventForm({ notifications }));
+
+      act(() => {
+        result.current.removeNotification("nonexistent");
+      });
+
+      expect(result.current.values.notifications).toHaveLength(1);
+    });
+
+    it("should allow adding after removing below limit", () => {
+      const notifications: NotificationSetting[] = Array.from({ length: 10 }, (_, i) => ({
+        key: `key-${i}`,
+        num: i + 1,
+        unit: "minutes" as const,
+      }));
+      const { result } = renderHook(() => useEventForm({ notifications }));
+
+      act(() => {
+        result.current.removeNotification("key-0");
+      });
+
+      let success: boolean;
+      act(() => {
+        success = result.current.addNotification({ num: 30, unit: "hours" });
+      });
+
+      expect(success!).toBe(true);
+      expect(result.current.values.notifications).toHaveLength(10);
+    });
+  });
+
+  describe("reset - 通知リセット", () => {
+    it("should reset notifications to empty array", () => {
+      const { result } = renderHook(() =>
+        useEventForm({
+          notifications: [{ key: "a1", num: 10, unit: "minutes" }],
+        })
+      );
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.values.notifications).toEqual([]);
+    });
+
+    it("should reset notifications to provided values", () => {
+      const { result } = renderHook(() => useEventForm());
+
+      const newNotifications: NotificationSetting[] = [
+        { key: "c3", num: 5, unit: "days" },
+      ];
+
+      act(() => {
+        result.current.reset({ notifications: newNotifications });
+      });
+
+      expect(result.current.values.notifications).toEqual(newNotifications);
     });
   });
 });
