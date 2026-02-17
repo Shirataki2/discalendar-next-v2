@@ -1,5 +1,5 @@
 /**
- * Task 4.2: ドキュメントコンテンツ（基本的な使い方、ログイン、Botの招待）のテスト
+ * Task 4.2 & 4.3: ドキュメントコンテンツのテスト
  *
  * Requirements:
  * - 3.2: 全ドキュメントページを提供する
@@ -8,7 +8,11 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { DocsCalendar } from "./docs-calendar";
+import { DocsCommands } from "./docs-commands";
+import { DocsEdit } from "./docs-edit";
 import { DocsGettingStarted } from "./docs-getting-started";
+import { DocsInitialize } from "./docs-initialize";
 import { DocsInvite } from "./docs-invite";
 import { DocsLogin } from "./docs-login";
 
@@ -21,6 +25,26 @@ const LOGIN_SUCCESS_PATTERN = /ログイン成功後/;
 const SUPPORT_SERVER_PATTERN = /サポートサーバー/;
 const CALENDAR_FEATURE_PATTERN = /カレンダー機能を使うには/;
 const DASHBOARD_INVITE_PATTERN = /ダッシュボードからの招待/;
+
+// Task 4.3 patterns
+const NOTIFICATION_RECEIVE_PATTERN = /通知を受け取る/;
+const MESSAGE_MANAGE_PATTERN = /メッセージの管理/;
+const SERVER_MANAGE_PATTERN = /サーバーの管理/;
+const INIT_COMPLETE_PATTERN = /初期設定は完了/;
+const CALENDAR_SCREEN_PATTERN = /カレンダー画面/;
+const DATE_CONTROL_PATTERN = /日付の操作/;
+const NEW_EVENT_PATTERN = /予定の新規作成/;
+const MONTHLY_PATTERN = /月間/;
+const WEEKLY_PATTERN = /週間/;
+const PRE_NOTIFICATION_PATTERN = /事前通知/;
+const RIGHT_CLICK_PATTERN = /右クリック/;
+const TAP_PATTERN = /タップ/;
+const DELETE_EVENT_PATTERN = /予定の削除/;
+const NOTIFICATION_DEST_PATTERN = /通知の送信先/;
+const EVENT_LIST_PATTERN = /予定のリスト/;
+const CREATE_EVENT_PATTERN = /予定を作成/;
+const HELP_MESSAGE_PATTERN = /ヘルプメッセージ/;
+const JOIN_SERVER_PATTERN = /サーバーに参加させる/;
 
 describe("Task 4.2: ドキュメントコンテンツ（基本的な使い方、ログイン、Botの招待）", () => {
   describe("DocsGettingStarted", () => {
@@ -153,6 +177,176 @@ describe("Task 4.2: ドキュメントコンテンツ（基本的な使い方、
 
     it("article要素でラップされている", () => {
       const { container } = render(<DocsInvite />);
+      expect(container.querySelector("article")).toBeInTheDocument();
+    });
+  });
+});
+
+describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の追加と表示、予定の編集と削除、コマンド）", () => {
+  describe("DocsInitialize", () => {
+    it("タイトル「初期設定」を表示する", () => {
+      render(<DocsInitialize />);
+      expect(
+        screen.getByRole("heading", { level: 1, name: "初期設定" })
+      ).toBeInTheDocument();
+    });
+
+    it("通知チャンネルの設定について説明する", () => {
+      render(<DocsInitialize />);
+      expect(
+        screen.getByText(NOTIFICATION_RECEIVE_PATTERN)
+      ).toBeInTheDocument();
+    });
+
+    it("/init コマンドの使い方を表示する", () => {
+      render(<DocsInitialize />);
+      expect(screen.getByText("/init")).toBeInTheDocument();
+    });
+
+    it("必要な権限について説明する", () => {
+      render(<DocsInitialize />);
+      expect(screen.getByText(MESSAGE_MANAGE_PATTERN)).toBeInTheDocument();
+      expect(screen.getByText(SERVER_MANAGE_PATTERN)).toBeInTheDocument();
+    });
+
+    it("設定完了後の案内を含む", () => {
+      render(<DocsInitialize />);
+      expect(screen.getByText(INIT_COMPLETE_PATTERN)).toBeInTheDocument();
+    });
+
+    it("article要素でラップされている", () => {
+      const { container } = render(<DocsInitialize />);
+      expect(container.querySelector("article")).toBeInTheDocument();
+    });
+  });
+
+  describe("DocsCalendar", () => {
+    it("タイトル「予定の追加と表示」を表示する", () => {
+      render(<DocsCalendar />);
+      expect(
+        screen.getByRole("heading", { level: 1, name: "予定の追加と表示" })
+      ).toBeInTheDocument();
+    });
+
+    it("カレンダー画面の説明を含む", () => {
+      render(<DocsCalendar />);
+      expect(screen.getByText(CALENDAR_SCREEN_PATTERN)).toBeInTheDocument();
+    });
+
+    it("日付コントロールについて説明する", () => {
+      render(<DocsCalendar />);
+      expect(
+        screen.getByRole("heading", { level: 2, name: DATE_CONTROL_PATTERN })
+      ).toBeInTheDocument();
+    });
+
+    it("新規作成の手順を説明する", () => {
+      render(<DocsCalendar />);
+      expect(
+        screen.getByRole("heading", { level: 2, name: NEW_EVENT_PATTERN })
+      ).toBeInTheDocument();
+    });
+
+    it("表示切り替え（月間・週間等）について説明する", () => {
+      render(<DocsCalendar />);
+      expect(screen.getByText(MONTHLY_PATTERN)).toBeInTheDocument();
+      expect(screen.getByText(WEEKLY_PATTERN)).toBeInTheDocument();
+    });
+
+    it("通知設定について説明する", () => {
+      render(<DocsCalendar />);
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: PRE_NOTIFICATION_PATTERN,
+        })
+      ).toBeInTheDocument();
+    });
+
+    it("article要素でラップされている", () => {
+      const { container } = render(<DocsCalendar />);
+      expect(container.querySelector("article")).toBeInTheDocument();
+    });
+  });
+
+  describe("DocsEdit", () => {
+    it("タイトル「予定の編集と削除」を表示する", () => {
+      render(<DocsEdit />);
+      expect(
+        screen.getByRole("heading", { level: 1, name: "予定の編集と削除" })
+      ).toBeInTheDocument();
+    });
+
+    it("右クリックでの編集操作を説明する", () => {
+      render(<DocsEdit />);
+      const matches = screen.getAllByText(RIGHT_CLICK_PATTERN);
+      expect(matches.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("モバイルでのタップ操作を説明する", () => {
+      render(<DocsEdit />);
+      const matches = screen.getAllByText(TAP_PATTERN);
+      expect(matches.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("予定の削除方法を説明する", () => {
+      render(<DocsEdit />);
+      expect(
+        screen.getByRole("heading", { level: 2, name: DELETE_EVENT_PATTERN })
+      ).toBeInTheDocument();
+    });
+
+    it("article要素でラップされている", () => {
+      const { container } = render(<DocsEdit />);
+      expect(container.querySelector("article")).toBeInTheDocument();
+    });
+  });
+
+  describe("DocsCommands", () => {
+    it("タイトル「利用可能なコマンド」を表示する", () => {
+      render(<DocsCommands />);
+      expect(
+        screen.getByRole("heading", { level: 1, name: "利用可能なコマンド" })
+      ).toBeInTheDocument();
+    });
+
+    it("全5コマンドの見出しを表示する", () => {
+      render(<DocsCommands />);
+      const commands = ["/init", "/list", "/create", "/help", "/invite"];
+      for (const cmd of commands) {
+        expect(
+          screen.getByRole("heading", { level: 2, name: cmd })
+        ).toBeInTheDocument();
+      }
+    });
+
+    it("/init コマンドの説明を含む", () => {
+      render(<DocsCommands />);
+      expect(screen.getByText(NOTIFICATION_DEST_PATTERN)).toBeInTheDocument();
+    });
+
+    it("/list コマンドの説明を含む", () => {
+      render(<DocsCommands />);
+      expect(screen.getByText(EVENT_LIST_PATTERN)).toBeInTheDocument();
+    });
+
+    it("/create コマンドの説明を含む", () => {
+      render(<DocsCommands />);
+      expect(screen.getByText(CREATE_EVENT_PATTERN)).toBeInTheDocument();
+    });
+
+    it("/help コマンドの説明を含む", () => {
+      render(<DocsCommands />);
+      expect(screen.getByText(HELP_MESSAGE_PATTERN)).toBeInTheDocument();
+    });
+
+    it("/invite コマンドの説明を含む", () => {
+      render(<DocsCommands />);
+      expect(screen.getByText(JOIN_SERVER_PATTERN)).toBeInTheDocument();
+    });
+
+    it("article要素でラップされている", () => {
+      const { container } = render(<DocsCommands />);
       expect(container.querySelector("article")).toBeInTheDocument();
     });
   });
