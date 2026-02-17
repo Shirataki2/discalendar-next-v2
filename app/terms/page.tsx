@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Discalendarの利用規約です。本サービスをご利用の際には必ずお読みください。",
 };
 
-export default async function TermsPage() {
+export default function TermsPage() {
   return (
     <StaticPageLayout>
       <section className="border-b bg-gradient-to-b from-muted/50 to-background">

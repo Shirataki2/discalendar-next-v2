@@ -26,7 +26,7 @@ export function DocPagination({ prev, next }: DocPaginationProps) {
           </div>
         </Link>
       ) : (
-        <div />
+        <span />
       )}
       {next ? (
         <Link

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Discalendarのプライバシーポリシーです。個人情報の取り扱いについて説明します。",
 };
 
-export default async function PrivacyPage() {
+export default function PrivacyPage() {
   return (
     <StaticPageLayout>
       <section className="border-b bg-gradient-to-b from-muted/50 to-background">

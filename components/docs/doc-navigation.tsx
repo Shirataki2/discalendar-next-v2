@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import type { DocEntry } from "@/lib/docs/config";
 import { cn } from "@/lib/utils";
