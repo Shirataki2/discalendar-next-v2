@@ -7,10 +7,10 @@ type StaticPageLayoutProps = {
 
 export function StaticPageLayout({ children }: StaticPageLayoutProps) {
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="container mx-auto max-w-4xl px-4 py-12">{children}</main>
+      <main className="flex-1">{children}</main>
       <Footer />
-    </>
+    </div>
   );
 }

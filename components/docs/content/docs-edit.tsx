@@ -1,7 +1,6 @@
 export function DocsEdit() {
   return (
     <article className="prose prose-neutral dark:prose-invert max-w-none">
-      <h1>予定の編集と削除</h1>
       <p>
         作成した予定は右クリックで編集および削除が可能です。スマートフォンからアクセスしている方は、予定をタップすることで同様の操作を行えます。
       </p>

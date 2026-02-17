@@ -1,7 +1,6 @@
 export function DocsInitialize() {
   return (
     <article className="prose prose-neutral dark:prose-invert max-w-none">
-      <h1>初期設定</h1>
       <p>
         Botを導入後、カレンダーサービスで追加した予定の通知を受け取るには、はじめにどのチャンネルで通知を受信するかを設定する必要があります。
       </p>

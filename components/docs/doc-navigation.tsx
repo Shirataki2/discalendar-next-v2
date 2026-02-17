@@ -23,9 +23,9 @@ export function DocNavigation({ entries, currentSlug }: DocNavigationProps) {
               <Link
                 {...(isActive ? { "aria-current": "page" as const } : {})}
                 className={cn(
-                  "block rounded-md px-3 py-2 text-sm transition-colors",
+                  "block rounded-r-md px-3 py-2 text-sm transition-colors",
                   isActive
-                    ? "bg-primary/10 font-medium text-primary"
+                    ? "border-primary border-l-2 bg-primary/10 font-medium text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
                 href={`/docs/${entry.slug}`}

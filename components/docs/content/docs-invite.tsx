@@ -1,7 +1,6 @@
 export function DocsInvite() {
   return (
     <article className="prose prose-neutral dark:prose-invert max-w-none">
-      <h1>Botの招待</h1>
       <p>
         カレンダー機能を使うには、DiscordのサーバーにBotを追加する必要があります。
       </p>

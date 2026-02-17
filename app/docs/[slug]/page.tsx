@@ -69,13 +69,31 @@ export default async function DocsSlugPage({
 
   return (
     <StaticPageLayout>
-      <div className="flex flex-col gap-8 lg:flex-row">
-        <aside className="shrink-0 lg:w-56">
-          <DocNavigation currentSlug={slug} entries={DOC_ENTRIES} />
-        </aside>
-        <div className="min-w-0 flex-1">
-          <Content />
-          <DocPagination next={next} prev={prev} />
+      <section className="border-b bg-gradient-to-b from-muted/50 to-background">
+        <div className="container mx-auto max-w-4xl px-4 py-12 lg:max-w-6xl">
+          <div className="animate-fade-in-up">
+            <p className="font-medium text-primary text-sm">ドキュメント</p>
+            <h1 className="mt-2 font-uni-sans-heavy text-3xl tracking-tight sm:text-4xl">
+              {doc.title}
+            </h1>
+            {doc.description ? (
+              <p className="mt-3 text-muted-foreground">{doc.description}</p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <div className="container mx-auto max-w-4xl px-4 py-12 lg:max-w-6xl">
+        <div className="flex flex-col gap-8 lg:flex-row">
+          <aside className="shrink-0 lg:w-56">
+            <div className="rounded-lg border bg-card p-4 lg:sticky lg:top-20">
+              <DocNavigation currentSlug={slug} entries={DOC_ENTRIES} />
+            </div>
+          </aside>
+          <div className="animation-delay-100 min-w-0 flex-1 animate-fade-in-up">
+            <Content />
+            <DocPagination next={next} prev={prev} />
+          </div>
         </div>
       </div>
     </StaticPageLayout>

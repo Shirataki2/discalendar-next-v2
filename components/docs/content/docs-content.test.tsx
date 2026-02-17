@@ -46,12 +46,17 @@ const CREATE_EVENT_PATTERN = /予定を作成/;
 const HELP_MESSAGE_PATTERN = /ヘルプメッセージ/;
 const JOIN_SERVER_PATTERN = /サーバーに参加させる/;
 
+// Patterns for replaced h1 title tests
+const GETTING_STARTED_INTRO_PATTERN = /Discalendarの導入から基本操作まで/;
+const LOGIN_INTRO_PATTERN = /Discordアカウントと連携/;
+const SLASH_COMMANDS_PATTERN = /スラッシュコマンドの一覧/;
+
 describe("Task 4.2: ドキュメントコンテンツ（基本的な使い方、ログイン、Botの招待）", () => {
   describe("DocsGettingStarted", () => {
-    it("タイトル「基本的な使い方」を表示する", () => {
+    it("導入手順の説明テキストを表示する", () => {
       render(<DocsGettingStarted />);
       expect(
-        screen.getByRole("heading", { level: 1, name: "基本的な使い方" })
+        screen.getByText(GETTING_STARTED_INTRO_PATTERN)
       ).toBeInTheDocument();
     });
 
@@ -87,11 +92,9 @@ describe("Task 4.2: ドキュメントコンテンツ（基本的な使い方、
   });
 
   describe("DocsLogin", () => {
-    it("タイトル「ログイン」を表示する", () => {
+    it("Discord連携の説明テキストを表示する", () => {
       render(<DocsLogin />);
-      expect(
-        screen.getByRole("heading", { level: 1, name: "ログイン" })
-      ).toBeInTheDocument();
+      expect(screen.getByText(LOGIN_INTRO_PATTERN)).toBeInTheDocument();
     });
 
     it("Discord連携のセクション見出しを含む", () => {
@@ -139,11 +142,9 @@ describe("Task 4.2: ドキュメントコンテンツ（基本的な使い方、
   });
 
   describe("DocsInvite", () => {
-    it("タイトル「Botの招待」を表示する", () => {
+    it("Bot追加の説明テキストを表示する", () => {
       render(<DocsInvite />);
-      expect(
-        screen.getByRole("heading", { level: 1, name: "Botの招待" })
-      ).toBeInTheDocument();
+      expect(screen.getByText(CALENDAR_FEATURE_PATTERN)).toBeInTheDocument();
     });
 
     it("Botの導入が必要な理由を説明する", () => {
@@ -184,10 +185,10 @@ describe("Task 4.2: ドキュメントコンテンツ（基本的な使い方、
 
 describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の追加と表示、予定の編集と削除、コマンド）", () => {
   describe("DocsInitialize", () => {
-    it("タイトル「初期設定」を表示する", () => {
+    it("通知設定の説明テキストを表示する", () => {
       render(<DocsInitialize />);
       expect(
-        screen.getByRole("heading", { level: 1, name: "初期設定" })
+        screen.getByText(NOTIFICATION_RECEIVE_PATTERN)
       ).toBeInTheDocument();
     });
 
@@ -221,11 +222,9 @@ describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の
   });
 
   describe("DocsCalendar", () => {
-    it("タイトル「予定の追加と表示」を表示する", () => {
+    it("カレンダー画面の説明テキストを表示する", () => {
       render(<DocsCalendar />);
-      expect(
-        screen.getByRole("heading", { level: 1, name: "予定の追加と表示" })
-      ).toBeInTheDocument();
+      expect(screen.getByText(CALENDAR_SCREEN_PATTERN)).toBeInTheDocument();
     });
 
     it("カレンダー画面の説明を含む", () => {
@@ -270,11 +269,10 @@ describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の
   });
 
   describe("DocsEdit", () => {
-    it("タイトル「予定の編集と削除」を表示する", () => {
+    it("編集操作の説明テキストを表示する", () => {
       render(<DocsEdit />);
-      expect(
-        screen.getByRole("heading", { level: 1, name: "予定の編集と削除" })
-      ).toBeInTheDocument();
+      const matches = screen.getAllByText(RIGHT_CLICK_PATTERN);
+      expect(matches.length).toBeGreaterThanOrEqual(1);
     });
 
     it("右クリックでの編集操作を説明する", () => {
@@ -303,11 +301,9 @@ describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の
   });
 
   describe("DocsCommands", () => {
-    it("タイトル「利用可能なコマンド」を表示する", () => {
+    it("コマンド一覧の説明テキストを表示する", () => {
       render(<DocsCommands />);
-      expect(
-        screen.getByRole("heading", { level: 1, name: "利用可能なコマンド" })
-      ).toBeInTheDocument();
+      expect(screen.getByText(SLASH_COMMANDS_PATTERN)).toBeInTheDocument();
     });
 
     it("全5コマンドの見出しを表示する", () => {

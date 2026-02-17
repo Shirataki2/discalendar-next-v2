@@ -16,7 +16,7 @@ export function DocPagination({ prev, next }: DocPaginationProps) {
     <nav aria-label="ページ送り" className="mt-12 grid gap-4 sm:grid-cols-2">
       {prev ? (
         <Link
-          className="group flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-muted"
+          className="group hover:-translate-y-0.5 flex items-center gap-3 rounded-xl border p-4 transition-all hover:bg-muted hover:shadow-md"
           href={`/docs/${prev.slug}`}
         >
           <ChevronLeft className="h-5 w-5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
@@ -30,7 +30,7 @@ export function DocPagination({ prev, next }: DocPaginationProps) {
       )}
       {next ? (
         <Link
-          className="group flex items-center justify-end gap-3 rounded-xl border p-4 text-right transition-colors hover:bg-muted"
+          className="group hover:-translate-y-0.5 flex items-center justify-end gap-3 rounded-xl border p-4 text-right transition-all hover:bg-muted hover:shadow-md"
           href={`/docs/${next.slug}`}
         >
           <div className="min-w-0">

@@ -54,32 +54,25 @@ describe("StaticPageLayout - 静的ページ共通レイアウト", () => {
     });
   });
 
-  describe("Req 5.2: 中央揃え・最大幅制限レイアウト", () => {
-    it("コンテンツ領域に container クラスが適用される", async () => {
+  describe("Req 5.2: フルハイトレイアウト", () => {
+    it("ルートに min-h-screen と flex が適用される", async () => {
       const element = await StaticPageLayout({
         children: <p data-testid="test-content">テスト</p>,
       });
-      const { getByTestId } = render(element);
-      const contentArea = getByTestId("test-content").closest(".container");
-      expect(contentArea).toBeInTheDocument();
+      const { container } = render(element);
+      const wrapper = container.firstElementChild;
+      expect(wrapper).toHaveClass("min-h-screen");
+      expect(wrapper).toHaveClass("flex");
+      expect(wrapper).toHaveClass("flex-col");
     });
 
-    it("コンテンツ領域に mx-auto が適用される", async () => {
+    it("main 要素に flex-1 が適用される", async () => {
       const element = await StaticPageLayout({
         children: <p data-testid="test-content">テスト</p>,
       });
-      const { getByTestId } = render(element);
-      const contentArea = getByTestId("test-content").closest(".mx-auto");
-      expect(contentArea).toBeInTheDocument();
-    });
-
-    it("コンテンツ領域に max-w-4xl が適用される", async () => {
-      const element = await StaticPageLayout({
-        children: <p data-testid="test-content">テスト</p>,
-      });
-      const { getByTestId } = render(element);
-      const contentArea = getByTestId("test-content").closest(".max-w-4xl");
-      expect(contentArea).toBeInTheDocument();
+      const { container } = render(element);
+      const main = container.querySelector("main");
+      expect(main).toHaveClass("flex-1");
     });
   });
 

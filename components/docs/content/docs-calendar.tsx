@@ -1,7 +1,6 @@
 export function DocsCalendar() {
   return (
     <article className="prose prose-neutral dark:prose-invert max-w-none">
-      <h1>予定の追加と表示</h1>
       <p>
         ダッシュボードページからBotを追加したサーバーを選択すると、カレンダー画面へと移動します。
       </p>
