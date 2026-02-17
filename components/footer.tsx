@@ -4,6 +4,7 @@
  */
 
 import { Github, Twitter } from "lucide-react";
+import Link from "next/link";
 
 // フッターリンクの型定義
 type FooterLink = {
@@ -21,9 +22,9 @@ type SocialLink = {
 
 // フッターリンク定数
 const footerLinks: FooterLink[] = [
-  { label: "利用規約", href: "#terms" },
-  { label: "プライバシーポリシー", href: "#privacy" },
-  { label: "お問い合わせ", href: "#contact" },
+  { label: "利用規約", href: "/terms" },
+  { label: "プライバシーポリシー", href: "/privacy" },
+  { label: "ドキュメント", href: "/docs/getting-started" },
 ];
 
 // ソーシャルメディアリンク定数
@@ -63,13 +64,13 @@ export function Footer() {
             <h3 className="font-semibold text-lg">リンク</h3>
             <nav className="mt-2 flex flex-col space-y-2">
               {footerLinks.map((link) => (
-                <a
+                <Link
                   className="text-muted-foreground text-sm hover:text-foreground"
                   href={link.href}
                   key={link.label}
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </nav>
           </div>
