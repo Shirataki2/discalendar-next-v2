@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <section className="border-b bg-gradient-to-b from-muted/50 to-background">
         <div className="container mx-auto max-w-4xl px-4 py-12">
           <div className="animate-fade-in-up">
-            <h1 className="font-uni-sans-heavy text-3xl tracking-tight sm:text-4xl">
+            <h1 className="font-uni-sans-heavy text-[length:var(--font-size-3xl)] leading-tight tracking-tight">
               プライバシーポリシー
             </h1>
             <p className="mt-3 text-muted-foreground">
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
       </section>
 
       <div className="container mx-auto max-w-4xl px-4 py-12">
-        <article className="prose prose-neutral prose-legal dark:prose-invert animation-delay-100 max-w-none animate-fade-in-up">
+        <article className="prose prose-lg prose-legal dark:prose-invert animation-delay-100 animate-fade-in-up">
           <h2>収集する個人情報</h2>
           <p>
             DisCalendar(以下「本サービス」)は，サービスの利用時にDiscordのユーザID，ユーザネームおよび所属しているDiscordのサーバーのID及び名前を取得及び保存しています．

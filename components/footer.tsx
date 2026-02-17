@@ -65,7 +65,7 @@ export function Footer() {
             <nav className="mt-2 flex flex-col space-y-2">
               {footerLinks.map((link) => (
                 <Link
-                  className="text-muted-foreground text-sm hover:text-foreground"
+                  className="text-muted-foreground text-sm leading-relaxed hover:text-foreground"
                   href={link.href}
                   key={link.label}
                 >

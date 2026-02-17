@@ -1,6 +1,6 @@
 export function DocsInvite() {
   return (
-    <article className="prose prose-neutral dark:prose-invert max-w-none">
+    <article className="prose prose-lg prose-docs dark:prose-invert">
       <p>
         カレンダー機能を使うには、DiscordのサーバーにBotを追加する必要があります。
       </p>

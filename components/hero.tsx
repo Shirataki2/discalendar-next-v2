@@ -31,12 +31,12 @@ export function Hero() {
         {/* テキストコンテンツ領域 */}
         <div className="flex-1 space-y-6 text-center lg:w-1/2 lg:text-left">
           {/* タスク4.1: キャッチコピー（h1見出し） */}
-          <h1 className="font-bold text-4xl leading-tight tracking-tight md:text-5xl lg:text-6xl">
+          <h1 className="font-bold text-[length:var(--font-size-4xl)] leading-[1.1] tracking-tight">
             {heroContent.headline}
           </h1>
 
           {/* タスク4.1: サービス説明文（サブヘッディング） */}
-          <p className="text-muted-foreground text-xl leading-relaxed">
+          <p className="text-[length:var(--font-size-lg)] text-muted-foreground leading-relaxed">
             {heroContent.subheading}
           </p>
 

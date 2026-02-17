@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function DocsLogin() {
   return (
-    <article className="prose prose-neutral dark:prose-invert max-w-none">
+    <article className="prose prose-lg prose-docs dark:prose-invert">
       <p>
         まずはこのサイトへログインし、あなたのDiscordアカウントと連携を行います。
       </p>

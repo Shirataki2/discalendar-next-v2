@@ -1,6 +1,6 @@
 export function DocsCommands() {
   return (
-    <article className="prose prose-neutral dark:prose-invert max-w-none">
+    <article className="prose prose-lg prose-docs dark:prose-invert">
       <p>Discalendarで使用できるDiscordスラッシュコマンドの一覧です。</p>
 
       <h2>/init</h2>

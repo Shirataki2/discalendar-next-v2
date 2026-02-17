@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function DocsGettingStarted() {
   return (
-    <article className="prose prose-neutral dark:prose-invert max-w-none">
+    <article className="prose prose-lg prose-docs dark:prose-invert">
       <p>
         Discalendarの導入から基本操作までの手順を解説します。以下の3つのステップで簡単に始められます。
       </p>

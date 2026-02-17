@@ -13,7 +13,7 @@ export default function TermsPage() {
       <section className="border-b bg-gradient-to-b from-muted/50 to-background">
         <div className="container mx-auto max-w-4xl px-4 py-12">
           <div className="animate-fade-in-up">
-            <h1 className="font-uni-sans-heavy text-3xl tracking-tight sm:text-4xl">
+            <h1 className="font-uni-sans-heavy text-[length:var(--font-size-3xl)] leading-tight tracking-tight">
               利用規約
             </h1>
             <p className="mt-3 text-muted-foreground">
@@ -27,7 +27,7 @@ export default function TermsPage() {
       </section>
 
       <div className="container mx-auto max-w-4xl px-4 py-12">
-        <article className="prose prose-neutral prose-legal dark:prose-invert animation-delay-100 max-w-none animate-fade-in-up">
+        <article className="prose prose-lg prose-legal dark:prose-invert animation-delay-100 animate-fade-in-up">
           <p>
             この利用規約(以下「本規約」)は，DisCalendar(以下「本Bot」)や，本Botを含む，本Botの運営が提供するサービス全体(以下「本サービス」)を利用するにあたっての利用条件を定めたものです．
           </p>

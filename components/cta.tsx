@@ -20,7 +20,7 @@ export function CTA() {
       data-testid="landing-cta"
     >
       <div className="container mx-auto px-4 text-center">
-        <h2 className="font-bold text-3xl leading-tight md:text-4xl">
+        <h2 className="font-bold text-[length:var(--font-size-3xl)] leading-tight tracking-tight">
           {ctaContent.message}
         </h2>
         <p className="mt-4 text-lg leading-relaxed md:text-xl">

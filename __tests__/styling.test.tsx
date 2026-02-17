@@ -50,7 +50,7 @@ vi.mock("@/components/header", () => ({
 import Page from "@/app/page";
 
 // Regex constants for performance
-const HEADING_SIZE_REGEX = /text-(4xl|5xl|6xl)/;
+const HEADING_SIZE_REGEX = /text-(4xl|5xl|6xl)|text-\[length:var\(--font-size-/;
 const TEXT_SIZE_REGEX = /text-(xs|sm|base|lg|xl)/;
 const SPACING_REGEX = /[pm][tblrxy]?-\d+/;
 const MD_GRID_COLS_REGEX = /md:grid-cols-/;

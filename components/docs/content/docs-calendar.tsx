@@ -1,6 +1,6 @@
 export function DocsCalendar() {
   return (
-    <article className="prose prose-neutral dark:prose-invert max-w-none">
+    <article className="prose prose-lg prose-docs dark:prose-invert">
       <p>
         ダッシュボードページからBotを追加したサーバーを選択すると、カレンダー画面へと移動します。
       </p>

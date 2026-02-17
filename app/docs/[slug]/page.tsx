@@ -73,7 +73,7 @@ export default async function DocsSlugPage({
         <div className="container mx-auto max-w-4xl px-4 py-12 lg:max-w-6xl">
           <div className="animate-fade-in-up">
             <p className="font-medium text-primary text-sm">ドキュメント</p>
-            <h1 className="mt-2 font-uni-sans-heavy text-3xl tracking-tight sm:text-4xl">
+            <h1 className="mt-2 font-uni-sans-heavy text-[length:var(--font-size-3xl)] leading-tight tracking-tight">
               {doc.title}
             </h1>
             {doc.description ? (
