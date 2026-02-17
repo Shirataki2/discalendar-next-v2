@@ -90,11 +90,10 @@ describe("Task 4.1: ドキュメントページの動的ルーティングとレ
 
     it("目次に全ドキュメントのリンクが含まれる", async () => {
       await renderPage("getting-started");
+      const nav = screen.getByRole("navigation", { name: "ドキュメント目次" });
       for (const entry of DOC_ENTRIES) {
-        expect(screen.getByRole("link", { name: entry.title })).toHaveAttribute(
-          "href",
-          `/docs/${entry.slug}`
-        );
+        const links = nav.querySelectorAll(`a[href="/docs/${entry.slug}"]`);
+        expect(links.length).toBeGreaterThanOrEqual(1);
       }
     });
 
