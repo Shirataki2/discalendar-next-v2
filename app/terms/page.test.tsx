@@ -3,7 +3,7 @@
  *
  * Requirements:
  * - 1.1: `/terms` ルートで利用規約ページを提供する
- * - 1.2: タイトル「利用規約」と全条文（第1条〜第6条、施行日）を表示する
+ * - 1.2: タイトル「利用規約」と全条文（第1条〜第12条、制定日・改定日）を表示する
  * - 1.3: Server Componentとして実装し、認証不要でアクセス可能にする
  * - 1.4: セマンティックHTML（見出し階層、リスト）を適用する
  * - 1.5: SEOメタデータを設定する
@@ -22,7 +22,7 @@ vi.mock("@/components/footer", () => ({
 
 import TermsPage, { metadata } from "./page";
 
-const ENFORCEMENT_DATE_PATTERN = /2020年12月1日 施行/;
+const ESTABLISHMENT_DATE_PATTERN = /2020年12月1日 制定/;
 
 describe("Task 2.1: 利用規約ページ", () => {
   async function renderPage() {
@@ -38,15 +38,21 @@ describe("Task 2.1: 利用規約ページ", () => {
       ).toBeInTheDocument();
     });
 
-    it("第1条〜第6条の見出しが表示される", async () => {
+    it("第1条〜第12条の見出しが表示される", async () => {
       await renderPage();
       const articles = [
-        "第1条 前提",
-        "第2条 利用",
-        "第3条 禁止事項",
-        "第4条 免責事項",
-        "第5条 本規約の変更",
-        "第6条 準拠法及び裁判管轄",
+        "第1条(適用)",
+        "第2条(利用の定義)",
+        "第3条(利用の拒否・停止)",
+        "第4条(禁止事項)",
+        "第5条(知的財産権)",
+        "第6条(個人情報の取り扱い)",
+        "第7条(サービスの変更・中断・終了)",
+        "第8条(免責事項)",
+        "第9条(損害賠償)",
+        "第10条(本規約の変更)",
+        "第11条(可分性)",
+        "第12条(準拠法および管轄裁判所)",
       ];
       for (const article of articles) {
         expect(
@@ -55,9 +61,9 @@ describe("Task 2.1: 利用規約ページ", () => {
       }
     });
 
-    it("施行日が表示される", async () => {
+    it("制定日が表示される", async () => {
       await renderPage();
-      expect(screen.getByText(ENFORCEMENT_DATE_PATTERN)).toBeInTheDocument();
+      expect(screen.getByText(ESTABLISHMENT_DATE_PATTERN)).toBeInTheDocument();
     });
   });
 
