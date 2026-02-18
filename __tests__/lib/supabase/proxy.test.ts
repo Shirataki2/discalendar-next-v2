@@ -122,6 +122,45 @@ describe("updateSession (proxy.ts)", () => {
       // Should NOT be a redirect
       expect(result.status).not.toBe(307);
     });
+
+    it("should allow access to /terms for unauthenticated users", async () => {
+      mockGetClaims.mockResolvedValue({
+        data: { claims: null },
+      });
+
+      const { updateSession } = await import("@/lib/supabase/proxy");
+
+      const mockRequest = createMockRequest("/terms");
+      const result = await updateSession(mockRequest);
+
+      expect(result.status).not.toBe(307);
+    });
+
+    it("should allow access to /privacy for unauthenticated users", async () => {
+      mockGetClaims.mockResolvedValue({
+        data: { claims: null },
+      });
+
+      const { updateSession } = await import("@/lib/supabase/proxy");
+
+      const mockRequest = createMockRequest("/privacy");
+      const result = await updateSession(mockRequest);
+
+      expect(result.status).not.toBe(307);
+    });
+
+    it("should allow access to /docs/* for unauthenticated users", async () => {
+      mockGetClaims.mockResolvedValue({
+        data: { claims: null },
+      });
+
+      const { updateSession } = await import("@/lib/supabase/proxy");
+
+      const mockRequest = createMockRequest("/docs/getting-started");
+      const result = await updateSession(mockRequest);
+
+      expect(result.status).not.toBe(307);
+    });
   });
 });
 

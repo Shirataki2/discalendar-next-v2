@@ -51,13 +51,14 @@ describe("Hero - ヒーローセクション", () => {
       const { container } = render(<Hero />);
       const heading = container.querySelector("h1");
       const className = heading?.className || "";
-      // text-4xl または類似のサイズクラスが含まれているか確認
+      // text-4xl または類似のサイズクラス、もしくはfluid typographyのCSS変数が含まれているか確認
       const hasTextSize =
         className.includes("text-2xl") ||
         className.includes("text-3xl") ||
         className.includes("text-4xl") ||
         className.includes("text-5xl") ||
-        className.includes("text-6xl");
+        className.includes("text-6xl") ||
+        className.includes("text-[length:var(--font-size-");
       expect(hasTextSize).toBe(true);
     });
 

@@ -32,14 +32,14 @@ describe("Footer - フッター", () => {
       expect(text).toMatch(SERVICE_DESCRIPTION_REGEX);
     });
 
-    it("補足ナビゲーションリンク（利用規約、プライバシーポリシー、お問い合わせ）が表示されている", () => {
+    it("補足ナビゲーションリンク（利用規約、プライバシーポリシー、ドキュメント）が表示されている", () => {
       const { container } = render(<Footer />);
       const links = container.querySelectorAll("a");
       const linkTexts = Array.from(links).map((link) => link.textContent || "");
 
       expect(linkTexts).toContain("利用規約");
       expect(linkTexts).toContain("プライバシーポリシー");
-      expect(linkTexts).toContain("お問い合わせ");
+      expect(linkTexts).toContain("ドキュメント");
     });
 
     it("ソーシャルメディアリンク（TwitterおよびGitHub）が表示されている", () => {
@@ -82,15 +82,22 @@ describe("Footer - フッター", () => {
       }
     });
 
-    it("すべてのhrefがプレースホルダー（#または#section-id）として設定されている", () => {
-      const { container } = render(<Footer />);
-      const links = container.querySelectorAll("a");
+    it("利用規約リンクが /terms へのリンクである", () => {
+      const { getByText } = render(<Footer />);
+      const termsLink = getByText("利用規約").closest("a");
+      expect(termsLink).toHaveAttribute("href", "/terms");
+    });
 
-      for (const link of links) {
-        const href = link.getAttribute("href") || "";
-        // プレースホルダーは#で始まる
-        expect(href.startsWith("#")).toBe(true);
-      }
+    it("プライバシーポリシーリンクが /privacy へのリンクである", () => {
+      const { getByText } = render(<Footer />);
+      const privacyLink = getByText("プライバシーポリシー").closest("a");
+      expect(privacyLink).toHaveAttribute("href", "/privacy");
+    });
+
+    it("ドキュメントリンクが /docs/getting-started へのリンクである", () => {
+      const { getByText } = render(<Footer />);
+      const docsLink = getByText("ドキュメント").closest("a");
+      expect(docsLink).toHaveAttribute("href", "/docs/getting-started");
     });
   });
 

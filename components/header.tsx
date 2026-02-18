@@ -47,9 +47,9 @@ type NavLink = {
  * Requirement 2.3: 主要セクションへのナビゲーションリンク
  */
 const navLinks: NavLink[] = [
-  { label: "機能", href: "#features" },
-  { label: "使い方", href: "#how-to-use" },
-  { label: "料金", href: "#pricing" },
+  { label: "機能", href: "/#features" },
+  { label: "使い方", href: "/#how-to-use" },
+  { label: "料金", href: "/#pricing" },
 ];
 
 /**

@@ -79,7 +79,9 @@ export function Features() {
     >
       <div className="container mx-auto max-w-7xl">
         {/* セクションタイトル - Requirement 4.2 */}
-        <h2 className="mb-12 text-center font-bold text-3xl">主な機能</h2>
+        <h2 className="mb-12 text-center font-bold text-[length:var(--font-size-3xl)] leading-tight tracking-tight">
+          主な機能
+        </h2>
 
         {/* 機能カードグリッド - Requirements 4.7, 4.8 */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
