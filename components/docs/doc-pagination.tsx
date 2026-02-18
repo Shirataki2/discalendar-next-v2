@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { DocEntry } from "@/lib/docs/config";
+import { cn } from "@/lib/utils";
 
 type DocPaginationProps = {
   prev: DocEntry | undefined;
@@ -25,12 +26,13 @@ export function DocPagination({ prev, next }: DocPaginationProps) {
             <p className="truncate font-medium text-sm">{prev.title}</p>
           </div>
         </Link>
-      ) : (
-        <span />
-      )}
+      ) : null}
       {next ? (
         <Link
-          className="group hover:-translate-y-0.5 flex items-center justify-end gap-3 rounded-xl border p-4 text-right transition-all hover:bg-muted hover:shadow-md"
+          className={cn(
+            "group hover:-translate-y-0.5 flex items-center justify-end gap-3 rounded-xl border p-4 text-right transition-all hover:bg-muted hover:shadow-md",
+            !prev && "sm:col-start-2"
+          )}
           href={`/docs/${next.slug}`}
         >
           <div className="min-w-0">

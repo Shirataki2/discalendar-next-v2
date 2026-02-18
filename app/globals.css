@@ -650,38 +650,40 @@
   }
 }
 
-/* 法務ページ向け prose 拡張 */
-.prose-legal h2 {
-  padding-top: 1.5em;
-  border-top: 1px solid hsl(var(--border));
-  margin-top: 2em;
-}
+@layer components {
+  /* 法務ページ向け prose 拡張 */
+  .prose-legal h2 {
+    padding-top: 1.5em;
+    border-top: 1px solid hsl(var(--border));
+    margin-top: 2em;
+  }
 
-.prose-legal h2:first-of-type {
-  border-top: none;
-  padding-top: 0;
-}
+  .prose-legal h2:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
 
-.prose-legal a {
-  color: hsl(var(--primary));
-  text-decoration-color: hsl(var(--primary) / 0.3);
-}
+  .prose-legal a {
+    color: hsl(var(--primary));
+    text-decoration-color: hsl(var(--primary) / 0.3);
+  }
 
-.prose-legal a:hover {
-  text-decoration-color: hsl(var(--primary));
-}
+  .prose-legal a:hover {
+    text-decoration-color: hsl(var(--primary));
+  }
 
-/* ドキュメントページ向け prose 拡張 */
-.prose-docs h2 {
-  margin-top: 2em;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid hsl(var(--border));
-}
+  /* ドキュメントページ向け prose 拡張 */
+  .prose-docs h2 {
+    margin-top: 2em;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid hsl(var(--border));
+  }
 
-.prose-docs h2:first-of-type {
-  margin-top: 0;
-}
+  .prose-docs h2:first-of-type {
+    margin-top: 0;
+  }
 
-.prose-docs h3 {
-  margin-top: 1.5em;
+  .prose-docs h3 {
+    margin-top: 1.5em;
+  }
 }
