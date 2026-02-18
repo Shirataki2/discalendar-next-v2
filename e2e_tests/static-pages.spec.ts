@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 
 const TERMS_TITLE_PATTERN = /利用規約/;
 const PRIVACY_TITLE_PATTERN = /プライバシーポリシー/;
+const PREV_LINK_PATTERN = /基本的な使い方/;
 
 test.describe("静的ページ E2Eテスト", () => {
   test.describe("フッターリンク遷移", () => {
@@ -207,11 +208,10 @@ test.describe("静的ページ E2Eテスト", () => {
     }) => {
       await page.goto("/docs/login");
 
-      const prevLink = page
+      await page
         .getByRole("navigation", { name: "ページ送り" })
-        .getByText("前の記事")
-        .locator("..");
-      await prevLink.click();
+        .getByRole("link", { name: PREV_LINK_PATTERN })
+        .click();
 
       await page.waitForURL("**/docs/getting-started");
       expect(page.url()).toContain("/docs/getting-started");

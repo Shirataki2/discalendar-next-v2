@@ -27,7 +27,7 @@ export default {
             "--tw-prose-quote-borders": "hsl(var(--border))",
             "--tw-prose-code": "hsl(var(--foreground))",
             "--tw-prose-pre-bg": "hsl(var(--muted))",
-            maxWidth: "65ch",
+            maxWidth: "none",
             fontSize: "1.125rem",
             lineHeight: "1.75",
           },
