@@ -11,7 +11,7 @@ Linear Issue    →   SDD Spec              →   コーディング      →   
 (WHAT/WHY)         (HOW)                     (DO)                 (DELIVER)
 
 /linear:create      /kiro:spec-init           /linear:start        /linear:pr
-                    /kiro:spec-requirements   実装 + テスト        /linear:update
+/linear:refine      /kiro:spec-requirements   実装 + テスト        /linear:update
                     /kiro:spec-design         /git:commit
                     /kiro:spec-tasks
                     /kiro:spec-impl
@@ -30,6 +30,24 @@ Linearでプロジェクト全体の作業を計画・管理する。
 # 即座にブランチ作成して作業開始する場合
 /linear:create -t "タイトル" -d "説明" --start
 ```
+
+### イシュー詳細化
+
+```bash
+# イシューを対話的に深掘り（詳細補強・サブタスク分解・プロジェクト昇格）
+/linear:refine DIS-XX
+
+# 全フェーズを対話なしで自動適用
+/linear:refine DIS-XX --auto
+
+# 詳細補強のみスキップ（分解判定から開始）
+/linear:refine DIS-XX --skip-refine
+
+# サブタスク分解をスキップ（詳細補強のみ）
+/linear:refine DIS-XX --skip-split
+```
+
+品質スコア（タイトル・説明文・優先度・見積もり・ラベル・受け入れ条件）を分析し、不足項目を対話的に補強する。スコープに応じてサブタスク分解やプロジェクト昇格も実行する。
 
 ### イシュー一覧・選択
 
@@ -187,6 +205,9 @@ PR マージ後:
     │
     └─ 機能追加・設計変更？
         │
+        ├─ イシューの詳細が不十分？
+        │   └─ YES → /linear:refine DIS-XX → 品質補強・サブタスク分解
+        │
         ├─ 要件が明確？
         │   ├─ YES → /kiro:spec-init → spec-requirements → spec-design → spec-tasks → spec-impl
         │   └─ NO  → /kiro:spec-init → spec-requirements（要件を対話的に洗い出し）
@@ -200,6 +221,7 @@ PR マージ後:
 | フェーズ | コマンド | 用途 |
 |---------|---------|------|
 | 計画 | `/linear:create` | イシュー作成 |
+| 計画 | `/linear:refine` | イシュー詳細化（品質補強・分解・昇格） |
 | 計画 | `/linear:list` | イシュー一覧 |
 | 計画 | `/linear:status` | 進捗サマリー |
 | 仕様 | `/kiro:spec-init` | 仕様初期化 |
