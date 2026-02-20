@@ -121,65 +121,40 @@ supabase/         # マイグレーション・設定
 .github/workflows/ # CI/CD（ci, playwright, deploy-migrations, claude）
 ```
 
-## AI-DLC Spec-Driven Workflow
+## Development Workflow
 
-3フェーズ承認ワークフロー: Requirements → Design → Tasks → Implementation
+Linear（計画）+ SDD（仕様駆動開発）の統合ワークフロー。詳細は `.kiro/steering/workflow.md` を参照。
 
-### Minimal Workflow
-- Phase 0 (optional): `/kiro:steering`, `/kiro:steering-custom`
-- Phase 1 (Specification):
-  - `/kiro:spec-init "description"`
-  - `/kiro:spec-requirements {feature}`
-  - `/kiro:validate-gap {feature}` (optional: 既存コードベース向け)
-  - `/kiro:spec-design {feature} [-y]`
-  - `/kiro:validate-design {feature}` (optional: 設計レビュー)
-  - `/kiro:spec-tasks {feature} [-y]`
-- Phase 2 (Implementation): `/kiro:spec-impl {feature} [tasks]`
-  - `/kiro:validate-impl {feature}` (optional: 実装後検証)
-- Progress check: `/kiro:spec-status {feature}` (随時)
-
-### Active Specifications
-- `calendar-events` - カレンダーイベントCRUD
-- `calendar-view` - カレンダー表示UI
-- `discord-login` - Discord OAuth認証
-- `guild-list` - ギルド一覧表示
-- `landing-page-mockup` - ランディングページ
-- `storybook-integration` - Storybook統合
-
-## Linear Integration
-
-プロジェクト管理に [Linear](https://linear.app) + linear-cli を使用。
-
-```bash
-# イシュー操作
-linear issue list              # 自分のイシュー一覧
-linear issue view [id]         # 詳細表示（ID省略でブランチから自動検出）
-linear issue create -t "title" # 新規作成
-linear issue start <id>        # ブランチ作成 + In Progress化
-linear issue update <id> -s completed  # ステータス更新
-linear issue comment add <id>  # コメント追加
-linear issue pr [id]           # Issue情報からGitHub PR作成
+```
+/linear:create → /kiro:spec-* (仕様策定) → /linear:start (実装) → /linear:pr (納品)
 ```
 
-### Claude Code コマンド (`/linear:*`)
+### Quick Start
 
-| コマンド | 用途 |
-|---------|------|
-| `/linear:list` | イシュー一覧（フィルタ対応） |
-| `/linear:view` | イシュー詳細（ブランチ自動検出） |
-| `/linear:create` | 新規イシュー作成 |
-| `/linear:start` | 作業開始（ブランチ + ステータス） |
-| `/linear:update` | プロパティ更新 |
-| `/linear:comment` | コメント管理 |
-| `/linear:pr` | Issue情報からPR作成 |
-| `/linear:status` | 進捗サマリー |
+| やりたいこと | コマンド |
+|-------------|---------|
+| イシュー作成 | `/linear:create -t "タイトル" -d "説明"` |
+| 仕様策定開始 | `/kiro:spec-init "説明"` → `spec-requirements` → `spec-design` → `spec-tasks` |
+| 実装開始 | `/linear:start DIS-XX` |
+| SDD実装 | `/kiro:spec-impl {feature}` |
+| PR作成 | `/linear:pr` or `/git:pr-cycle` |
+| 完了 | `/linear:update DIS-XX --state completed` |
 
-### Issue-Driven Development ワークフロー
+### SDD 適用判断
 
-`/linear:start <id>` → 実装 → `/linear:pr` or `/git:pr-cycle` → `/linear:update --state completed`
+- **S（数時間）**: SDD不要、直接実装
+- **M以上（1日+）**: SDD推奨（複数ファイル変更、DB変更、新パターン導入時は必須）
+
+### Active Specifications
+
+`calendar-events`, `calendar-view`, `discord-login`, `guild-list`, `landing-page-mockup`, `storybook-integration`
+
+### Linear CLI (`/linear:*`)
+
+`/linear:list`, `/linear:view`, `/linear:create`, `/linear:start`, `/linear:update`, `/linear:comment`, `/linear:pr`, `/linear:status`
 
 ## Steering Configuration
 
 - `.kiro/steering/` 全体をプロジェクトメモリとして読み込み
-- デフォルトファイル: `product.md`, `tech.md`, `structure.md`
+- デフォルトファイル: `product.md`, `tech.md`, `structure.md`, `workflow.md`
 - カスタムファイル対応（`/kiro:steering-custom` で管理）
