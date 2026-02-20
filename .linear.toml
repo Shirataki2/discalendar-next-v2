@@ -1,0 +1,6 @@
+# linear cli
+# https://github.com/schpet/linear-cli
+
+workspace = "ff2345"
+team_id = "DIS"
+issue_sort = "manual"

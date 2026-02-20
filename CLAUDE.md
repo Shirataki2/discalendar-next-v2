@@ -146,6 +146,38 @@ supabase/         # マイグレーション・設定
 - `landing-page-mockup` - ランディングページ
 - `storybook-integration` - Storybook統合
 
+## Linear Integration
+
+プロジェクト管理に [Linear](https://linear.app) + linear-cli を使用。
+
+```bash
+# イシュー操作
+linear issue list              # 自分のイシュー一覧
+linear issue view [id]         # 詳細表示（ID省略でブランチから自動検出）
+linear issue create -t "title" # 新規作成
+linear issue start <id>        # ブランチ作成 + In Progress化
+linear issue update <id> -s completed  # ステータス更新
+linear issue comment add <id>  # コメント追加
+linear issue pr [id]           # Issue情報からGitHub PR作成
+```
+
+### Claude Code コマンド (`/linear:*`)
+
+| コマンド | 用途 |
+|---------|------|
+| `/linear:list` | イシュー一覧（フィルタ対応） |
+| `/linear:view` | イシュー詳細（ブランチ自動検出） |
+| `/linear:create` | 新規イシュー作成 |
+| `/linear:start` | 作業開始（ブランチ + ステータス） |
+| `/linear:update` | プロパティ更新 |
+| `/linear:comment` | コメント管理 |
+| `/linear:pr` | Issue情報からPR作成 |
+| `/linear:status` | 進捗サマリー |
+
+### Issue-Driven Development ワークフロー
+
+`/linear:start <id>` → 実装 → `/linear:pr` or `/git:pr-cycle` → `/linear:update --state completed`
+
 ## Steering Configuration
 
 - `.kiro/steering/` 全体をプロジェクトメモリとして読み込み
