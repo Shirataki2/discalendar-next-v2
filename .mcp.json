@@ -5,6 +5,7 @@
       "url": "https://mcp.supabase.com/mcp?project_ref=nthdxkbfvzlbbdwlqaih"
     },
     "Sentry": {
+      "type": "http",
       "url": "https://mcp.sentry.dev/mcp/personal-vnh/discalendar-next"
     }
   }

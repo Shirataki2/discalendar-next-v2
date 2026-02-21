@@ -28,11 +28,17 @@ linear issue list --no-pager
 一覧を表示し、ユーザーに対象イシューを選択してもらう。
 
 ### 作業開始
+イシュー内容から英語ブランチ名を生成し、`-b` フラグで明示指定する。
+
+**ブランチ名フォーマット**: `<type>/dis-<number>-<english-slug>`
+- `<type>`: `feat`, `fix`, `refactor`, `chore`, `docs` など
+- `<english-slug>`: イシュー内容を英語で要約したkebab-case（2〜4語）
+
 ```bash
-linear issue start <issue-id>
+linear issue start <issue-id> -b <type>/dis-<number>-<english-slug>
 ```
 - イシューのステータスが「In Progress」に更新
-- Gitブランチが自動作成・チェックアウト
+- 指定した英語ブランチ名でGitブランチが作成・チェックアウト
 
 ## Phase 2: 実装
 
@@ -92,6 +98,7 @@ linear issue update <issue-id> --state completed
 
 ## 注意事項
 
-- ブランチ名はLinear CLIが自動生成する（`username/dis-xx-title` 形式）
+- ブランチ名は必ず `-b` フラグで英語名を明示指定する（`<type>/dis-<number>-<english-slug>` 形式）
+- 日本語タイトルからの自動生成は使わない
 - 1つのイシューに対して1つのブランチ・1つのPRを原則とする
 - 実装中に追加タスクが見つかった場合は、別イシューとして `linear issue create` で作成する

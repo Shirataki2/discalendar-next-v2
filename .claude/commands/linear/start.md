@@ -31,22 +31,41 @@ linear issue list --no-pager
 ```
 表示された一覧からユーザーにIssue IDを選択してもらう。
 
-### Step 2: 作業開始
+### Step 2: イシュー内容の確認
 ```bash
-linear issue start <issue-id>
+linear issue view <issue-id> --no-pager
+```
+イシューのタイトル・説明を確認し、英語でのブランチ名を決定する。
+
+### Step 3: 英語ブランチ名の生成
+イシュー内容から英語の短い要約スラッグを生成する。
+
+**ブランチ名フォーマット**: `<type>/dis-<number>-<english-slug>`
+- `<type>`: `feat`, `fix`, `refactor`, `chore`, `docs` などConventional Commits準拠のプレフィックス
+- `<number>`: イシュー番号（例: `42`）
+- `<english-slug>`: イシュー内容を英語で要約したkebab-case（2〜4語程度）
+
+**例**:
+- DIS-42「カレンダーイベント作成機能」→ `feat/dis-42-create-calendar-events`
+- DIS-15「ログインページのバグ修正」→ `fix/dis-15-login-page-bug`
+- DIS-30「DBスキーマにインデックス追加」→ `chore/dis-30-add-db-indexes`
+
+### Step 4: 作業開始（ブランチ名を明示指定）
+```bash
+linear issue start <issue-id> -b <branch-name>
 ```
 
 これにより:
 - イシューのステータスが「In Progress」に更新
-- Gitブランチが自動作成（例: `tomoya/dis-42-issue-title`）
+- 指定した英語ブランチ名でGitブランチが作成
 - 作成されたブランチに自動チェックアウト
 
-### Step 3: 結果確認
+### Step 5: 結果確認
 ```bash
 git branch --show-current
 ```
 
-### Step 4: 結果表示
+### Step 6: 結果表示
 ```markdown
 ## 作業開始
 

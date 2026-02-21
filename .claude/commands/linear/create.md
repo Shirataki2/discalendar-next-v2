@@ -45,9 +45,14 @@ linear issue create --title "<title>" --no-interactive [options]
 - `--assignee` → `-a "<name>"` を追加（未指定時は `-a self`）
 
 ### Step 2: --start 指定時の追加処理
-作成されたイシューIDを出力から取得し:
+作成されたイシューIDを出力から取得し、イシュー内容から英語ブランチ名を生成する。
+
+**ブランチ名フォーマット**: `<type>/dis-<number>-<english-slug>`
+- `<type>`: `feat`, `fix`, `refactor`, `chore`, `docs` など
+- `<english-slug>`: イシュー内容を英語で要約したkebab-case（2〜4語）
+
 ```bash
-linear issue start <issue-id>
+linear issue start <issue-id> -b <type>/dis-<number>-<english-slug>
 ```
 
 ### Step 3: 結果表示
