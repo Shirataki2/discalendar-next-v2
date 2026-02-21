@@ -126,7 +126,7 @@ supabase/         # マイグレーション・設定
 Linear（計画）+ SDD（仕様駆動開発）の統合ワークフロー。詳細は `.kiro/steering/workflow.md` を参照。
 
 ```
-/linear:create → /kiro:spec-* (仕様策定) → /linear:start (実装) → /linear:pr (納品)
+/linear:create → /kiro:spec-* (仕様策定) → /linear:start (実装) → /linear:pr (納品) → /linear:done (検証・完了)
 ```
 
 ### Quick Start
@@ -138,6 +138,7 @@ Linear（計画）+ SDD（仕様駆動開発）の統合ワークフロー。詳
 | 実装開始 | `/linear:start DIS-XX` |
 | SDD実装 | `/kiro:spec-impl {feature}` |
 | PR作成 | `/linear:pr` or `/git:pr-cycle` |
+| 受け入れ条件更新 | `/linear:done` — コードから検証して条件・サブイシューを一括更新 |
 | 完了 | `/linear:update DIS-XX --state completed` |
 
 ### SDD 適用判断
@@ -151,7 +152,7 @@ Linear（計画）+ SDD（仕様駆動開発）の統合ワークフロー。詳
 
 ### Linear CLI (`/linear:*`)
 
-`/linear:list`, `/linear:view`, `/linear:create`, `/linear:start`, `/linear:update`, `/linear:comment`, `/linear:pr`, `/linear:status`
+`/linear:list`, `/linear:view`, `/linear:create`, `/linear:start`, `/linear:update`, `/linear:comment`, `/linear:pr`, `/linear:done`, `/linear:status`
 
 ## Steering Configuration
 
