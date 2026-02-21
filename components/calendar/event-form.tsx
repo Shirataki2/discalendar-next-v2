@@ -164,7 +164,9 @@ function DateTimeField({
         <div className="sm:flex-1">
           <DatePicker
             aria-describedby={ariaDescribedBy}
+            aria-invalid={hasError}
             aria-label={`${label}の日付`}
+            aria-required
             disabled={isSubmitting}
             hasError={hasError}
             onBlur={handleBlur}
@@ -176,7 +178,9 @@ function DateTimeField({
           <div className="sm:w-32">
             <TimePicker
               aria-describedby={ariaDescribedBy}
+              aria-invalid={hasError}
               aria-label={`${label}の時刻`}
+              aria-required
               disabled={isSubmitting}
               hasError={hasError}
               onBlur={handleBlur}
@@ -298,11 +302,21 @@ export function EventForm({
    * シグネチャを汎用的に保持している
    */
   function handleDateChange(field: "startAt" | "endAt", date: Date) {
-    if (field === "startAt" && date > form.values.endAt) {
-      const adjusted = new Date(form.values.endAt);
-      adjusted.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-      form.handleChange("endAt", adjusted);
+    if (field !== "startAt") {
+      return;
     }
+    const endAt = form.values.endAt;
+    if (date <= endAt) {
+      return;
+    }
+    // startAt > endAt の場合、終了日を開始日と同日に調整
+    const adjusted = new Date(endAt);
+    adjusted.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+    // 日付調整後も startAt > endAt（時刻差で逆転する場合）なら時刻も合わせる
+    if (date > adjusted) {
+      adjusted.setHours(date.getHours(), date.getMinutes(), 0, 0);
+    }
+    form.handleChange("endAt", adjusted);
   }
 
   return (

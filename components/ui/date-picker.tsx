@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { ja } from "date-fns/locale";
 
 interface DatePickerProps {
   value: Date | undefined;
@@ -21,6 +22,8 @@ interface DatePickerProps {
   hasError?: boolean;
   "aria-label"?: string;
   "aria-describedby"?: string;
+  "aria-required"?: boolean;
+  "aria-invalid"?: boolean;
 }
 
 function DatePicker({
@@ -32,6 +35,8 @@ function DatePicker({
   hasError = false,
   "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
+  "aria-required": ariaRequired,
+  "aria-invalid": ariaInvalid,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -55,6 +60,8 @@ function DatePicker({
           disabled={disabled}
           aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy}
+          aria-required={ariaRequired}
+          aria-invalid={ariaInvalid}
           className={cn(
             "w-full justify-start text-left font-normal",
             !value && "text-muted-foreground",
@@ -67,6 +74,7 @@ function DatePicker({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
+          locale={ja}
           mode="single"
           selected={value}
           onSelect={handleSelect}

@@ -15,12 +15,15 @@ interface TimePickerProps {
   /** value が undefined の場合、現在日時を基準に新しい Date を生成して返す。DatePicker の onChange と異なり undefined を返さない（時刻クリア操作は不要なため）。 */
   onChange: (date: Date) => void;
   onBlur?: () => void;
+  /** 分の刻み幅。60の約数（5, 10, 15, 20, 30）を推奨。0以下または60以上はデフォルト値(5)にフォールバック。 */
   minuteStep?: number;
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
   "aria-label"?: string;
   "aria-describedby"?: string;
+  "aria-required"?: boolean;
+  "aria-invalid"?: boolean;
 }
 
 const HOURS_COUNT = 24;
@@ -54,6 +57,8 @@ function TimePicker({
   hasError = false,
   "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
+  "aria-required": ariaRequired,
+  "aria-invalid": ariaInvalid,
 }: TimePickerProps) {
   const [open, setOpen] = useState(false);
   const minuteOptions = useMemo(
@@ -73,7 +78,7 @@ function TimePicker({
       if (!el) return;
       const selected = el.querySelector('[aria-selected="true"]');
       if (selected instanceof HTMLElement && selected.scrollIntoView) {
-        selected.scrollIntoView({ block: "nearest" });
+        selected.scrollIntoView({ block: "center" });
       }
     },
     []
@@ -143,6 +148,8 @@ function TimePicker({
           disabled={disabled}
           aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy}
+          aria-required={ariaRequired}
+          aria-invalid={ariaInvalid}
           className={cn(
             "w-full justify-start text-left font-normal",
             !value && "text-muted-foreground",
