@@ -7,8 +7,8 @@
   - 追加されたコンポーネントがビルドエラーなく動作することを確認する
   - _Requirements: 1.1, 2.1_
 
-- [ ] 2. DatePickerコンポーネントの作成
-- [ ] 2.1 (P) 日付選択のPopover+Calendar合成コンポーネントを実装する
+- [x] 2. DatePickerコンポーネントの作成
+- [x] 2.1 (P) 日付選択のPopover+Calendar合成コンポーネントを実装する
   - ボタンをクリックするとPopover内にCalendarが表示される日付ピッカーを作成する
   - 日付を選択するとフィールドに反映され、Popoverが自動的に閉じるようにする
   - 選択中の日付をプライマリカラーでハイライト表示し、今日の日付を視覚的に区別する
@@ -17,12 +17,12 @@
   - aria-labelとaria-describedbyを受け取り、適切なARIA属性を設定する
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 5.1, 5.3, 5.4_
 
-- [ ] 2.2 (P) DatePickerのStorybookストーリーを作成する
+- [x] 2.2 (P) DatePickerのStorybookストーリーを作成する
   - Default, WithValue, Disabled, Error, DarkModeの各バリアントをストーリーとして定義する
   - CSF3形式でautodocsタグを設定し、コンポーネントと同じディレクトリに配置する
   - _Requirements: 1.1, 1.3, 1.4, 1.5_
 
-- [ ] 2.3 DatePickerの単体テストを作成する
+- [x] 2.3 DatePickerの単体テストを作成する
   - 日付選択時にonChangeコールバックが正しい日付で呼ばれることを検証する
   - Popoverの開閉動作を検証する
   - disabled状態でクリックしても反応しないことを検証する
