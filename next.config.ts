@@ -27,5 +27,6 @@ export default withSentryConfig(nextConfig, {
   sourcemaps: {
     deleteSourcemapsAfterUpload: true,
   },
+  // CIではSource Mapのアップロードのログを出力してデバッグしやすくするためにverboseに設定
   silent: !process.env.CI,
 });
