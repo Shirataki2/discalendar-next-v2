@@ -1,7 +1,7 @@
 "use client";
 
 import { ClockIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface TimePickerProps {
   value: Date | undefined;
+  /** value が undefined の場合、現在日時を基準に新しい Date を生成して返す。DatePicker の onChange と異なり undefined を返さない（時刻クリア操作は不要なため）。 */
   onChange: (date: Date) => void;
   minuteStep?: number;
   placeholder?: string;
@@ -29,9 +30,10 @@ const ITEM_HEIGHT = 44;
 const HOURS = Array.from({ length: HOURS_COUNT }, (_, i) => i);
 
 function generateMinuteOptions(step: number): number[] {
+  const safeStep = step > 0 ? step : DEFAULT_MINUTE_STEP;
   return Array.from(
-    { length: Math.ceil(MINUTES_IN_HOUR / step) },
-    (_, i) => i * step
+    { length: Math.ceil(MINUTES_IN_HOUR / safeStep) },
+    (_, i) => i * safeStep
   );
 }
 
@@ -52,7 +54,10 @@ function TimePicker({
   "aria-describedby": ariaDescribedBy,
 }: TimePickerProps) {
   const [open, setOpen] = useState(false);
-  const minuteOptions = generateMinuteOptions(minuteStep);
+  const minuteOptions = useMemo(
+    () => generateMinuteOptions(minuteStep),
+    [minuteStep]
+  );
 
   const selectedHour = value?.getHours();
   const selectedMinute = value?.getMinutes();
@@ -80,14 +85,14 @@ function TimePicker({
   function handleHourSelect(hour: number) {
     const base = value ?? new Date();
     const next = new Date(base);
-    next.setHours(hour);
+    next.setHours(hour, next.getMinutes(), 0, 0);
     onChange(next);
   }
 
   function handleMinuteSelect(minute: number) {
     const base = value ?? new Date();
     const next = new Date(base);
-    next.setMinutes(minute);
+    next.setMinutes(minute, 0, 0);
     onChange(next);
   }
 

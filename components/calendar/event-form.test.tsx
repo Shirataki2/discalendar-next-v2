@@ -7,7 +7,13 @@
  *
  * Requirements: 1.3, 1.6, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3
  */
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { EventForm, type EventFormProps } from "./event-form";
@@ -657,6 +663,67 @@ describe("EventForm", () => {
         });
         expect(endDateBtn).toHaveAttribute("aria-describedby", "endAt-error");
       });
+    });
+  });
+
+  // DatePicker/TimePicker統合: 日時選択→フォーム値反映
+  describe("DatePicker/TimePickerでの日時選択→フォーム値反映", () => {
+    it("時刻ピッカーで時間を選択するとフォーム値が更新される", () => {
+      const startAt = new Date(2026, 1, 15, 10, 0);
+      const endAt = new Date(2026, 1, 15, 11, 0);
+
+      render(
+        <EventForm {...defaultProps} defaultValues={{ startAt, endAt }} />
+      );
+
+      const startTimeButton = screen.getByRole("button", {
+        name: START_TIME_PATTERN,
+      });
+      fireEvent.click(startTimeButton);
+
+      const hour14 = screen.getByRole("option", { name: "14" });
+      fireEvent.click(hour14);
+
+      expect(startTimeButton).toHaveTextContent("14:00");
+    });
+
+    it("時刻ピッカーで分を選択するとフォーム値が更新される", () => {
+      const startAt = new Date(2026, 1, 15, 10, 0);
+      const endAt = new Date(2026, 1, 15, 11, 0);
+
+      render(
+        <EventForm {...defaultProps} defaultValues={{ startAt, endAt }} />
+      );
+
+      const startTimeButton = screen.getByRole("button", {
+        name: START_TIME_PATTERN,
+      });
+      fireEvent.click(startTimeButton);
+
+      const minute30 = screen.getByRole("option", { name: "30" });
+      fireEvent.click(minute30);
+
+      expect(startTimeButton).toHaveTextContent("10:30");
+    });
+
+    it("エラー状態でDatePickerにborder-destructiveが適用される", () => {
+      const startAt = new Date(2026, 1, 20, 10, 0);
+      const endAt = new Date(2026, 1, 15, 11, 0);
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={{ title: "テスト", startAt, endAt }}
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      fireEvent.click(saveButton);
+
+      const endDateButton = screen.getByRole("button", {
+        name: END_DATE_PATTERN,
+      });
+      expect(endDateButton.className).toContain("border-destructive");
     });
   });
 
