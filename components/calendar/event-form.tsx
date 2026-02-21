@@ -130,14 +130,22 @@ function DateTimeField({
     if (!date) {
       return;
     }
-    const merged = new Date(dateValue);
+    const base =
+      dateValue instanceof Date && !Number.isNaN(dateValue.getTime())
+        ? dateValue
+        : new Date();
+    const merged = new Date(base);
     merged.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
     form.handleChange(field, merged);
     onDateChange?.(field, merged);
   }
 
   function handleTimeChange(date: Date) {
-    const merged = new Date(dateValue);
+    const base =
+      dateValue instanceof Date && !Number.isNaN(dateValue.getTime())
+        ? dateValue
+        : new Date();
+    const merged = new Date(base);
     merged.setHours(date.getHours(), date.getMinutes());
     form.handleChange(field, merged);
   }
@@ -284,6 +292,10 @@ export function EventForm({
   /**
    * 開始日変更時の終了日自動調整（Task 4.2）
    * 開始日が終了日より後になった場合、終了日を開始日と同日に調整する
+   *
+   * 注: 現在 onDateChange は startAt の DateTimeField にのみ渡されるため
+   * field は常に "startAt" だが、将来 endAt にも拡張する可能性を考慮して
+   * シグネチャを汎用的に保持している
    */
   function handleDateChange(field: "startAt" | "endAt", date: Date) {
     if (field === "startAt" && date > form.values.endAt) {

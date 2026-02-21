@@ -30,7 +30,8 @@ const DEFAULT_MINUTE_STEP = 5;
 const HOURS = Array.from({ length: HOURS_COUNT }, (_, i) => i);
 
 function generateMinuteOptions(step: number): number[] {
-  const safeStep = step > 0 ? step : DEFAULT_MINUTE_STEP;
+  const safeStep =
+    step > 0 && step < MINUTES_IN_HOUR ? step : DEFAULT_MINUTE_STEP;
   return Array.from(
     { length: Math.ceil(MINUTES_IN_HOUR / safeStep) },
     (_, i) => i * safeStep
@@ -120,14 +121,17 @@ function TimePicker({
   }
 
   function handleMinuteKeyDown(e: React.KeyboardEvent, minute: number) {
+    const currentIndex = minuteOptions.indexOf(minute);
+    if (currentIndex < 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      handleMinuteSelect((minute + minuteStep) % MINUTES_IN_HOUR);
+      const nextIndex = (currentIndex + 1) % minuteOptions.length;
+      handleMinuteSelect(minuteOptions[nextIndex]);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      handleMinuteSelect(
-        (minute - minuteStep + MINUTES_IN_HOUR) % MINUTES_IN_HOUR
-      );
+      const nextIndex =
+        (currentIndex - 1 + minuteOptions.length) % minuteOptions.length;
+      handleMinuteSelect(minuteOptions[nextIndex]);
     }
   }
 
