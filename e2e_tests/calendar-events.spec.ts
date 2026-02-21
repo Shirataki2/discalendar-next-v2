@@ -42,14 +42,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
         name: ADD_BUTTON_PATTERN,
       });
 
-      // 追加ボタンが存在しない場合はスキップ
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
-
-      // 追加ボタンをクリック
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -70,11 +63,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -101,11 +90,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -134,11 +119,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -167,11 +148,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -202,11 +179,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -241,11 +214,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -271,11 +240,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -310,11 +275,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -337,11 +298,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -364,11 +321,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
@@ -402,11 +355,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       const addButton = toolbar.getByRole("button", {
         name: ADD_BUTTON_PATTERN,
       });
-      const isVisible = await addButton.isVisible().catch(() => false);
-      if (!isVisible) {
-        test.skip();
-        return;
-      }
+      await expect(addButton).toBeVisible();
       await addButton.click();
 
       // ダイアログが開くことを確認
