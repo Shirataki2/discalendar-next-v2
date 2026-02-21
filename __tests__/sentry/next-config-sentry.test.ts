@@ -4,7 +4,7 @@
  * Requirements:
  * - 1.5: next.config.tsをwithSentryConfigでラップしてビルド統合を有効化する
  * - 4.1: プロダクションビルドでソースマップをSentryに自動アップロードする
- * - 4.2: ソースマップをクライアントに公開しない（v10ではデフォルト）
+ * - 4.2: ソースマップをクライアントに公開しない（deleteSourcemapsAfterUploadで明示的に設定）
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -61,5 +61,18 @@ describe("next.config.ts Sentry integration", () => {
     >;
 
     expect(sentryOptions).toHaveProperty("silent");
+  });
+
+  it("ソースマップがアップロード後に削除される設定になっている", async () => {
+    await import("@/next.config");
+
+    const sentryOptions = mockWithSentryConfig.mock.calls[0][1] as Record<
+      string,
+      unknown
+    >;
+
+    expect(sentryOptions).toHaveProperty("sourcemaps");
+    const sourcemaps = sentryOptions.sourcemaps as Record<string, unknown>;
+    expect(sourcemaps).toHaveProperty("deleteSourcemapsAfterUpload", true);
   });
 });

@@ -28,7 +28,7 @@ describe("sentry.server.config", () => {
     process.env = originalEnv;
   });
 
-  it("DSN設定時にSentry.initが正しいオプションで呼ばれる", async () => {
+  it("DSN設定かつ本番環境でSentryが有効化される", async () => {
     process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/123";
     process.env.NODE_ENV = "production";
 
@@ -45,6 +45,7 @@ describe("sentry.server.config", () => {
 
   it("DSN未設定時にSentryが無効化される", async () => {
     process.env.NEXT_PUBLIC_SENTRY_DSN = "";
+    process.env.NODE_ENV = "production";
 
     await import("@/sentry.server.config");
 
@@ -56,14 +57,30 @@ describe("sentry.server.config", () => {
     );
   });
 
-  it("本番環境ではtracesSampleRateが低く設定される", async () => {
+  it("開発環境ではDSNが設定されていてもSentryが無効化される", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/123";
+    process.env.NODE_ENV = "development";
+
+    await import("@/sentry.server.config");
+
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enabled: false,
+      })
+    );
+  });
+
+  it("environmentにNODE_ENVが設定される", async () => {
     process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/123";
     process.env.NODE_ENV = "production";
 
     await import("@/sentry.server.config");
 
-    const callArgs = mockInit.mock.calls[0][0];
-    expect(callArgs.tracesSampleRate).toBeLessThanOrEqual(0.1);
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        environment: "production",
+      })
+    );
   });
 
   it("sendDefaultPiiがfalseに設定される", async () => {

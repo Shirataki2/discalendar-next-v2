@@ -30,27 +30,24 @@ describe("instrumentation", () => {
     process.env = originalEnv;
   });
 
+  // register() のテストはスモークテストとして位置づける。
+  // 動的importのモック検証は vi.mock の仕組み上困難なため、
+  // 各ランタイムで register() がエラーなく完了することを確認する。
   describe("register()", () => {
-    it("Node.jsランタイムでsentry.server.configをimportする", async () => {
+    it("Node.jsランタイムでregisterがエラーなく完了する", async () => {
       process.env.NEXT_RUNTIME = "nodejs";
 
       const mod = await import("@/instrumentation");
 
-      await mod.register();
-
-      // sentry.server.configのimportが実行されたことを確認
-      // vi.mockでモック済みなのでエラーなく完了すれば成功
-      expect(mod.register).toBeDefined();
+      await expect(mod.register()).resolves.toBeUndefined();
     });
 
-    it("Edgeランタイムでsentry.edge.configをimportする", async () => {
+    it("Edgeランタイムでregisterがエラーなく完了する", async () => {
       process.env.NEXT_RUNTIME = "edge";
 
       const mod = await import("@/instrumentation");
 
-      await mod.register();
-
-      expect(mod.register).toBeDefined();
+      await expect(mod.register()).resolves.toBeUndefined();
     });
 
     it("未知のランタイムではエラーをスローしない", async () => {
