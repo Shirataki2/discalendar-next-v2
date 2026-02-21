@@ -2,23 +2,22 @@
  * EventForm - テスト
  *
  * タスク5.1: 予定入力フォームコンポーネントを作成する
- * - タイトル、開始日時、終了日時、説明、終日フラグ、色、場所を入力できるフォームを実装する
- * - HTML5のdatetime-local入力を使用して日時選択を提供する
- * - バリデーションエラーをフィールドごとに表示する
- * - 保存中のローディング状態とキャンセルボタンを提供する
- * - useEventFormフックを使用してフォーム状態を管理する
+ * タスク4.1: DateTimeFieldをDatePicker+TimePickerに置き換え
+ * タスク4.2: 開始日変更時の終了日自動調整
  *
- * Requirements: 1.3, 1.6, 3.2, 3.5
+ * Requirements: 1.3, 1.6, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { EventForm, type EventFormProps } from "./event-form";
 
 // トップレベルに正規表現を定義（パフォーマンス最適化）
 const TITLE_PATTERN = /タイトル/i;
-const START_TIME_PATTERN = /開始日時/i;
-const END_TIME_PATTERN = /終了日時/i;
+const START_DATE_PATTERN = /開始日時の日付/;
+const START_TIME_PATTERN = /開始日時の時刻/;
+const END_DATE_PATTERN = /終了日時の日付/;
+const END_TIME_PATTERN = /終了日時の時刻/;
 const DESCRIPTION_PATTERN = /説明/i;
 const ALL_DAY_PATTERN = /終日/i;
 const COLOR_PATTERN = /色/i;
@@ -50,16 +49,26 @@ describe("EventForm", () => {
       ).toBeInTheDocument();
     });
 
-    it("開始日時入力フィールドが表示される (Req 1.3)", () => {
+    it("開始日時の日付ピッカーと時刻ピッカーが表示される (Req 1.3)", () => {
       render(<EventForm {...defaultProps} />);
 
-      expect(screen.getByLabelText(START_TIME_PATTERN)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: START_DATE_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: START_TIME_PATTERN })
+      ).toBeInTheDocument();
     });
 
-    it("終了日時入力フィールドが表示される (Req 1.3)", () => {
+    it("終了日時の日付ピッカーと時刻ピッカーが表示される (Req 1.3)", () => {
       render(<EventForm {...defaultProps} />);
 
-      expect(screen.getByLabelText(END_TIME_PATTERN)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_DATE_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_TIME_PATTERN })
+      ).toBeInTheDocument();
     });
 
     it("説明入力フィールドが表示される (Req 1.3)", () => {
@@ -358,33 +367,206 @@ describe("EventForm", () => {
 
       const checkbox = screen.getByRole("checkbox", { name: ALL_DAY_PATTERN });
       expect(checkbox).toBeDisabled();
+
+      // DatePicker/TimePickerも無効になる
+      const startDateBtn = screen.getByRole("button", {
+        name: START_DATE_PATTERN,
+      });
+      expect(startDateBtn).toBeDisabled();
+
+      const startTimeBtn = screen.getByRole("button", {
+        name: START_TIME_PATTERN,
+      });
+      expect(startTimeBtn).toBeDisabled();
     });
   });
 
-  // Task 5.1: 終日フラグ動作
-  describe("Task 5.1: 終日フラグ動作", () => {
-    it("終日フラグがオンの時、日時入力がdate型になる", async () => {
+  // Task 4.1: 終日フラグ動作（DatePicker+TimePicker統合）
+  describe("Task 4.1: 終日フラグ動作", () => {
+    it("終日フラグがオンの時、TimePickerが非表示になる (Req 3.2)", async () => {
       const user = userEvent.setup();
       render(<EventForm {...defaultProps} />);
 
       const checkbox = screen.getByRole("checkbox", { name: ALL_DAY_PATTERN });
       await user.click(checkbox);
 
-      const startInput = screen.getByLabelText(START_TIME_PATTERN);
-      const endInput = screen.getByLabelText(END_TIME_PATTERN);
+      // DatePickerは引き続き表示される
+      expect(
+        screen.getByRole("button", { name: START_DATE_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_DATE_PATTERN })
+      ).toBeInTheDocument();
 
-      expect(startInput).toHaveAttribute("type", "date");
-      expect(endInput).toHaveAttribute("type", "date");
+      // TimePickerは非表示になる
+      expect(
+        screen.queryByRole("button", { name: START_TIME_PATTERN })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: END_TIME_PATTERN })
+      ).not.toBeInTheDocument();
     });
 
-    it("終日フラグがオフの時、日時入力がdatetime-local型になる", () => {
+    it("終日フラグがオフの時、DatePickerとTimePickerが両方表示される (Req 3.3)", () => {
       render(<EventForm {...defaultProps} />);
 
-      const startInput = screen.getByLabelText(START_TIME_PATTERN);
-      const endInput = screen.getByLabelText(END_TIME_PATTERN);
+      expect(
+        screen.getByRole("button", { name: START_DATE_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: START_TIME_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_DATE_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_TIME_PATTERN })
+      ).toBeInTheDocument();
+    });
 
-      expect(startInput).toHaveAttribute("type", "datetime-local");
-      expect(endInput).toHaveAttribute("type", "datetime-local");
+    it("終日フラグをオフに切り替えるとTimePickerが再表示される (Req 3.3)", async () => {
+      const user = userEvent.setup();
+      render(
+        <EventForm {...defaultProps} defaultValues={{ isAllDay: true }} />
+      );
+
+      // 終日オンの状態ではTimePickerがない
+      expect(
+        screen.queryByRole("button", { name: START_TIME_PATTERN })
+      ).not.toBeInTheDocument();
+
+      // 終日をオフにする
+      const checkbox = screen.getByRole("checkbox", { name: ALL_DAY_PATTERN });
+      await user.click(checkbox);
+
+      // TimePickerが表示される
+      expect(
+        screen.getByRole("button", { name: START_TIME_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_TIME_PATTERN })
+      ).toBeInTheDocument();
+    });
+  });
+
+  // Task 4.1: DateTimeField レイアウト
+  describe("Task 4.1: DateTimeField レイアウト", () => {
+    it("日付と時刻のピッカーが明確に区別可能なレイアウトで配置される (Req 3.4)", () => {
+      render(<EventForm {...defaultProps} />);
+
+      // 開始日時フィールドにDatePickerとTimePickerが含まれる
+      const startDateBtn = screen.getByRole("button", {
+        name: START_DATE_PATTERN,
+      });
+      const startTimeBtn = screen.getByRole("button", {
+        name: START_TIME_PATTERN,
+      });
+
+      // 両方が存在し、別のボタンである
+      expect(startDateBtn).not.toBe(startTimeBtn);
+    });
+
+    it("レスポンシブレイアウトのCSSクラスが適用されている (Req 4.2, 4.3)", () => {
+      const { container } = render(<EventForm {...defaultProps} />);
+
+      // flex-col（モバイル）とsm:flex-row（デスクトップ）が含まれるdivがある
+      const responsiveContainers = container.querySelectorAll(
+        ".flex.flex-col.sm\\:flex-row"
+      );
+      // 開始日時と終了日時の2つ
+      expect(responsiveContainers.length).toBe(2);
+    });
+  });
+
+  // Task 4.2: 開始日変更時の終了日自動調整
+  describe("Task 4.2: 開始日変更時の終了日自動調整", () => {
+    it("開始日を終了日より後に変更すると、終了日が開始日と同日に自動調整される (Req 3.1)", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+
+      // 開始日: 12/10, 終了日: 12/15
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00"),
+        endAt: new Date("2025-12-15T11:00"),
+      };
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+        />
+      );
+
+      // 開始日時の日付ピッカーを開く
+      const startDateBtn = screen.getByRole("button", {
+        name: START_DATE_PATTERN,
+      });
+      await user.click(startDateBtn);
+
+      // カレンダーから12/20を選択（終了日12/15より後）
+      const day20Cell = screen.getByRole("gridcell", { name: "20" });
+      await user.click(within(day20Cell).getByRole("button"));
+
+      // フォームを保存して値を確認
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+        const submittedData = onSubmit.mock.calls[0][0];
+        // 開始日が12/20
+        expect(submittedData.startAt.getDate()).toBe(20);
+        // 終了日も12/20に自動調整されている
+        expect(submittedData.endAt.getDate()).toBe(20);
+        expect(submittedData.endAt.getMonth()).toBe(
+          submittedData.startAt.getMonth()
+        );
+        // 終了日の時刻は元の値（11:00）が維持される
+        expect(submittedData.endAt.getHours()).toBe(11);
+      });
+    });
+
+    it("開始日が終了日以前の場合、終了日は変更されない (Req 3.1)", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+
+      // 開始日: 12/10, 終了日: 12/15
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00"),
+        endAt: new Date("2025-12-15T11:00"),
+      };
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+        />
+      );
+
+      // 開始日時の日付ピッカーを開く
+      const startDateBtn = screen.getByRole("button", {
+        name: START_DATE_PATTERN,
+      });
+      await user.click(startDateBtn);
+
+      // カレンダーから12/12を選択（終了日12/15より前）
+      const day12Cell = screen.getByRole("gridcell", { name: "12" });
+      await user.click(within(day12Cell).getByRole("button"));
+
+      // フォームを保存
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+        const submittedData = onSubmit.mock.calls[0][0];
+        // 終了日は元の12/15のまま
+        expect(submittedData.endAt.getDate()).toBe(15);
+      });
     });
   });
 
@@ -393,14 +575,26 @@ describe("EventForm", () => {
     it("フォームフィールドに適切なラベルが関連付けられている", () => {
       render(<EventForm {...defaultProps} />);
 
-      // 各フィールドがラベルと関連付けられていることを確認
+      // テキストフィールド
       expect(screen.getByLabelText(TITLE_PATTERN)).toBeInTheDocument();
-      expect(screen.getByLabelText(START_TIME_PATTERN)).toBeInTheDocument();
-      expect(screen.getByLabelText(END_TIME_PATTERN)).toBeInTheDocument();
       expect(screen.getByLabelText(DESCRIPTION_PATTERN)).toBeInTheDocument();
       expect(screen.getByLabelText(ALL_DAY_PATTERN)).toBeInTheDocument();
       expect(screen.getByLabelText(COLOR_PATTERN)).toBeInTheDocument();
       expect(screen.getByLabelText(LOCATION_PATTERN)).toBeInTheDocument();
+
+      // DatePicker/TimePickerはaria-labelで関連付けられている
+      expect(
+        screen.getByRole("button", { name: START_DATE_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: START_TIME_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_DATE_PATTERN })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: END_TIME_PATTERN })
+      ).toBeInTheDocument();
     });
 
     it("必須フィールドにaria-required属性が設定されている", () => {
@@ -436,6 +630,32 @@ describe("EventForm", () => {
         expect(errorElement).toHaveAttribute("id");
         const errorId = errorElement.getAttribute("id");
         expect(titleInput).toHaveAttribute("aria-describedby", errorId);
+      });
+    });
+
+    it("DatePickerのエラー時にaria-describedbyが設定される (Req 5.3)", async () => {
+      const user = userEvent.setup();
+
+      // 終了日が開始日より前
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T14:00"),
+        endAt: new Date("2025-12-10T10:00"),
+      };
+
+      render(<EventForm {...defaultProps} defaultValues={defaultValues} />);
+
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        const errorElement = screen.getByText(END_TIME_ERROR_PATTERN);
+        expect(errorElement).toHaveAttribute("id", "endAt-error");
+
+        const endDateBtn = screen.getByRole("button", {
+          name: END_DATE_PATTERN,
+        });
+        expect(endDateBtn).toHaveAttribute("aria-describedby", "endAt-error");
       });
     });
   });

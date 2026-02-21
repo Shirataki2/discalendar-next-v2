@@ -8,7 +8,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface TimePickerProps {
@@ -60,23 +59,17 @@ function TimePicker({
 
   useEffect(() => {
     if (!open || selectedHour === undefined) return;
-    const viewport = hourListRef.current?.querySelector(
-      '[data-slot="scroll-area-viewport"]'
-    );
-    if (viewport) {
-      viewport.scrollTop = selectedHour * ITEM_HEIGHT;
+    if (hourListRef.current) {
+      hourListRef.current.scrollTop = selectedHour * ITEM_HEIGHT;
     }
   }, [open, selectedHour]);
 
   useEffect(() => {
     if (!open || selectedMinute === undefined) return;
-    const viewport = minuteListRef.current?.querySelector(
-      '[data-slot="scroll-area-viewport"]'
-    );
-    if (viewport) {
+    if (minuteListRef.current) {
       const index = minuteOptions.indexOf(selectedMinute);
       if (index >= 0) {
-        viewport.scrollTop = index * ITEM_HEIGHT;
+        minuteListRef.current.scrollTop = index * ITEM_HEIGHT;
       }
     }
   }, [open, selectedMinute, minuteOptions]);
@@ -115,56 +108,58 @@ function TimePicker({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <div className="flex divide-x">
-          <ScrollArea
+          <div
             ref={hourListRef}
-            className="h-[220px] w-[72px]"
+            className="h-[220px] w-[72px] overflow-y-auto overscroll-contain"
+            role="listbox"
+            aria-label="時"
+            onWheel={(e) => e.stopPropagation()}
           >
-            <div role="listbox" aria-label="時">
-              {HOURS.map((hour) => (
-                <button
-                  key={hour}
-                  type="button"
-                  role="option"
-                  aria-selected={selectedHour === hour}
-                  className={cn(
-                    "flex w-full items-center justify-center text-sm",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    "min-h-[44px]",
-                    selectedHour === hour &&
-                      "bg-primary text-primary-foreground"
-                  )}
-                  onClick={() => handleHourSelect(hour)}
-                >
-                  {hour}
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
-          <ScrollArea
+            {HOURS.map((hour) => (
+              <button
+                key={hour}
+                type="button"
+                role="option"
+                aria-selected={selectedHour === hour}
+                className={cn(
+                  "flex w-full items-center justify-center text-sm",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "min-h-[44px]",
+                  selectedHour === hour &&
+                    "bg-primary text-primary-foreground"
+                )}
+                onClick={() => handleHourSelect(hour)}
+              >
+                {hour}
+              </button>
+            ))}
+          </div>
+          <div
             ref={minuteListRef}
-            className="h-[220px] w-[72px]"
+            className="h-[220px] w-[72px] overflow-y-auto overscroll-contain"
+            role="listbox"
+            aria-label="分"
+            onWheel={(e) => e.stopPropagation()}
           >
-            <div role="listbox" aria-label="分">
-              {minuteOptions.map((minute) => (
-                <button
-                  key={minute}
-                  type="button"
-                  role="option"
-                  aria-selected={selectedMinute === minute}
-                  className={cn(
-                    "flex w-full items-center justify-center text-sm",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    "min-h-[44px]",
-                    selectedMinute === minute &&
-                      "bg-primary text-primary-foreground"
-                  )}
-                  onClick={() => handleMinuteSelect(minute)}
-                >
-                  {minute.toString().padStart(2, "0")}
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
+            {minuteOptions.map((minute) => (
+              <button
+                key={minute}
+                type="button"
+                role="option"
+                aria-selected={selectedMinute === minute}
+                className={cn(
+                  "flex w-full items-center justify-center text-sm",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "min-h-[44px]",
+                  selectedMinute === minute &&
+                    "bg-primary text-primary-foreground"
+                )}
+                onClick={() => handleMinuteSelect(minute)}
+              >
+                {minute.toString().padStart(2, "0")}
+              </button>
+            ))}
+          </div>
         </div>
       </PopoverContent>
     </Popover>

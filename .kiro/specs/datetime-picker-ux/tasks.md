@@ -51,8 +51,8 @@
   - minuteStepプロパティで刻みをカスタマイズできることを検証する
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 4. DateTimeFieldの統合とEventFormへの組み込み
-- [ ] 4.1 DateTimeFieldをDatePicker+TimePickerの合成コンポーネントに置き換える
+- [x] 4. DateTimeFieldの統合とEventFormへの組み込み
+- [x] 4.1 DateTimeFieldをDatePicker+TimePickerの合成コンポーネントに置き換える
   - 既存のDateTimeField（ネイティブinput使用）を、DatePickerとTimePickerを組み合わせた新しい実装に置き換える
   - 日付変更時はDate値の日付部分のみ更新し、時刻変更時は時刻部分のみ更新するマージロジックを実装する
   - 終日トグルがオンの場合はTimePickerを非表示にし、オフの場合は表示する
@@ -61,7 +61,7 @@
   - エラー状態の表示とaria-describedbyの連携を既存パターンに合わせて維持する
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3_
 
-- [ ] 4.2 開始日変更時の終了日自動調整ロジックを実装する
+- [x] 4.2 開始日変更時の終了日自動調整ロジックを実装する
   - 開始日を変更した結果、終了日が開始日より前になる場合に、終了日を開始日と同日に自動調整する
   - useEventFormの既存バリデーションと連携して矛盾のない日時設定を保証する
   - _Requirements: 3.1_

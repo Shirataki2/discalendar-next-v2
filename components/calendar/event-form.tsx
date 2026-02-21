@@ -13,11 +13,12 @@
  * Requirements: 1.3, 1.6, 3.2, 3.5
  */
 
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   type EventFormData,
   type UseEventFormReturn,
@@ -39,16 +40,6 @@ export type EventFormProps = {
   /** キャンセル時のコールバック */
   onCancel: () => void;
 };
-
-/**
- * 日時をHTML input用の文字列にフォーマットする
- */
-function formatDateTimeForInput(date: Date, isAllDay: boolean): string {
-  if (isAllDay) {
-    return format(date, "yyyy-MM-dd");
-  }
-  return format(date, "yyyy-MM-dd'T'HH:mm");
-}
 
 // エラーメッセージのID（aria-describedby用）
 const ERROR_IDS = {
@@ -116,38 +107,70 @@ function AllDayField({ form, isSubmitting }: FormFieldProps) {
 }
 
 /**
- * 日時フィールド
+ * 日時フィールド（DatePicker + TimePicker統合）
  */
 function DateTimeField({
   form,
   isSubmitting,
   field,
   label,
-}: FormFieldProps & { field: "startAt" | "endAt"; label: string }) {
+  onDateChange,
+}: FormFieldProps & {
+  field: "startAt" | "endAt";
+  label: string;
+  onDateChange?: (field: "startAt" | "endAt", date: Date) => void;
+}) {
   const hasError = Boolean(form.touched[field] && form.errors[field]);
   const errorId = ERROR_IDS[field];
   const ariaDescribedBy = hasError ? errorId : undefined;
-  const errorClassName = hasError ? "border-destructive" : undefined;
+  const dateValue = form.values[field];
+
+  function handleDateSelect(date: Date | undefined) {
+    if (!date) {
+      return;
+    }
+    const merged = new Date(dateValue);
+    merged.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+    form.handleChange(field, merged);
+    onDateChange?.(field, merged);
+  }
+
+  function handleTimeChange(date: Date) {
+    const merged = new Date(dateValue);
+    merged.setHours(date.getHours(), date.getMinutes());
+    form.handleChange(field, merged);
+  }
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={field}>
+      <Label>
         {label}
         <span className="text-destructive">*</span>
       </Label>
-      <Input
-        aria-describedby={ariaDescribedBy}
-        aria-invalid={hasError}
-        aria-required="true"
-        className={cn(errorClassName)}
-        disabled={isSubmitting}
-        id={field}
-        name={field}
-        onBlur={() => form.handleBlur(field)}
-        onChange={(e) => form.handleChange(field, e.target.value)}
-        type={form.values.isAllDay ? "date" : "datetime-local"}
-        value={formatDateTimeForInput(form.values[field], form.values.isAllDay)}
-      />
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="sm:flex-1">
+          <DatePicker
+            aria-describedby={ariaDescribedBy}
+            aria-label={`${label}の日付`}
+            disabled={isSubmitting}
+            hasError={hasError}
+            onChange={handleDateSelect}
+            value={dateValue}
+          />
+        </div>
+        {!form.values.isAllDay && (
+          <div className="sm:w-32">
+            <TimePicker
+              aria-describedby={ariaDescribedBy}
+              aria-label={`${label}の時刻`}
+              disabled={isSubmitting}
+              hasError={hasError}
+              onChange={handleTimeChange}
+              value={dateValue}
+            />
+          </div>
+        )}
+      </div>
       {hasError ? (
         <p className="text-destructive text-sm" id={errorId}>
           {form.errors[field]}
@@ -251,6 +274,18 @@ export function EventForm({
     }
   }
 
+  /**
+   * 開始日変更時の終了日自動調整（Task 4.2）
+   * 開始日が終了日より後になった場合、終了日を開始日と同日に調整する
+   */
+  function handleDateChange(field: "startAt" | "endAt", date: Date) {
+    if (field === "startAt" && date > form.values.endAt) {
+      const adjusted = new Date(form.values.endAt);
+      adjusted.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+      form.handleChange("endAt", adjusted);
+    }
+  }
+
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <TitleField form={form} isSubmitting={isSubmitting} />
@@ -260,6 +295,7 @@ export function EventForm({
         form={form}
         isSubmitting={isSubmitting}
         label="開始日時"
+        onDateChange={handleDateChange}
       />
       <DateTimeField
         field="endAt"
