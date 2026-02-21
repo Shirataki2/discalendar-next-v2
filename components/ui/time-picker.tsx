@@ -21,15 +21,18 @@ interface TimePickerProps {
   "aria-describedby"?: string;
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOURS_COUNT = 24;
+const MINUTES_IN_HOUR = 60;
+const DEFAULT_MINUTE_STEP = 5;
 const ITEM_HEIGHT = 44;
 
+const HOURS = Array.from({ length: HOURS_COUNT }, (_, i) => i);
+
 function generateMinuteOptions(step: number): number[] {
-  const options: number[] = [];
-  for (let m = 0; m < 60; m += step) {
-    options.push(m);
-  }
-  return options;
+  return Array.from(
+    { length: Math.ceil(MINUTES_IN_HOUR / step) },
+    (_, i) => i * step
+  );
 }
 
 function formatTime(date: Date): string {
@@ -41,7 +44,7 @@ function formatTime(date: Date): string {
 function TimePicker({
   value,
   onChange,
-  minuteStep = 5,
+  minuteStep = DEFAULT_MINUTE_STEP,
   placeholder = "時刻を選択",
   disabled = false,
   hasError = false,

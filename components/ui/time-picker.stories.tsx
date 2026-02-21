@@ -60,3 +60,17 @@ export const Error: Story = {
     placeholder: "時刻を選択",
   },
 };
+
+export const DarkMode: Story = {
+  args: {
+    value: new Date(2026, 1, 15, 14, 30),
+    onChange: fn(),
+  },
+  decorators: [
+    (StoryFn) => (
+      <div className="dark" style={{ padding: "1rem", background: "#0e1629" }}>
+        <StoryFn />
+      </div>
+    ),
+  ],
+};
