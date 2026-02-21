@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -63,7 +69,7 @@ describe("DatePicker", () => {
       }
 
       // Popoverが閉じるまで待つ
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(screen.queryByRole("grid")).not.toBeInTheDocument();
       });
     });

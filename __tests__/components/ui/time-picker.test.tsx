@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TimePicker } from "@/components/ui/time-picker";
 
@@ -75,8 +81,7 @@ describe("TimePicker", () => {
       fireEvent.click(screen.getByRole("button"));
 
       // 分リストに00, 05, 10, ..., 55 が存在する（12個）
-      const listboxes = screen.getAllByRole("listbox");
-      const minuteListbox = listboxes[1];
+      const minuteListbox = screen.getByRole("listbox", { name: "分" });
       const minuteOptions = minuteListbox.querySelectorAll('[role="option"]');
       expect(minuteOptions).toHaveLength(12);
 
@@ -99,8 +104,7 @@ describe("TimePicker", () => {
 
       fireEvent.click(screen.getByRole("button"));
 
-      const listboxes = screen.getAllByRole("listbox");
-      const minuteListbox = listboxes[1];
+      const minuteListbox = screen.getByRole("listbox", { name: "分" });
       const minuteOptions = minuteListbox.querySelectorAll('[role="option"]');
       expect(minuteOptions).toHaveLength(4); // 00, 15, 30, 45
 
@@ -119,8 +123,7 @@ describe("TimePicker", () => {
 
       fireEvent.click(screen.getByRole("button"));
 
-      const listboxes = screen.getAllByRole("listbox");
-      const hourListbox = listboxes[0];
+      const hourListbox = screen.getByRole("listbox", { name: "時" });
       const hourOptions = hourListbox.querySelectorAll('[role="option"]');
       expect(hourOptions).toHaveLength(24);
 
@@ -226,6 +229,126 @@ describe("TimePicker", () => {
 
       const minute30 = screen.getByRole("option", { name: "30" });
       expect(minute30).toHaveAttribute("aria-selected", "true");
+    });
+  });
+
+  describe("キーボードナビゲーション (Req 5.2)", () => {
+    it("ArrowDownで次の時間が選択される", () => {
+      const onChange = vi.fn();
+      const value = new Date(2026, 1, 15, 10, 30);
+
+      render(<TimePicker onChange={onChange} value={value} />);
+      fireEvent.click(screen.getByRole("button"));
+
+      const hourListbox = screen.getByRole("listbox", { name: "時" });
+      const hour10 = within(hourListbox).getByRole("option", { name: "10" });
+      fireEvent.keyDown(hour10, { key: "ArrowDown" });
+
+      expect(onChange).toHaveBeenCalledWith(expect.any(Date));
+      const calledDate = onChange.mock.calls[0][0] as Date;
+      expect(calledDate.getHours()).toBe(11);
+    });
+
+    it("ArrowUpで前の時間が選択される", () => {
+      const onChange = vi.fn();
+      const value = new Date(2026, 1, 15, 10, 30);
+
+      render(<TimePicker onChange={onChange} value={value} />);
+      fireEvent.click(screen.getByRole("button"));
+
+      const hourListbox = screen.getByRole("listbox", { name: "時" });
+      const hour10 = within(hourListbox).getByRole("option", { name: "10" });
+      fireEvent.keyDown(hour10, { key: "ArrowUp" });
+
+      expect(onChange).toHaveBeenCalledWith(expect.any(Date));
+      const calledDate = onChange.mock.calls[0][0] as Date;
+      expect(calledDate.getHours()).toBe(9);
+    });
+
+    it("時間が23からArrowDownで0にラップアラウンドする", () => {
+      const onChange = vi.fn();
+      const value = new Date(2026, 1, 15, 23, 0);
+
+      render(<TimePicker onChange={onChange} value={value} />);
+      fireEvent.click(screen.getByRole("button"));
+
+      const hourListbox = screen.getByRole("listbox", { name: "時" });
+      const hour23 = within(hourListbox).getByRole("option", { name: "23" });
+      fireEvent.keyDown(hour23, { key: "ArrowDown" });
+
+      expect(onChange).toHaveBeenCalledWith(expect.any(Date));
+      const calledDate = onChange.mock.calls[0][0] as Date;
+      expect(calledDate.getHours()).toBe(0);
+    });
+
+    it("時間が0からArrowUpで23にラップアラウンドする", () => {
+      const onChange = vi.fn();
+      const value = new Date(2026, 1, 15, 0, 0);
+
+      render(<TimePicker onChange={onChange} value={value} />);
+      fireEvent.click(screen.getByRole("button"));
+
+      const hourListbox = screen.getByRole("listbox", { name: "時" });
+      const hour00 = within(hourListbox).getByRole("option", { name: "00" });
+      fireEvent.keyDown(hour00, { key: "ArrowUp" });
+
+      expect(onChange).toHaveBeenCalledWith(expect.any(Date));
+      const calledDate = onChange.mock.calls[0][0] as Date;
+      expect(calledDate.getHours()).toBe(23);
+    });
+
+    it("ArrowDownで次の分が選択される", () => {
+      const onChange = vi.fn();
+      const value = new Date(2026, 1, 15, 10, 30);
+
+      render(<TimePicker onChange={onChange} value={value} />);
+      fireEvent.click(screen.getByRole("button"));
+
+      const minuteListbox = screen.getByRole("listbox", { name: "分" });
+      const minute30 = within(minuteListbox).getByRole("option", {
+        name: "30",
+      });
+      fireEvent.keyDown(minute30, { key: "ArrowDown" });
+
+      expect(onChange).toHaveBeenCalledWith(expect.any(Date));
+      const calledDate = onChange.mock.calls[0][0] as Date;
+      expect(calledDate.getMinutes()).toBe(35);
+    });
+
+    it("分が55からArrowDownで0にラップアラウンドする", () => {
+      const onChange = vi.fn();
+      const value = new Date(2026, 1, 15, 10, 55);
+
+      render(<TimePicker onChange={onChange} value={value} />);
+      fireEvent.click(screen.getByRole("button"));
+
+      const minuteListbox = screen.getByRole("listbox", { name: "分" });
+      const minute55 = within(minuteListbox).getByRole("option", {
+        name: "55",
+      });
+      fireEvent.keyDown(minute55, { key: "ArrowDown" });
+
+      expect(onChange).toHaveBeenCalledWith(expect.any(Date));
+      const calledDate = onChange.mock.calls[0][0] as Date;
+      expect(calledDate.getMinutes()).toBe(0);
+    });
+
+    it("分が0からArrowUpで55にラップアラウンドする", () => {
+      const onChange = vi.fn();
+      const value = new Date(2026, 1, 15, 10, 0);
+
+      render(<TimePicker onChange={onChange} value={value} />);
+      fireEvent.click(screen.getByRole("button"));
+
+      const minuteListbox = screen.getByRole("listbox", { name: "分" });
+      const minute00 = within(minuteListbox).getByRole("option", {
+        name: "00",
+      });
+      fireEvent.keyDown(minute00, { key: "ArrowUp" });
+
+      expect(onChange).toHaveBeenCalledWith(expect.any(Date));
+      const calledDate = onChange.mock.calls[0][0] as Date;
+      expect(calledDate.getMinutes()).toBe(55);
     });
   });
 });

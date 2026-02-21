@@ -706,7 +706,7 @@ describe("EventForm", () => {
       expect(startTimeButton).toHaveTextContent("10:30");
     });
 
-    it("エラー状態でDatePickerにborder-destructiveが適用される", () => {
+    it("エラー状態でDatePickerにborder-destructiveが適用される", async () => {
       const startAt = new Date(2026, 1, 20, 10, 0);
       const endAt = new Date(2026, 1, 15, 11, 0);
 
@@ -720,10 +720,12 @@ describe("EventForm", () => {
       const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
       fireEvent.click(saveButton);
 
-      const endDateButton = screen.getByRole("button", {
-        name: END_DATE_PATTERN,
+      await waitFor(() => {
+        const endDateButton = screen.getByRole("button", {
+          name: END_DATE_PATTERN,
+        });
+        expect(endDateButton.className).toContain("border-destructive");
       });
-      expect(endDateButton.className).toContain("border-destructive");
     });
   });
 

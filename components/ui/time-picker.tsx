@@ -24,6 +24,7 @@ interface TimePickerProps {
   "aria-describedby"?: string;
   "aria-required"?: boolean;
   "aria-invalid"?: boolean;
+  "aria-labelledby"?: string;
 }
 
 const HOURS_COUNT = 24;
@@ -59,6 +60,7 @@ function TimePicker({
   "aria-describedby": ariaDescribedBy,
   "aria-required": ariaRequired,
   "aria-invalid": ariaInvalid,
+  "aria-labelledby": ariaLabelledBy,
 }: TimePickerProps) {
   const [open, setOpen] = useState(false);
   const minuteOptions = useMemo(
@@ -115,13 +117,28 @@ function TimePicker({
     onChange(next);
   }
 
+  function focusOptionAt(
+    listRef: React.RefObject<HTMLDivElement | null>,
+    index: number
+  ) {
+    const options = listRef.current?.querySelectorAll('[role="option"]');
+    const target = options?.[index];
+    if (target instanceof HTMLElement) {
+      target.focus();
+    }
+  }
+
   function handleHourKeyDown(e: React.KeyboardEvent, hour: number) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      handleHourSelect((hour + 1) % HOURS_COUNT);
+      const nextHour = (hour + 1) % HOURS_COUNT;
+      handleHourSelect(nextHour);
+      focusOptionAt(hourListRef, nextHour);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      handleHourSelect((hour - 1 + HOURS_COUNT) % HOURS_COUNT);
+      const nextHour = (hour - 1 + HOURS_COUNT) % HOURS_COUNT;
+      handleHourSelect(nextHour);
+      focusOptionAt(hourListRef, nextHour);
     }
   }
 
@@ -132,11 +149,13 @@ function TimePicker({
       e.preventDefault();
       const nextIndex = (currentIndex + 1) % minuteOptions.length;
       handleMinuteSelect(minuteOptions[nextIndex]);
+      focusOptionAt(minuteListRef, nextIndex);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       const nextIndex =
         (currentIndex - 1 + minuteOptions.length) % minuteOptions.length;
       handleMinuteSelect(minuteOptions[nextIndex]);
+      focusOptionAt(minuteListRef, nextIndex);
     }
   }
 
@@ -147,6 +166,7 @@ function TimePicker({
           variant="outline"
           disabled={disabled}
           aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           aria-required={ariaRequired}
           aria-invalid={ariaInvalid}

@@ -123,7 +123,6 @@ function DateTimeField({
   const hasError = Boolean(form.touched[field] && form.errors[field]);
   const errorId = ERROR_IDS[field];
   const ariaDescribedBy = hasError ? errorId : undefined;
-  const labelId = `${field}-label`;
   const dateValue = form.values[field];
 
   function handleDateSelect(date: Date | undefined) {
@@ -155,11 +154,11 @@ function DateTimeField({
   }
 
   return (
-    <div className="space-y-2">
-      <Label id={labelId}>
+    <fieldset className="space-y-2 border-none p-0">
+      <legend className="font-medium text-sm leading-none">
         {label}
         <span className="text-destructive">*</span>
-      </Label>
+      </legend>
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="sm:flex-1">
           <DatePicker
@@ -195,7 +194,7 @@ function DateTimeField({
           {form.errors[field]}
         </p>
       ) : null}
-    </div>
+    </fieldset>
   );
 }
 

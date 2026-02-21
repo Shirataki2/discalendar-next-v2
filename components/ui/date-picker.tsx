@@ -24,6 +24,7 @@ interface DatePickerProps {
   "aria-describedby"?: string;
   "aria-required"?: boolean;
   "aria-invalid"?: boolean;
+  "aria-labelledby"?: string;
 }
 
 function DatePicker({
@@ -37,6 +38,7 @@ function DatePicker({
   "aria-describedby": ariaDescribedBy,
   "aria-required": ariaRequired,
   "aria-invalid": ariaInvalid,
+  "aria-labelledby": ariaLabelledBy,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -59,6 +61,7 @@ function DatePicker({
           variant="outline"
           disabled={disabled}
           aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           aria-required={ariaRequired}
           aria-invalid={ariaInvalid}
