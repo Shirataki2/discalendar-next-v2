@@ -55,3 +55,6 @@ refs/DisCalendarV2/
 storybook-static
 
 debug.log
+
+# Sentry Config File
+.env.sentry-build-plugin
