@@ -25,7 +25,7 @@
   - サーバー設定と同様のDSN管理・環境分離ロジックを適用する
   - _Requirements: 1.4, 5.1, 5.2, 5.5_
 
-- [ ] 3. Next.js App Router統合を設定する
+- [x] 3. Next.js App Router統合を設定する
 - [x] 3.1 サーバーサイド計装フックを作成する
   - Next.jsのinstrumentationフックを使い、ランタイム環境に応じてサーバーまたはEdge設定を動的にロードする
   - Server Components、Route Handlers、Server Actions、Middlewareで発生するリクエストエラーを自動捕捉するハンドラをエクスポートする
@@ -45,18 +45,18 @@
   - Tailwind CSSはルートレイアウト外では適用できないため、最小限のインラインスタイルで対応する
   - _Requirements: 2.2, 2.3_
 
-- [ ] 5. GitHub Actions CIワークフローにSentry環境変数を追加する
+- [x] 5. GitHub Actions CIワークフローにSentry環境変数を追加する
   - CIのビルドステップにSentry認証トークン・Organization・Projectの環境変数をGitHub Secretsから参照する形で追加する
   - ソースマップアップロードがCI環境で正常に動作することを確認する
   - _Requirements: 4.3_
 
-- [ ] 6. 統合検証を行う
-- [ ] 6.1 プロダクションビルドの成功を検証する
+- [x] 6. 統合検証を行う
+- [x] 6.1 プロダクションビルドの成功を検証する
   - Sentry統合後に `npm run build` がエラーなく完了することを確認する
   - lint・型チェックがSentry関連ファイルでも通過することを確認する
   - _Requirements: 1.5, 4.1_
 
-- [ ] 6.2 DSN未設定時の正常起動を検証する
+- [x] 6.2 DSN未設定時の正常起動を検証する
   - DSN環境変数を設定しない状態で開発サーバーが正常に起動することを確認する
   - Sentryの設定ファイルがエラーをスローせず、アプリケーション機能に影響しないことを確認する
   - _Requirements: 5.5_
