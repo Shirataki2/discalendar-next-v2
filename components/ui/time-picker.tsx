@@ -1,7 +1,7 @@
 "use client";
 
 import { ClockIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -14,6 +14,7 @@ interface TimePickerProps {
   value: Date | undefined;
   /** value が undefined の場合、現在日時を基準に新しい Date を生成して返す。DatePicker の onChange と異なり undefined を返さない（時刻クリア操作は不要なため）。 */
   onChange: (date: Date) => void;
+  onBlur?: () => void;
   minuteStep?: number;
   placeholder?: string;
   disabled?: boolean;
@@ -25,7 +26,6 @@ interface TimePickerProps {
 const HOURS_COUNT = 24;
 const MINUTES_IN_HOUR = 60;
 const DEFAULT_MINUTE_STEP = 5;
-const ITEM_HEIGHT = 44;
 
 const HOURS = Array.from({ length: HOURS_COUNT }, (_, i) => i);
 
@@ -46,6 +46,7 @@ function formatTime(date: Date): string {
 function TimePicker({
   value,
   onChange,
+  onBlur,
   minuteStep = DEFAULT_MINUTE_STEP,
   placeholder = "時刻を選択",
   disabled = false,
@@ -65,22 +66,34 @@ function TimePicker({
   const hourListRef = useRef<HTMLDivElement>(null);
   const minuteListRef = useRef<HTMLDivElement>(null);
 
+  const scrollToSelected = useCallback(
+    (listRef: React.RefObject<HTMLDivElement | null>) => {
+      const el = listRef.current;
+      if (!el) return;
+      const selected = el.querySelector('[aria-selected="true"]');
+      if (selected instanceof HTMLElement && selected.scrollIntoView) {
+        selected.scrollIntoView({ block: "nearest" });
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!open || selectedHour === undefined) return;
-    if (hourListRef.current) {
-      hourListRef.current.scrollTop = selectedHour * ITEM_HEIGHT;
-    }
-  }, [open, selectedHour]);
+    scrollToSelected(hourListRef);
+  }, [open, selectedHour, scrollToSelected]);
 
   useEffect(() => {
     if (!open || selectedMinute === undefined) return;
-    if (minuteListRef.current) {
-      const index = minuteOptions.indexOf(selectedMinute);
-      if (index >= 0) {
-        minuteListRef.current.scrollTop = index * ITEM_HEIGHT;
-      }
+    scrollToSelected(minuteListRef);
+  }, [open, selectedMinute, scrollToSelected, minuteOptions]);
+
+  function handleOpenChange(isOpen: boolean) {
+    setOpen(isOpen);
+    if (!isOpen) {
+      onBlur?.();
     }
-  }, [open, selectedMinute, minuteOptions]);
+  }
 
   function handleHourSelect(hour: number) {
     const base = value ?? new Date();
@@ -96,8 +109,30 @@ function TimePicker({
     onChange(next);
   }
 
+  function handleHourKeyDown(e: React.KeyboardEvent, hour: number) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      handleHourSelect((hour + 1) % HOURS_COUNT);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      handleHourSelect((hour - 1 + HOURS_COUNT) % HOURS_COUNT);
+    }
+  }
+
+  function handleMinuteKeyDown(e: React.KeyboardEvent, minute: number) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      handleMinuteSelect((minute + minuteStep) % MINUTES_IN_HOUR);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      handleMinuteSelect(
+        (minute - minuteStep + MINUTES_IN_HOUR) % MINUTES_IN_HOUR
+      );
+    }
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -137,8 +172,9 @@ function TimePicker({
                     "bg-primary text-primary-foreground"
                 )}
                 onClick={() => handleHourSelect(hour)}
+                onKeyDown={(e) => handleHourKeyDown(e, hour)}
               >
-                {hour}
+                {hour.toString().padStart(2, "0")}
               </button>
             ))}
           </div>
@@ -163,6 +199,7 @@ function TimePicker({
                     "bg-primary text-primary-foreground"
                 )}
                 onClick={() => handleMinuteSelect(minute)}
+                onKeyDown={(e) => handleMinuteKeyDown(e, minute)}
               >
                 {minute.toString().padStart(2, "0")}
               </button>

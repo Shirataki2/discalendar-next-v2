@@ -123,6 +123,7 @@ function DateTimeField({
   const hasError = Boolean(form.touched[field] && form.errors[field]);
   const errorId = ERROR_IDS[field];
   const ariaDescribedBy = hasError ? errorId : undefined;
+  const labelId = `${field}-label`;
   const dateValue = form.values[field];
 
   function handleDateSelect(date: Date | undefined) {
@@ -141,9 +142,13 @@ function DateTimeField({
     form.handleChange(field, merged);
   }
 
+  function handleBlur() {
+    form.handleBlur(field);
+  }
+
   return (
     <div className="space-y-2">
-      <Label>
+      <Label id={labelId}>
         {label}
         <span className="text-destructive">*</span>
       </Label>
@@ -154,6 +159,7 @@ function DateTimeField({
             aria-label={`${label}の日付`}
             disabled={isSubmitting}
             hasError={hasError}
+            onBlur={handleBlur}
             onChange={handleDateSelect}
             value={dateValue}
           />
@@ -165,6 +171,7 @@ function DateTimeField({
               aria-label={`${label}の時刻`}
               disabled={isSubmitting}
               hasError={hasError}
+              onBlur={handleBlur}
               onChange={handleTimeChange}
               value={dateValue}
             />

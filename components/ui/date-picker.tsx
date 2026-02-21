@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 interface DatePickerProps {
   value: Date | undefined;
   onChange: (date: Date | undefined) => void;
+  onBlur?: () => void;
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
@@ -25,6 +26,7 @@ interface DatePickerProps {
 function DatePicker({
   value,
   onChange,
+  onBlur,
   placeholder = "日付を選択",
   disabled = false,
   hasError = false,
@@ -38,8 +40,15 @@ function DatePicker({
     setOpen(false);
   }
 
+  function handleOpenChange(isOpen: boolean) {
+    setOpen(isOpen);
+    if (!isOpen) {
+      onBlur?.();
+    }
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
