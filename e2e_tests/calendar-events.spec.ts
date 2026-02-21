@@ -21,8 +21,6 @@ const TEST_CALENDAR_PATH = "/test/calendar";
 const ADD_BUTTON_PATTERN = /追加|新規/;
 const DIALOG_TITLE_PATTERN = /新規予定作成/;
 const TITLE_LABEL_PATTERN = /タイトル/;
-const START_DATE_LABEL_PATTERN = /開始日時/;
-const END_DATE_LABEL_PATTERN = /終了日時/;
 const DESCRIPTION_LABEL_PATTERN = /説明/;
 const COLOR_LABEL_PATTERN = /色/;
 const LOCATION_LABEL_PATTERN = /場所/;
@@ -30,6 +28,15 @@ const ALL_DAY_LABEL_PATTERN = /終日/;
 const SAVE_BUTTON_PATTERN = /保存/;
 const CANCEL_BUTTON_PATTERN = /キャンセル/;
 const TITLE_REQUIRED_ERROR_PATTERN = /タイトルは必須です/;
+
+// DatePicker/TimePicker用パターン
+const START_DATE_BUTTON_PATTERN = /開始日時の日付/;
+const END_DATE_BUTTON_PATTERN = /終了日時の日付/;
+const START_TIME_BUTTON_PATTERN = /開始日時の時刻/;
+const END_TIME_BUTTON_PATTERN = /終了日時の時刻/;
+const MINUTE_00_PATTERN = /^00$/;
+const MINUTE_05_PATTERN = /^05$/;
+const MINUTE_55_PATTERN = /^55$/;
 
 test.describe("カレンダーイベント管理E2Eテスト", () => {
   test.describe("タスク9.5: 新規予定作成フロー", () => {
@@ -72,8 +79,13 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
 
       // フォームフィールドが存在することを確認
       await expect(dialog.getByLabel(TITLE_LABEL_PATTERN)).toBeVisible();
-      await expect(dialog.getByLabel(START_DATE_LABEL_PATTERN)).toBeVisible();
-      await expect(dialog.getByLabel(END_DATE_LABEL_PATTERN)).toBeVisible();
+      // 開始・終了日時はDatePicker+TimePickerで表示される（aria-label使用）
+      await expect(
+        dialog.getByRole("button", { name: START_DATE_BUTTON_PATTERN })
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("button", { name: END_DATE_BUTTON_PATTERN })
+      ).toBeVisible();
       await expect(dialog.getByLabel(DESCRIPTION_LABEL_PATTERN)).toBeVisible();
       await expect(dialog.getByLabel(COLOR_LABEL_PATTERN)).toBeVisible();
       await expect(dialog.getByLabel(LOCATION_LABEL_PATTERN)).toBeVisible();
@@ -230,7 +242,7 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
   });
 
   test.describe("タスク9.5: フォームフィールドの動作確認", () => {
-    test("終日チェックボックスの切り替えで日時入力形式が変わる", async ({
+    test("終日チェックボックスの切り替えで時刻ピッカーの表示/非表示が変わる", async ({
       page,
     }) => {
       await page.goto(TEST_CALENDAR_PATH);
@@ -256,15 +268,32 @@ test.describe("カレンダーイベント管理E2Eテスト", () => {
       // 初期状態では終日チェックボックスはオフ
       await expect(allDayCheckbox).not.toBeChecked();
 
-      // 開始日時フィールドがdatetime-local型であることを確認
-      const startInput = dialog.getByLabel(START_DATE_LABEL_PATTERN);
-      await expect(startInput).toHaveAttribute("type", "datetime-local");
+      // 初期状態で時刻ピッカーが表示されていることを確認
+      await expect(
+        dialog.getByRole("button", { name: START_TIME_BUTTON_PATTERN })
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("button", { name: END_TIME_BUTTON_PATTERN })
+      ).toBeVisible();
 
       // 終日チェックボックスをオン
       await allDayCheckbox.check();
 
-      // 開始日時フィールドがdate型に変わることを確認
-      await expect(startInput).toHaveAttribute("type", "date");
+      // 時刻ピッカーが非表示になることを確認
+      await expect(
+        dialog.getByRole("button", { name: START_TIME_BUTTON_PATTERN })
+      ).not.toBeVisible();
+      await expect(
+        dialog.getByRole("button", { name: END_TIME_BUTTON_PATTERN })
+      ).not.toBeVisible();
+
+      // 日付ピッカーは引き続き表示されていることを確認
+      await expect(
+        dialog.getByRole("button", { name: START_DATE_BUTTON_PATTERN })
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("button", { name: END_DATE_BUTTON_PATTERN })
+      ).toBeVisible();
     });
 
     test("色選択が機能する", async ({ page }) => {
@@ -425,6 +454,169 @@ test.describe("イベントポップオーバーE2Eテスト", () => {
         const popover = page.getByRole("dialog");
         await expect(popover).toBeVisible({ timeout: 3000 });
       }
+    });
+  });
+});
+
+/**
+ * datetime-picker-ux E2Eテスト
+ *
+ * 日付ピッカー・時刻ピッカーの操作フローを検証する
+ * Requirements: 1.1, 1.2, 2.1, 2.3, 3.2, 3.3
+ */
+test.describe("日付・時刻ピッカーE2Eテスト", () => {
+  /** ダイアログを開くヘルパー */
+  async function openEventDialog(page: import("@playwright/test").Page) {
+    await page.goto(TEST_CALENDAR_PATH);
+    const toolbar = page.locator('[data-testid="calendar-toolbar"]');
+    const addButton = toolbar.getByRole("button", {
+      name: ADD_BUTTON_PATTERN,
+    });
+    await expect(addButton).toBeVisible();
+    await addButton.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
+  test.describe("日付ピッカーの操作", () => {
+    test("Req 1.1: 日付ボタンをクリックするとカレンダーPopoverが表示される", async ({
+      page,
+    }) => {
+      const dialog = await openEventDialog(page);
+
+      // 開始日時の日付ボタンをクリック
+      const startDateButton = dialog.getByRole("button", {
+        name: START_DATE_BUTTON_PATTERN,
+      });
+      await startDateButton.click();
+
+      // カレンダーグリッドが表示される
+      await expect(page.getByRole("grid")).toBeVisible();
+    });
+
+    test("Req 1.2: カレンダーで日付を選択するとボタンの表示が更新される", async ({
+      page,
+    }) => {
+      const dialog = await openEventDialog(page);
+
+      // 開始日時の日付ボタンをクリック
+      const startDateButton = dialog.getByRole("button", {
+        name: START_DATE_BUTTON_PATTERN,
+      });
+      await startDateButton.click();
+
+      // カレンダーが表示される
+      await expect(page.getByRole("grid")).toBeVisible();
+
+      // 15日を選択
+      const day15 = page.getByRole("gridcell", { name: "15" });
+      const dayButton = day15.locator("button");
+      if ((await dayButton.count()) > 0) {
+        await dayButton.click();
+      } else {
+        await day15.click();
+      }
+
+      // カレンダーが閉じる
+      await expect(page.getByRole("grid")).not.toBeVisible();
+
+      // ボタンのテキストに日付が反映される
+      await expect(startDateButton).toContainText("15");
+    });
+  });
+
+  test.describe("時刻ピッカーの操作", () => {
+    test("Req 2.1: 時刻ボタンをクリックすると時刻選択UIが表示される", async ({
+      page,
+    }) => {
+      const dialog = await openEventDialog(page);
+
+      // 開始日時の時刻ボタンをクリック
+      const startTimeButton = dialog.getByRole("button", {
+        name: START_TIME_BUTTON_PATTERN,
+      });
+      await startTimeButton.click();
+
+      // 時間と分のlistboxが表示される
+      const listboxes = page.getByRole("listbox");
+      await expect(listboxes.first()).toBeVisible();
+    });
+
+    test("Req 2.3: 時間を選択するとボタンの表示が更新される", async ({
+      page,
+    }) => {
+      const dialog = await openEventDialog(page);
+
+      // 開始日時の時刻ボタンをクリック
+      const startTimeButton = dialog.getByRole("button", {
+        name: START_TIME_BUTTON_PATTERN,
+      });
+      await startTimeButton.click();
+
+      // 14時を選択
+      const hour14 = page.getByRole("option", { name: "14" });
+      await hour14.click();
+
+      // ボタンのテキストに14が含まれる
+      await expect(startTimeButton).toContainText("14");
+    });
+
+    test("Req 2.2: 5分刻みの分が選択肢に表示される", async ({ page }) => {
+      const dialog = await openEventDialog(page);
+
+      // 開始日時の時刻ボタンをクリック
+      const startTimeButton = dialog.getByRole("button", {
+        name: START_TIME_BUTTON_PATTERN,
+      });
+      await startTimeButton.click();
+
+      // listboxが2つ（時間・分）表示される
+      const listboxes = page.getByRole("listbox");
+      await expect(listboxes.nth(1)).toBeVisible();
+
+      // 分リストに5分刻みの値が存在する
+      await expect(
+        page.getByRole("option", { name: MINUTE_00_PATTERN })
+      ).toBeVisible();
+      await expect(
+        page.getByRole("option", { name: MINUTE_05_PATTERN })
+      ).toBeVisible();
+      await expect(
+        page.getByRole("option", { name: MINUTE_55_PATTERN })
+      ).toBeVisible();
+    });
+  });
+
+  test.describe("終日トグルとの連携", () => {
+    test("Req 3.2: 終日オンで時刻ピッカーが非表示、オフで再表示される", async ({
+      page,
+    }) => {
+      const dialog = await openEventDialog(page);
+
+      // 初期状態で時刻ピッカーが表示されている
+      await expect(
+        dialog.getByRole("button", { name: START_TIME_BUTTON_PATTERN })
+      ).toBeVisible();
+
+      // 終日チェックボックスをオン
+      const allDayCheckbox = dialog.getByRole("checkbox", {
+        name: ALL_DAY_LABEL_PATTERN,
+      });
+      await allDayCheckbox.check();
+
+      // 時刻ピッカーが非表示
+      await expect(
+        dialog.getByRole("button", { name: START_TIME_BUTTON_PATTERN })
+      ).not.toBeVisible();
+
+      // 終日チェックボックスをオフに戻す
+      await allDayCheckbox.uncheck();
+
+      // 時刻ピッカーが再表示される
+      await expect(
+        dialog.getByRole("button", { name: START_TIME_BUTTON_PATTERN })
+      ).toBeVisible();
     });
   });
 });
