@@ -140,3 +140,166 @@ describe("trackEvent", () => {
     expect(mockCapture).not.toHaveBeenCalled();
   });
 });
+
+describe("getChangedEventFields", () => {
+  it("変更された文字列フィールドを検出する", async () => {
+    const { getChangedEventFields } = await import("./events");
+
+    const initial = {
+      title: "Meeting",
+      description: "Old desc",
+      color: "#3b82f6",
+      location: "",
+      isAllDay: false,
+      startAt: new Date("2026-01-01T10:00:00"),
+      endAt: new Date("2026-01-01T11:00:00"),
+      notifications: [] as Array<{ type: string; minutes: number }>,
+    };
+
+    const updated = {
+      ...initial,
+      title: "Updated Meeting",
+      color: "#ef4444",
+    };
+
+    const changed = getChangedEventFields(initial, updated);
+    expect(changed).toContain("title");
+    expect(changed).toContain("color");
+    expect(changed).not.toContain("description");
+    expect(changed).not.toContain("isAllDay");
+  });
+
+  it("変更されたbooleanフィールドを検出する", async () => {
+    const { getChangedEventFields } = await import("./events");
+
+    const initial = {
+      title: "Meeting",
+      description: "",
+      color: "#3b82f6",
+      location: "",
+      isAllDay: false,
+      startAt: new Date("2026-01-01T10:00:00"),
+      endAt: new Date("2026-01-01T11:00:00"),
+      notifications: [] as Array<{ type: string; minutes: number }>,
+    };
+
+    const updated = {
+      ...initial,
+      isAllDay: true,
+    };
+
+    const changed = getChangedEventFields(initial, updated);
+    expect(changed).toContain("isAllDay");
+    expect(changed).toHaveLength(1);
+  });
+
+  it("変更されたDateフィールドを検出する", async () => {
+    const { getChangedEventFields } = await import("./events");
+
+    const initial = {
+      title: "Meeting",
+      description: "",
+      color: "#3b82f6",
+      location: "",
+      isAllDay: false,
+      startAt: new Date("2026-01-01T10:00:00"),
+      endAt: new Date("2026-01-01T11:00:00"),
+      notifications: [] as Array<{ type: string; minutes: number }>,
+    };
+
+    const updated = {
+      ...initial,
+      startAt: new Date("2026-01-02T10:00:00"),
+      endAt: new Date("2026-01-02T11:00:00"),
+    };
+
+    const changed = getChangedEventFields(initial, updated);
+    expect(changed).toContain("startAt");
+    expect(changed).toContain("endAt");
+    expect(changed).not.toContain("title");
+  });
+
+  it("変更された通知を検出する", async () => {
+    const { getChangedEventFields } = await import("./events");
+
+    const initial = {
+      title: "Meeting",
+      description: "",
+      color: "#3b82f6",
+      location: "",
+      isAllDay: false,
+      startAt: new Date("2026-01-01T10:00:00"),
+      endAt: new Date("2026-01-01T11:00:00"),
+      notifications: [] as Array<{ type: string; minutes: number }>,
+    };
+
+    const updated = {
+      ...initial,
+      notifications: [{ type: "push" as const, minutes: 10 }],
+    };
+
+    const changed = getChangedEventFields(initial, updated);
+    expect(changed).toContain("notifications");
+  });
+
+  it("変更がない場合は空配列を返す", async () => {
+    const { getChangedEventFields } = await import("./events");
+
+    const initial = {
+      title: "Meeting",
+      description: "",
+      color: "#3b82f6",
+      location: "",
+      isAllDay: false,
+      startAt: new Date("2026-01-01T10:00:00"),
+      endAt: new Date("2026-01-01T11:00:00"),
+      notifications: [] as Array<{ type: string; minutes: number }>,
+    };
+
+    const changed = getChangedEventFields(initial, { ...initial });
+    expect(changed).toHaveLength(0);
+  });
+
+  it("部分的な初期データを処理する（作成モード）", async () => {
+    const { getChangedEventFields } = await import("./events");
+
+    const initial = {
+      startAt: new Date("2026-01-01T10:00:00"),
+      endAt: new Date("2026-01-01T11:00:00"),
+    };
+
+    const updated = {
+      title: "New Event",
+      description: "",
+      color: "#3b82f6",
+      location: "",
+      isAllDay: false,
+      startAt: new Date("2026-01-01T10:00:00"),
+      endAt: new Date("2026-01-01T11:00:00"),
+      notifications: [] as Array<{ type: string; minutes: number }>,
+    };
+
+    const changed = getChangedEventFields(initial, updated);
+    expect(changed).toContain("title");
+    expect(changed).toContain("color");
+    expect(changed).not.toContain("startAt");
+    expect(changed).not.toContain("endAt");
+  });
+});
+
+describe("mapNavigationDirection", () => {
+  it('PREVを"prev"にマッピングする', async () => {
+    const { mapNavigationDirection } = await import("./events");
+    expect(mapNavigationDirection("PREV")).toBe("prev");
+  });
+
+  it('NEXTを"next"にマッピングする', async () => {
+    const { mapNavigationDirection } = await import("./events");
+    expect(mapNavigationDirection("NEXT")).toBe("next");
+  });
+
+  it('TODAYを"today"にマッピングする', async () => {
+    const { mapNavigationDirection } = await import("./events");
+    expect(mapNavigationDirection("TODAY")).toBe("today");
+  });
+});
