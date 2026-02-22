@@ -39,6 +39,7 @@ import { useCalendarState } from "@/hooks/calendar/use-calendar-state";
 import { useCalendarUrlSync } from "@/hooks/calendar/use-calendar-url-sync";
 import type { EventFormData } from "@/hooks/calendar/use-event-form";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
+import { mapNavigationDirection, trackEvent } from "@/lib/analytics/events";
 import { createEventService } from "@/lib/calendar/event-service";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { createClient } from "@/lib/supabase/client";
@@ -473,23 +474,29 @@ export function CalendarContainer({
 
   /**
    * ビューモード変更ハンドラー
+   * Analytics: view_changed イベントをトラッキング
    */
   const handleViewChange = useCallback(
     (mode: ViewMode) => {
       setViewMode(mode);
       actions.setViewMode(mode);
+      trackEvent("view_changed", { view_type: mode });
     },
     [setViewMode, actions]
   );
 
   /**
    * ナビゲーションハンドラー
+   * Analytics: calendar_navigated イベントをトラッキング
    */
   const handleNavigate = useCallback(
     (action: "PREV" | "NEXT" | "TODAY") => {
       const newDate = calculateNavigationDate(action, viewMode, selectedDate);
       setSelectedDate(newDate);
       actions.setSelectedDate(newDate);
+      trackEvent("calendar_navigated", {
+        direction: mapNavigationDirection(action),
+      });
     },
     [viewMode, selectedDate, setSelectedDate, actions]
   );
@@ -584,6 +591,7 @@ export function CalendarContainer({
   /**
    * Task 7.2: 削除確認ハンドラー (Req 4.2, 4.3)
    * ConfirmDialogの確認ボタンクリック時に呼ばれる
+   * Analytics: event_deleted イベントをトラッキング
    */
   const handleConfirmDelete = useCallback(async () => {
     if (!eventToDelete) {
@@ -593,6 +601,7 @@ export function CalendarContainer({
     const result = await deleteEvent(eventToDelete.id);
 
     if (result.success) {
+      trackEvent("event_deleted", {});
       closeConfirmDialog();
       fetchEvents();
     }
@@ -601,6 +610,7 @@ export function CalendarContainer({
   /**
    * イベントドロップ（日時変更）ハンドラー
    * ドラッグ＆ドロップでイベントの日時を変更する
+   * Analytics: event_moved イベントをトラッキング（成功時のみ）
    */
   const handleEventDrop = useCallback(
     async (args: {
@@ -628,8 +638,10 @@ export function CalendarContainer({
         isAllDay: isAllDay ?? event.allDay,
       });
 
-      // 失敗時はリバート（最新の表示範囲でrefetch）
-      if (!result.success) {
+      if (result.success) {
+        trackEvent("event_moved", { method: "drag_and_drop" });
+      } else {
+        // 失敗時はリバート（最新の表示範囲でrefetch）
         fetchEventsRef.current();
       }
     },
@@ -639,6 +651,7 @@ export function CalendarContainer({
   /**
    * イベントリサイズ（期間変更）ハンドラー
    * ドラッグでイベントの開始時刻・終了時刻を変更する
+   * Analytics: event_resized イベントをトラッキング（成功時のみ）
    */
   const handleEventResize = useCallback(
     async (args: {
@@ -662,8 +675,10 @@ export function CalendarContainer({
         endAt: newEnd,
       });
 
-      // 失敗時はリバート（最新の表示範囲でrefetch）
-      if (!result.success) {
+      if (result.success) {
+        trackEvent("event_resized", {});
+      } else {
+        // 失敗時はリバート（最新の表示範囲でrefetch）
         fetchEventsRef.current();
       }
     },

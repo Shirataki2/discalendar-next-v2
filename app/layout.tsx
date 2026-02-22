@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PostHogProvider } from "@/lib/analytics/posthog-provider";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -47,14 +48,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.className} ${uniSansHeavy.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          disableTransitionOnChange
-          enableSystem
-        >
-          <TooltipProvider>{children}</TooltipProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            disableTransitionOnChange
+            enableSystem
+          >
+            <TooltipProvider>{children}</TooltipProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

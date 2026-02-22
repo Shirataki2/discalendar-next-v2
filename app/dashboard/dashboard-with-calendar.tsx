@@ -37,6 +37,7 @@ import {
 import { useGuildPermissions } from "@/hooks/guilds/use-guild-permissions";
 import { useGuildRefresh } from "@/hooks/guilds/use-guild-refresh";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { trackEvent } from "@/lib/analytics/events";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
 import { cn } from "@/lib/utils";
 
@@ -483,6 +484,7 @@ export function DashboardWithCalendar({
 
   const handleGuildSelect = useCallback((guildId: string) => {
     setSelectedGuildId(guildId);
+    trackEvent("guild_switched", { guild_id: guildId });
   }, []);
 
   const handleToggleCollapse = useCallback(() => {

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import type { EventFormData } from "@/hooks/calendar/use-event-form";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
+import { getChangedEventFields, trackEvent } from "@/lib/analytics/events";
 import type {
   CreateEventInput,
   EventServiceInterface,
@@ -154,25 +155,49 @@ export function EventDialog({
     async (data: EventFormData) => {
       setError(null);
 
-      // 編集モードでeventIdがない場合はエラー
-      if (mode === "edit" && !eventId) {
-        setError("イベントIDが指定されていません。");
+      if (mode === "edit") {
+        if (!eventId) {
+          setError("イベントIDが指定されていません。");
+          return;
+        }
+        const result = await updateEvent(eventId, toUpdateEventInput(data));
+
+        if (result.success) {
+          trackEvent("event_updated", {
+            changed_fields: getChangedEventFields(initialData ?? {}, data),
+          });
+          onSuccess();
+          onClose();
+        } else {
+          setError(result.error.message);
+        }
         return;
       }
 
-      const result =
-        mode === "create"
-          ? await createEvent(toCreateEventInput(guildId, data))
-          : await updateEvent(eventId as string, toUpdateEventInput(data));
+      const result = await createEvent(toCreateEventInput(guildId, data));
 
       if (result.success) {
+        trackEvent("event_created", {
+          is_all_day: data.isAllDay,
+          color: data.color,
+          has_notifications: data.notifications.length > 0,
+        });
         onSuccess();
         onClose();
       } else {
         setError(result.error.message);
       }
     },
-    [mode, guildId, eventId, createEvent, updateEvent, onSuccess, onClose]
+    [
+      mode,
+      guildId,
+      eventId,
+      initialData,
+      createEvent,
+      updateEvent,
+      onSuccess,
+      onClose,
+    ]
   );
 
   /**
