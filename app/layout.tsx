@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Geist } from "next/font/google";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+
+const PostHogProvider = dynamic(
+  () =>
+    import("@/lib/analytics/posthog-provider").then((mod) => ({
+      default: mod.PostHogProvider,
+    })),
+  { ssr: false }
+);
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -47,14 +56,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.className} ${uniSansHeavy.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          disableTransitionOnChange
-          enableSystem
-        >
-          <TooltipProvider>{children}</TooltipProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            disableTransitionOnChange
+            enableSystem
+          >
+            <TooltipProvider>{children}</TooltipProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </body>
     </html>
   );
