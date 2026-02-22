@@ -313,6 +313,32 @@ export interface EventServiceInterface {
   deleteSeries(
     seriesId: string
   ): Promise<MutationResult<void>>;
+
+  /**
+   * シリーズを分割（これ以降の編集）
+   * 元のシリーズを分割日の前日で終了させ、新しいシリーズを分割日から作成する
+   * @param seriesId - 元のシリーズID
+   * @param splitDate - 分割日（新シリーズの開始日）
+   * @param newInput - 新シリーズに適用する変更（未指定フィールドは元シリーズから継承）
+   * @returns 作成された新シリーズレコードまたはエラー
+   */
+  splitSeries(
+    seriesId: string,
+    splitDate: Date,
+    newInput: UpdateSeriesInput
+  ): Promise<MutationResult<EventSeriesRecord>>;
+
+  /**
+   * シリーズを切り詰め（これ以降の削除）
+   * RRULEにUNTILパラメータを設定し、指定日以降のオカレンスを生成しないようにする
+   * @param seriesId - シリーズID
+   * @param untilDate - この日以降のオカレンスを停止する日付
+   * @returns 成功時はvoid、失敗時はエラー
+   */
+  truncateSeries(
+    seriesId: string,
+    untilDate: Date
+  ): Promise<MutationResult<void>>;
 }
 
 /**
@@ -1461,5 +1487,247 @@ export function createEventService(
         };
       }
     },
+
+    async splitSeries(
+      seriesId: string,
+      splitDate: Date,
+      newInput: UpdateSeriesInput
+    ): Promise<MutationResult<EventSeriesRecord>> {
+      try {
+        // Step 1: 元シリーズを取得して存在確認
+        const { data: seriesData, error: seriesError } = await supabase
+          .from("event_series")
+          .select("*")
+          .eq("id", seriesId)
+          .single();
+
+        if (seriesError || !seriesData) {
+          return {
+            success: false,
+            error: {
+              code: "SERIES_NOT_FOUND",
+              message: getCalendarErrorMessage("SERIES_NOT_FOUND"),
+              details: seriesError?.message ?? "Series not found",
+            },
+          };
+        }
+
+        const originalSeries = seriesData as EventSeriesRecord;
+        const originalRrule = originalSeries.rrule;
+
+        // Step 2: 元シリーズのRRULEにUNTILを追加（分割日の前日23:59:59 UTC）
+        const untilDate = new Date(splitDate.getTime() - 1);
+        const untilStr = formatUntilDate(untilDate);
+        const updatedRrule = addUntilToRrule(originalRrule, untilStr);
+
+        const { error: updateError } = await supabase
+          .from("event_series")
+          .update({ rrule: updatedRrule })
+          .eq("id", seriesId)
+          .select()
+          .single();
+
+        if (updateError) {
+          const errorCode = classifySupabaseError(updateError, "update");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: updateError.message,
+            },
+          };
+        }
+
+        // Step 3: 新シリーズを作成（元シリーズのプロパティを継承 + 変更適用）
+        const newSeriesData = {
+          guild_id: originalSeries.guild_id,
+          name: newInput.title?.trim() ?? originalSeries.name,
+          description: newInput.description !== undefined
+            ? (newInput.description?.trim() || null)
+            : originalSeries.description,
+          color: newInput.color ?? originalSeries.color,
+          is_all_day: newInput.isAllDay ?? originalSeries.is_all_day,
+          rrule: newInput.rrule ?? originalSeries.rrule,
+          dtstart: splitDate.toISOString(),
+          duration_minutes: newInput.startAt && newInput.endAt
+            ? Math.round((newInput.endAt.getTime() - newInput.startAt.getTime()) / 60000)
+            : originalSeries.duration_minutes,
+          location: newInput.location !== undefined
+            ? (newInput.location?.trim() || null)
+            : originalSeries.location,
+          channel_id: originalSeries.channel_id,
+          channel_name: originalSeries.channel_name,
+          notifications: newInput.notifications ?? originalSeries.notifications,
+          exdates: [],
+        };
+
+        const { data: newData, error: insertError } = await supabase
+          .from("event_series")
+          .insert(newSeriesData)
+          .select()
+          .single();
+
+        if (insertError) {
+          // 補償処理: 元シリーズのRRULEを復元
+          await supabase
+            .from("event_series")
+            .update({ rrule: originalRrule })
+            .eq("id", seriesId)
+            .select()
+            .single();
+
+          const errorCode = classifySupabaseError(insertError, "create");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: insertError.message,
+            },
+          };
+        }
+
+        return {
+          success: true,
+          data: newData as EventSeriesRecord,
+        };
+      } catch (error) {
+        const errorCode = classifyException(error, "update");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async truncateSeries(
+      seriesId: string,
+      untilDate: Date
+    ): Promise<MutationResult<void>> {
+      try {
+        // Step 1: シリーズを取得して存在確認
+        const { data: seriesData, error: seriesError } = await supabase
+          .from("event_series")
+          .select("*")
+          .eq("id", seriesId)
+          .single();
+
+        if (seriesError || !seriesData) {
+          return {
+            success: false,
+            error: {
+              code: "SERIES_NOT_FOUND",
+              message: getCalendarErrorMessage("SERIES_NOT_FOUND"),
+              details: seriesError?.message ?? "Series not found",
+            },
+          };
+        }
+
+        const series = seriesData as EventSeriesRecord;
+
+        // Step 2: 指定日以降の例外レコードを削除
+        const { error: deleteExceptionsError } = await supabase
+          .from("events")
+          .delete()
+          .eq("series_id", seriesId)
+          .gte("original_date", untilDate.toISOString());
+
+        if (deleteExceptionsError) {
+          const errorCode = classifySupabaseError(deleteExceptionsError, "delete");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: deleteExceptionsError.message,
+            },
+          };
+        }
+
+        // Step 3: RRULEにUNTILを追加し、未来のexdatesをフィルタリング
+        const untilDateBefore = new Date(untilDate.getTime() - 1);
+        const untilStr = formatUntilDate(untilDateBefore);
+        const updatedRrule = addUntilToRrule(series.rrule, untilStr);
+        const filteredExdates = series.exdates.filter(
+          (exdate) => new Date(exdate).getTime() < untilDate.getTime()
+        );
+
+        const { error: updateError } = await supabase
+          .from("event_series")
+          .update({
+            rrule: updatedRrule,
+            exdates: filteredExdates,
+          })
+          .eq("id", seriesId)
+          .select()
+          .single();
+
+        if (updateError) {
+          const errorCode = classifySupabaseError(updateError, "update");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: updateError.message,
+            },
+          };
+        }
+
+        return {
+          success: true,
+          data: undefined,
+        };
+      } catch (error) {
+        const errorCode = classifyException(error, "update");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
   };
+}
+
+/**
+ * RRULE文字列にUNTILパラメータを追加（または既存のUNTILを置換）する
+ * 既存のCOUNTパラメータがある場合は除去してUNTILに置換する
+ */
+function addUntilToRrule(rrule: string, untilStr: string): string {
+  let result = rrule;
+
+  // 既存のUNTILを除去
+  result = result.replace(/;?UNTIL=[^;]*/g, "");
+  // 既存のCOUNTを除去（UNTILとCOUNTは共存不可）
+  result = result.replace(/;?COUNT=[^;]*/g, "");
+  // 先頭のセミコロンを除去
+  result = result.replace(/^;/, "");
+
+  return `${result};UNTIL=${untilStr}`;
+}
+
+/**
+ * DateをUTC RRULEフォーマットのUNTIL文字列に変換する
+ */
+function formatUntilDate(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
 }

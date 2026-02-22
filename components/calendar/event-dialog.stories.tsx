@@ -62,6 +62,8 @@ const createMockEventService = (
   deleteOccurrence: fn().mockResolvedValue({ success: true, data: undefined }),
   updateSeries: fn().mockResolvedValue({ success: true, data: {} }),
   deleteSeries: fn().mockResolvedValue({ success: true, data: undefined }),
+  splitSeries: fn().mockResolvedValue({ success: true, data: {} }),
+  truncateSeries: fn().mockResolvedValue({ success: true, data: undefined }),
   ...overrides,
 });
 
@@ -129,6 +131,8 @@ const createSlowMockEventService = (): EventServiceInterface => ({
   deleteOccurrence: fn().mockResolvedValue({ success: true, data: undefined }),
   updateSeries: fn().mockResolvedValue({ success: true, data: {} }),
   deleteSeries: fn().mockResolvedValue({ success: true, data: undefined }),
+  splitSeries: fn().mockResolvedValue({ success: true, data: {} }),
+  truncateSeries: fn().mockResolvedValue({ success: true, data: undefined }),
 });
 
 // エラーを返すモックEventService
@@ -192,6 +196,20 @@ const createErrorMockEventService = (): EventServiceInterface => ({
     error: {
       code: "DELETE_FAILED",
       message: "イベントの削除に失敗しました。",
+    },
+  }),
+  splitSeries: fn().mockResolvedValue({
+    success: false,
+    error: {
+      code: "UPDATE_FAILED",
+      message: "イベントの更新に失敗しました。",
+    },
+  }),
+  truncateSeries: fn().mockResolvedValue({
+    success: false,
+    error: {
+      code: "UPDATE_FAILED",
+      message: "イベントの更新に失敗しました。",
     },
   }),
 });
