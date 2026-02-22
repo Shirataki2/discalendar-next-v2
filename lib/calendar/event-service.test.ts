@@ -22,6 +22,7 @@ import {
   type CreateEventInput,
   type CreateSeriesInput,
   type UpdateEventInput,
+  type UpdateSeriesInput,
   type FetchEventsParams,
   type FetchEventsResult,
   createEventService,
@@ -3262,6 +3263,483 @@ describe("createEventService - deleteOccurrence (Task 3.3)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const result = await service.deleteOccurrence("series-1", occurrenceDate);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("NETWORK_ERROR");
+    }
+  });
+});
+
+// UPDATE+SELECT+SINGLE用モッククエリビルダー（EventSeriesRecord向け）
+const createMockSeriesUpdateBuilder = (options: {
+  data?: EventSeriesRecord | null;
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: options.data ?? null,
+    error: options.error ?? null,
+  };
+
+  const mockUpdate = vi.fn();
+  const mockEq = vi.fn();
+  const mockSelect = vi.fn();
+  const mockSingle = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    update: mockUpdate,
+    eq: mockEq,
+    select: mockSelect,
+    single: mockSingle,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { update: mockUpdate, eq: mockEq, select: mockSelect, single: mockSingle },
+  };
+
+  mockUpdate.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+  mockSelect.mockReturnValue(queryBuilder);
+  mockSingle.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+// DELETE+EQ用モッククエリビルダー（シリーズ例外レコード削除向け）
+const createMockSeriesDeleteBuilder = (options: {
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: null,
+    error: options.error ?? null,
+  };
+
+  const mockDelete = vi.fn();
+  const mockEq = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    delete: mockDelete,
+    eq: mockEq,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { delete: mockDelete, eq: mockEq },
+  };
+
+  mockDelete.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+describe("createEventService - updateSeries (Task 3.4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const mockSeries: EventSeriesRecord = {
+    id: "series-1",
+    guild_id: "guild-123",
+    name: "毎週の定例会",
+    description: "チーム定例",
+    color: "#22C55E",
+    is_all_day: false,
+    rrule: "FREQ=WEEKLY;BYDAY=MO",
+    dtstart: "2026-03-02T10:00:00Z",
+    duration_minutes: 60,
+    location: "会議室A",
+    channel_id: null,
+    channel_name: null,
+    notifications: [],
+    exdates: [],
+    created_at: "2026-02-01T00:00:00Z",
+    updated_at: "2026-02-01T00:00:00Z",
+  };
+
+  it("should update series title successfully (Req 6.1)", async () => {
+    const updatedSeries: EventSeriesRecord = {
+      ...mockSeries,
+      name: "新しい定例会名",
+      updated_at: "2026-03-01T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const seriesUpdateBuilder = createMockSeriesUpdateBuilder({ data: updatedSeries });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)   // SELECT series
+      .mockReturnValueOnce(seriesUpdateBuilder);  // UPDATE series
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", { title: "新しい定例会名" });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe("新しい定例会名");
+    }
+  });
+
+  it("should update multiple fields at once (Req 6.1)", async () => {
+    const updatedSeries: EventSeriesRecord = {
+      ...mockSeries,
+      name: "更新後の会議",
+      description: "新しい説明",
+      color: "#EF4444",
+      location: "会議室B",
+      updated_at: "2026-03-01T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const seriesUpdateBuilder = createMockSeriesUpdateBuilder({ data: updatedSeries });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(seriesUpdateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", {
+      title: "更新後の会議",
+      description: "新しい説明",
+      color: "#EF4444",
+      location: "会議室B",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe("更新後の会議");
+      expect(result.data.description).toBe("新しい説明");
+      expect(result.data.color).toBe("#EF4444");
+      expect(result.data.location).toBe("会議室B");
+    }
+
+    // update に正しいデータが渡されること
+    const updateCall = seriesUpdateBuilder._mocks.update.mock.calls[0]?.[0];
+    expect(updateCall).toBeDefined();
+    if (updateCall) {
+      expect(updateCall.name).toBe("更新後の会議");
+      expect(updateCall.description).toBe("新しい説明");
+      expect(updateCall.color).toBe("#EF4444");
+      expect(updateCall.location).toBe("会議室B");
+    }
+  });
+
+  it("should update RRULE and recalculate duration (Req 6.2)", async () => {
+    const newStartAt = new Date("2026-03-02T14:00:00Z");
+    const newEndAt = new Date("2026-03-02T15:30:00Z");
+
+    const updatedSeries: EventSeriesRecord = {
+      ...mockSeries,
+      rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
+      dtstart: newStartAt.toISOString(),
+      duration_minutes: 90,
+      updated_at: "2026-03-01T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const seriesUpdateBuilder = createMockSeriesUpdateBuilder({ data: updatedSeries });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(seriesUpdateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", {
+      rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
+      startAt: newStartAt,
+      endAt: newEndAt,
+    });
+
+    expect(result.success).toBe(true);
+
+    // update に正しいRRULEとdtstart、duration_minutesが渡されること
+    const updateCall = seriesUpdateBuilder._mocks.update.mock.calls[0]?.[0];
+    expect(updateCall).toBeDefined();
+    if (updateCall) {
+      expect(updateCall.rrule).toBe("FREQ=WEEKLY;BYDAY=TU,TH");
+      expect(updateCall.dtstart).toBe(newStartAt.toISOString());
+      expect(updateCall.duration_minutes).toBe(90);
+    }
+  });
+
+  it("should reset exceptions when resetExceptions is true (Req 6.4)", async () => {
+    const updatedSeries: EventSeriesRecord = {
+      ...mockSeries,
+      name: "全体更新",
+      updated_at: "2026-03-01T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const exceptionDeleteBuilder = createMockSeriesDeleteBuilder({});
+    const seriesUpdateBuilder = createMockSeriesUpdateBuilder({ data: updatedSeries });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)    // SELECT series
+      .mockReturnValueOnce(exceptionDeleteBuilder) // DELETE exceptions
+      .mockReturnValueOnce(seriesUpdateBuilder);   // UPDATE series
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", {
+      title: "全体更新",
+      resetExceptions: true,
+    });
+
+    expect(result.success).toBe(true);
+
+    // 例外レコード削除が呼ばれること
+    expect(exceptionDeleteBuilder._mocks.delete).toHaveBeenCalled();
+    expect(exceptionDeleteBuilder._mocks.eq).toHaveBeenCalledWith("series_id", "series-1");
+  });
+
+  it("should not delete exceptions when resetExceptions is false", async () => {
+    const updatedSeries: EventSeriesRecord = {
+      ...mockSeries,
+      name: "タイトル変更のみ",
+      updated_at: "2026-03-01T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const seriesUpdateBuilder = createMockSeriesUpdateBuilder({ data: updatedSeries });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(seriesUpdateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", {
+      title: "タイトル変更のみ",
+    });
+
+    expect(result.success).toBe(true);
+
+    // from は 2回だけ呼ばれる（SELECT series + UPDATE series）
+    expect(mockSupabaseClient.from).toHaveBeenCalledTimes(2);
+  });
+
+  it("should return SERIES_NOT_FOUND when series doesn't exist", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({
+      error: { message: "Row not found", code: "PGRST116" },
+    });
+
+    mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("non-existent", { title: "テスト" });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("SERIES_NOT_FOUND");
+    }
+  });
+
+  it("should return VALIDATION_ERROR for empty title", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", { title: "" });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("should return VALIDATION_ERROR for title exceeding 255 characters", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const longTitle = "a".repeat(256);
+    const result = await service.updateSeries("series-1", { title: longTitle });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when endAt is before startAt", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", {
+      startAt: new Date("2026-03-02T15:00:00Z"),
+      endAt: new Date("2026-03-02T14:00:00Z"),
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("should return VALIDATION_ERROR for invalid RRULE", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", { rrule: "INVALID_RRULE" });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("should return UPDATE_FAILED on database error", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const seriesUpdateBuilder = createMockSeriesUpdateBuilder({
+      error: { message: "Database connection failed" },
+    });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(seriesUpdateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", { title: "テスト" });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UPDATE_FAILED");
+    }
+  });
+
+  it("should handle network errors gracefully", async () => {
+    const mockSelect = vi.fn();
+    const mockEq = vi.fn();
+    const mockSingle = vi.fn();
+
+    const networkError = new TypeError("Failed to fetch");
+    const internalPromise = Promise.reject(networkError);
+
+    const queryBuilder = {
+      select: mockSelect,
+      eq: mockEq,
+      single: mockSingle,
+      then: (
+        onFulfilled?: (value: unknown) => unknown,
+        onRejected?: (reason: unknown) => unknown
+      ) => internalPromise.then(onFulfilled, onRejected),
+      catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    };
+
+    mockSelect.mockReturnValue(queryBuilder);
+    mockEq.mockReturnValue(queryBuilder);
+    mockSingle.mockReturnValue(queryBuilder);
+    mockSupabaseClient.from.mockReturnValue(queryBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateSeries("series-1", { title: "テスト" });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("NETWORK_ERROR");
+    }
+  });
+});
+
+describe("createEventService - deleteSeries (Task 3.4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should delete series and related exceptions successfully (Req 6.3)", async () => {
+    const exceptionDeleteBuilder = createMockSeriesDeleteBuilder({});
+    const seriesDeleteBuilder = createMockSeriesDeleteBuilder({});
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(exceptionDeleteBuilder) // DELETE exceptions
+      .mockReturnValueOnce(seriesDeleteBuilder);   // DELETE series
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteSeries("series-1");
+
+    expect(result.success).toBe(true);
+
+    // 例外レコードが先に削除される
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
+    expect(exceptionDeleteBuilder._mocks.eq).toHaveBeenCalledWith("series_id", "series-1");
+
+    // シリーズが削除される
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("event_series");
+    expect(seriesDeleteBuilder._mocks.eq).toHaveBeenCalledWith("id", "series-1");
+  });
+
+  it("should return DELETE_FAILED when exception deletion fails", async () => {
+    const exceptionDeleteBuilder = createMockSeriesDeleteBuilder({
+      error: { message: "Database error" },
+    });
+
+    mockSupabaseClient.from.mockReturnValueOnce(exceptionDeleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteSeries("series-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("DELETE_FAILED");
+    }
+  });
+
+  it("should return DELETE_FAILED when series deletion fails", async () => {
+    const exceptionDeleteBuilder = createMockSeriesDeleteBuilder({});
+    const seriesDeleteBuilder = createMockSeriesDeleteBuilder({
+      error: { message: "Database error" },
+    });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(exceptionDeleteBuilder)
+      .mockReturnValueOnce(seriesDeleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteSeries("series-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("DELETE_FAILED");
+    }
+  });
+
+  it("should return UNAUTHORIZED on permission denied error", async () => {
+    const exceptionDeleteBuilder = createMockSeriesDeleteBuilder({
+      error: { message: "permission denied", code: "42501" },
+    });
+
+    mockSupabaseClient.from.mockReturnValueOnce(exceptionDeleteBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteSeries("series-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+  });
+
+  it("should handle network errors gracefully", async () => {
+    const mockDelete = vi.fn();
+    const mockEq = vi.fn();
+
+    const networkError = new TypeError("Failed to fetch");
+    const internalPromise = Promise.reject(networkError);
+
+    const queryBuilder = {
+      delete: mockDelete,
+      eq: mockEq,
+      then: (
+        onFulfilled?: (value: unknown) => unknown,
+        onRejected?: (reason: unknown) => unknown
+      ) => internalPromise.then(onFulfilled, onRejected),
+      catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    };
+
+    mockDelete.mockReturnValue(queryBuilder);
+    mockEq.mockReturnValue(queryBuilder);
+    mockSupabaseClient.from.mockReturnValue(queryBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteSeries("series-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
