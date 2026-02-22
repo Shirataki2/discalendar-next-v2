@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import type { EventFormData } from "@/hooks/calendar/use-event-form";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
+import { getChangedEventFields, trackEvent } from "@/lib/analytics/events";
 import type {
   CreateEventInput,
   EventServiceInterface,
@@ -166,13 +167,34 @@ export function EventDialog({
           : await updateEvent(eventId as string, toUpdateEventInput(data));
 
       if (result.success) {
+        // Analytics: イベント作成・編集のトラッキング
+        if (mode === "create") {
+          trackEvent("event_created", {
+            is_all_day: data.isAllDay,
+            color: data.color,
+            has_notifications: data.notifications.length > 0,
+          });
+        } else {
+          trackEvent("event_updated", {
+            changed_fields: getChangedEventFields(initialData ?? {}, data),
+          });
+        }
         onSuccess();
         onClose();
       } else {
         setError(result.error.message);
       }
     },
-    [mode, guildId, eventId, createEvent, updateEvent, onSuccess, onClose]
+    [
+      mode,
+      guildId,
+      eventId,
+      initialData,
+      createEvent,
+      updateEvent,
+      onSuccess,
+      onClose,
+    ]
   );
 
   /**
