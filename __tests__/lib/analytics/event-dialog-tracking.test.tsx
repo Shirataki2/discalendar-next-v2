@@ -16,7 +16,7 @@ vi.mock("posthog-js", () => {
   const posthog = {
     init: vi.fn(),
     capture: (...args: unknown[]) => mockCapture(...args),
-    __loaded: true,
+    get_distinct_id: () => "test-distinct-id",
   };
   return { default: posthog };
 });

@@ -24,7 +24,9 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
         persistence: "memory",
       });
     } catch {
-      console.warn("[Analytics] PostHog SDK initialization failed");
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[Analytics] PostHog SDK initialization failed");
+      }
     }
   }, []);
 

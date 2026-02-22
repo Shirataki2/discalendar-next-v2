@@ -2,11 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // posthog-jsのモック
 const mockCapture = vi.fn();
+const mockGetDistinctId = vi.fn();
 vi.mock("posthog-js", () => {
   const posthog = {
     init: vi.fn(),
     capture: mockCapture,
-    __loaded: false,
+    get_distinct_id: mockGetDistinctId,
   };
   return { default: posthog };
 });
@@ -15,6 +16,7 @@ describe("trackEvent", () => {
   beforeEach(() => {
     vi.resetModules();
     mockCapture.mockClear();
+    mockGetDistinctId.mockReset();
   });
 
   afterEach(() => {
@@ -22,8 +24,7 @@ describe("trackEvent", () => {
   });
 
   it("event_created を正しいプロパティでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("event_created", {
@@ -40,8 +41,7 @@ describe("trackEvent", () => {
   });
 
   it("event_updated を変更フィールド情報付きでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("event_updated", {
@@ -54,8 +54,7 @@ describe("trackEvent", () => {
   });
 
   it("event_deleted をプロパティなしでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("event_deleted", {});
@@ -64,8 +63,7 @@ describe("trackEvent", () => {
   });
 
   it("event_moved をメソッド情報付きでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("event_moved", { method: "drag_and_drop" });
@@ -76,8 +74,7 @@ describe("trackEvent", () => {
   });
 
   it("event_resized をプロパティなしでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("event_resized", {});
@@ -86,8 +83,7 @@ describe("trackEvent", () => {
   });
 
   it("guild_switched をギルドID付きでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("guild_switched", { guild_id: "guild_123" });
@@ -98,8 +94,7 @@ describe("trackEvent", () => {
   });
 
   it("view_changed をビュータイプ付きでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("view_changed", { view_type: "week" });
@@ -110,8 +105,7 @@ describe("trackEvent", () => {
   });
 
   it("calendar_navigated を方向情報付きでキャプチャする", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", { value: true, writable: true });
+    mockGetDistinctId.mockReturnValue("test-id");
 
     const { trackEvent } = await import("./events");
     trackEvent("calendar_navigated", { direction: "next" });
@@ -122,11 +116,7 @@ describe("trackEvent", () => {
   });
 
   it("PostHog SDKが未初期化の場合、エラーを投げない", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", {
-      value: false,
-      writable: true,
-    });
+    mockGetDistinctId.mockReturnValue(undefined);
 
     const { trackEvent } = await import("./events");
 
@@ -142,11 +132,7 @@ describe("trackEvent", () => {
   });
 
   it("PostHog SDKが未初期化の場合、captureを呼び出さない", async () => {
-    const posthog = (await import("posthog-js")).default;
-    Object.defineProperty(posthog, "__loaded", {
-      value: false,
-      writable: true,
-    });
+    mockGetDistinctId.mockReturnValue(undefined);
 
     const { trackEvent } = await import("./events");
     trackEvent("guild_switched", { guild_id: "guild_456" });

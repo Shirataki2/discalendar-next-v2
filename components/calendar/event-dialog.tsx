@@ -155,30 +155,36 @@ export function EventDialog({
     async (data: EventFormData) => {
       setError(null);
 
-      // 編集モードでeventIdがない場合はエラー
-      if (mode === "edit" && !eventId) {
-        setError("イベントIDが指定されていません。");
+      if (mode === "edit") {
+        if (!eventId) {
+          setError("イベントIDが指定されていません。");
+          return;
+        }
+        const result = await updateEvent(eventId, toUpdateEventInput(data));
+
+        if (result.success) {
+          trackEvent("event_updated", {
+            changed_fields: getChangedEventFields(
+              (initialData ?? {}) as Record<string, unknown>,
+              data as unknown as Record<string, unknown>
+            ),
+          });
+          onSuccess();
+          onClose();
+        } else {
+          setError(result.error.message);
+        }
         return;
       }
 
-      const result =
-        mode === "create"
-          ? await createEvent(toCreateEventInput(guildId, data))
-          : await updateEvent(eventId as string, toUpdateEventInput(data));
+      const result = await createEvent(toCreateEventInput(guildId, data));
 
       if (result.success) {
-        // Analytics: イベント作成・編集のトラッキング
-        if (mode === "create") {
-          trackEvent("event_created", {
-            is_all_day: data.isAllDay,
-            color: data.color,
-            has_notifications: data.notifications.length > 0,
-          });
-        } else {
-          trackEvent("event_updated", {
-            changed_fields: getChangedEventFields(initialData ?? {}, data),
-          });
-        }
+        trackEvent("event_created", {
+          is_all_day: data.isAllDay,
+          color: data.color,
+          has_notifications: data.notifications.length > 0,
+        });
         onSuccess();
         onClose();
       } else {

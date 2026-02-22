@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock posthog-js before importing modules
 vi.mock("posthog-js", () => {
   const mockPostHog = {
-    __loaded: true,
     capture: vi.fn(),
     init: vi.fn(),
+    get_distinct_id: () => "test-distinct-id",
   };
   return { default: mockPostHog };
 });
@@ -79,7 +79,7 @@ describe("Analytics Events", () => {
     it("should not throw when PostHog is not loaded", async () => {
       const posthog = await import("posthog-js");
       // Simulate unloaded state
-      Object.defineProperty(posthog.default, "__loaded", { value: false });
+      vi.spyOn(posthog.default, "get_distinct_id").mockReturnValue("");
 
       const { trackEvent } = await import("@/lib/analytics/events");
 
@@ -91,8 +91,7 @@ describe("Analytics Events", () => {
         });
       }).not.toThrow();
 
-      // Restore
-      Object.defineProperty(posthog.default, "__loaded", { value: true });
+      vi.restoreAllMocks();
     });
   });
 

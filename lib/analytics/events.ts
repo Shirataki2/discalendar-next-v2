@@ -48,12 +48,9 @@ export function trackEvent<E extends AnalyticsEventName>(
  * initialとupdatedを比較し、値が異なるフィールド名の配列を返す。
  * Date、配列、プリミティブ型に対応。
  */
-// biome-ignore lint/suspicious/noExplicitAny: generic field comparison requires any for flexibility
-type FieldRecord = Record<string, any>;
-
 export function getChangedEventFields(
-  initial: FieldRecord,
-  updated: FieldRecord,
+  initial: Record<string, unknown>,
+  updated: Record<string, unknown>,
 ): string[] {
   const trackableFields = [
     "title",
@@ -67,8 +64,8 @@ export function getChangedEventFields(
   ];
 
   return trackableFields.filter((field) => {
-    const oldVal = initial[field];
-    const newVal = updated[field];
+    const oldVal: unknown = initial[field];
+    const newVal: unknown = updated[field];
 
     // initialに存在しないフィールドは変更とみなす
     if (!(field in initial)) {
