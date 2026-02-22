@@ -242,6 +242,30 @@ export interface EventServiceInterface {
    * @returns 統合されたイベント一覧またはエラー
    */
   fetchEventsWithSeries(params: FetchEventsParams): Promise<FetchEventsResult>;
+
+  /**
+   * 単一オカレンスを編集（例外レコード作成）
+   * @param seriesId - シリーズID
+   * @param originalDate - 元のオカレンス日付
+   * @param input - 更新パラメータ
+   * @returns 作成された例外イベントまたはエラー
+   */
+  updateOccurrence(
+    seriesId: string,
+    originalDate: Date,
+    input: UpdateEventInput
+  ): Promise<MutationResult<CalendarEvent>>;
+
+  /**
+   * 単一オカレンスを削除（EXDATE追加）
+   * @param seriesId - シリーズID
+   * @param occurrenceDate - 削除するオカレンス日付
+   * @returns 成功時はvoid、失敗時はエラー
+   */
+  deleteOccurrence(
+    seriesId: string,
+    occurrenceDate: Date
+  ): Promise<MutationResult<void>>;
 }
 
 /**
@@ -894,6 +918,207 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async updateOccurrence(
+      seriesId: string,
+      originalDate: Date,
+      input: UpdateEventInput
+    ): Promise<MutationResult<CalendarEvent>> {
+      const {
+        title,
+        startAt,
+        endAt,
+        description,
+        isAllDay,
+        color,
+        location,
+        notifications,
+      } = input;
+
+      try {
+        // バリデーション: タイトルが指定されている場合のチェック
+        if (title !== undefined) {
+          if (!title || title.trim().length === 0) {
+            return {
+              success: false,
+              error: {
+                code: "VALIDATION_ERROR",
+                message: getCalendarErrorMessage("VALIDATION_ERROR"),
+                details: "タイトルは必須です。",
+              },
+            };
+          }
+
+          if (title.length > 255) {
+            return {
+              success: false,
+              error: {
+                code: "VALIDATION_ERROR",
+                message: getCalendarErrorMessage("VALIDATION_ERROR"),
+                details: "タイトルは255文字以内で入力してください。",
+              },
+            };
+          }
+        }
+
+        // バリデーション: 両方の日時が指定されている場合のチェック
+        if (startAt !== undefined && endAt !== undefined) {
+          if (startAt >= endAt) {
+            return {
+              success: false,
+              error: {
+                code: "VALIDATION_ERROR",
+                message: getCalendarErrorMessage("VALIDATION_ERROR"),
+                details: "終了日時は開始日時より後である必要があります。",
+              },
+            };
+          }
+        }
+
+        // シリーズを取得して存在確認 + デフォルト値の取得
+        const { data: seriesData, error: seriesError } = await supabase
+          .from("event_series")
+          .select("*")
+          .eq("id", seriesId)
+          .single();
+
+        if (seriesError || !seriesData) {
+          return {
+            success: false,
+            error: {
+              code: "SERIES_NOT_FOUND",
+              message: getCalendarErrorMessage("SERIES_NOT_FOUND"),
+              details: seriesError?.message ?? "Series not found",
+            },
+          };
+        }
+
+        const series = seriesData as EventSeriesRecord;
+        const occEnd = new Date(originalDate.getTime() + series.duration_minutes * 60 * 1000);
+
+        // シリーズのデフォルト値 + 入力値で例外レコードを構築
+        const insertData = {
+          guild_id: series.guild_id,
+          name: title !== undefined ? title.trim() : series.name,
+          description: description !== undefined ? (description?.trim() || null) : series.description,
+          color: color ?? series.color,
+          is_all_day: isAllDay ?? series.is_all_day,
+          start_at: (startAt ?? originalDate).toISOString(),
+          end_at: (endAt ?? occEnd).toISOString(),
+          location: location !== undefined ? (location?.trim() || null) : series.location,
+          channel_id: series.channel_id,
+          channel_name: series.channel_name,
+          notifications: notifications ?? series.notifications,
+          series_id: seriesId,
+          original_date: originalDate.toISOString(),
+        };
+
+        const { data, error } = await supabase
+          .from("events")
+          .insert(insertData)
+          .select()
+          .single();
+
+        if (error) {
+          const errorCode = classifySupabaseError(error, "create");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: error.message,
+            },
+          };
+        }
+
+        const event = toCalendarEvent(data as EventRecord);
+
+        return {
+          success: true,
+          data: {
+            ...event,
+            seriesId,
+            isRecurring: true,
+            originalDate,
+          },
+        };
+      } catch (error) {
+        const errorCode = classifyException(error, "create");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async deleteOccurrence(
+      seriesId: string,
+      occurrenceDate: Date
+    ): Promise<MutationResult<void>> {
+      try {
+        // シリーズを取得して存在確認 + 現在のexdatesを取得
+        const { data: seriesData, error: seriesError } = await supabase
+          .from("event_series")
+          .select("*")
+          .eq("id", seriesId)
+          .single();
+
+        if (seriesError || !seriesData) {
+          return {
+            success: false,
+            error: {
+              code: "SERIES_NOT_FOUND",
+              message: getCalendarErrorMessage("SERIES_NOT_FOUND"),
+              details: seriesError?.message ?? "Series not found",
+            },
+          };
+        }
+
+        const series = seriesData as EventSeriesRecord;
+        const updatedExdates = [...series.exdates, occurrenceDate.toISOString()];
+
+        // exdatesを更新
+        const { error: updateError } = await supabase
+          .from("event_series")
+          .update({ exdates: updatedExdates })
+          .eq("id", seriesId);
+
+        if (updateError) {
+          const errorCode = classifySupabaseError(updateError, "delete");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: updateError.message,
+            },
+          };
+        }
+
+        return {
+          success: true,
+          data: undefined,
+        };
+      } catch (error) {
+        const errorCode = classifyException(error, "delete");
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
         return {

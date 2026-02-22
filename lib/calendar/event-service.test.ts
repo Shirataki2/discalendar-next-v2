@@ -2677,6 +2677,27 @@ describe("createEventService - fetchEventsWithSeries (Task 3.2)", () => {
     expect(eventsBuilder._mocks.abortSignal).toHaveBeenCalledWith(abortController.signal);
   });
 
+  it("should return FETCH_FAILED when exception records query fails", async () => {
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: [] });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({
+      error: { message: "Database connection failed" },
+    });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("FETCH_FAILED");
+    }
+  });
+
   it("should handle all-day series correctly", async () => {
     const seriesRecords: EventSeriesRecord[] = [
       {
@@ -2717,6 +2738,534 @@ describe("createEventService - fetchEventsWithSeries (Task 3.2)", () => {
       for (const event of result.data) {
         expect(event.allDay).toBe(true);
       }
+    }
+  });
+});
+
+// =============================================================================
+// updateOccurrence テスト (Task 3.3)
+// =============================================================================
+
+// 単一レコード取得用 (select → eq → single → thenable)
+const createMockSelectSingleBuilder = (options: {
+  data?: EventSeriesRecord | null;
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: options.data ?? null,
+    error: options.error ?? null,
+  };
+
+  const mockSelect = vi.fn();
+  const mockEq = vi.fn();
+  const mockSingle = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    select: mockSelect,
+    eq: mockEq,
+    single: mockSingle,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { select: mockSelect, eq: mockEq, single: mockSingle },
+  };
+
+  mockSelect.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+  mockSingle.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+// シンプルなUPDATE用 (update → eq → thenable, select/singleなし)
+const createMockSimpleUpdateBuilder = (options: {
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: null,
+    error: options.error ?? null,
+  };
+
+  const mockUpdate = vi.fn();
+  const mockEq = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    update: mockUpdate,
+    eq: mockEq,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { update: mockUpdate, eq: mockEq },
+  };
+
+  mockUpdate.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+describe("createEventService - updateOccurrence (Task 3.3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const mockSeries: EventSeriesRecord = {
+    id: "series-1",
+    guild_id: "guild-123",
+    name: "毎週の定例会",
+    description: "週次ミーティング",
+    color: "#22C55E",
+    is_all_day: false,
+    rrule: "FREQ=WEEKLY;BYDAY=MO",
+    dtstart: "2026-03-02T10:00:00Z",
+    duration_minutes: 60,
+    location: "会議室A",
+    channel_id: "ch-1",
+    channel_name: "general",
+    notifications: [{ key: "n1", num: 1, unit: "hours" }],
+    exdates: [],
+    created_at: "2026-02-01T00:00:00Z",
+    updated_at: "2026-02-01T00:00:00Z",
+  };
+
+  const originalDate = new Date("2026-03-09T10:00:00Z"); // 2nd Monday
+
+  it("should create exception record successfully (Req 5.2)", async () => {
+    const exceptionRecord: EventRecord = {
+      id: "exception-1",
+      guild_id: "guild-123",
+      name: "変更された定例会",
+      description: "週次ミーティング",
+      color: "#22C55E",
+      is_all_day: false,
+      start_at: "2026-03-09T11:00:00Z",
+      end_at: "2026-03-09T12:00:00Z",
+      location: "会議室A",
+      channel_id: "ch-1",
+      channel_name: "general",
+      notifications: [{ key: "n1", num: 1, unit: "hours" }],
+      created_at: "2026-03-09T00:00:00Z",
+      updated_at: "2026-03-09T00:00:00Z",
+    };
+
+    // 1st call: fetch series
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    // 2nd call: insert exception
+    const insertBuilder = createMockInsertBuilder({ data: exceptionRecord });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateOccurrence("series-1", originalDate, {
+      title: "変更された定例会",
+      startAt: new Date("2026-03-09T11:00:00Z"),
+      endAt: new Date("2026-03-09T12:00:00Z"),
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("変更された定例会");
+      expect(result.data.seriesId).toBe("series-1");
+      expect(result.data.isRecurring).toBe(true);
+      expect(result.data.originalDate).toEqual(originalDate);
+    }
+  });
+
+  it("should set series_id and original_date on the inserted record", async () => {
+    const exceptionRecord: EventRecord = {
+      id: "exception-2",
+      guild_id: "guild-123",
+      name: "変更された定例会",
+      description: "週次ミーティング",
+      color: "#22C55E",
+      is_all_day: false,
+      start_at: "2026-03-09T11:00:00Z",
+      end_at: "2026-03-09T12:00:00Z",
+      location: "会議室A",
+      channel_id: "ch-1",
+      channel_name: "general",
+      notifications: [{ key: "n1", num: 1, unit: "hours" }],
+      created_at: "2026-03-09T00:00:00Z",
+      updated_at: "2026-03-09T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const insertBuilder = createMockInsertBuilder({ data: exceptionRecord });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    await service.updateOccurrence("series-1", originalDate, {
+      title: "変更された定例会",
+      startAt: new Date("2026-03-09T11:00:00Z"),
+      endAt: new Date("2026-03-09T12:00:00Z"),
+    });
+
+    // insertが呼ばれた際の引数を確認
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.series_id).toBe("series-1");
+      expect(insertCall.original_date).toBe("2026-03-09T10:00:00.000Z");
+    }
+
+    // event_series テーブルから取得、events テーブルへ挿入
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("event_series");
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
+  });
+
+  it("should use series data as defaults for omitted fields", async () => {
+    const exceptionRecord: EventRecord = {
+      id: "exception-3",
+      guild_id: "guild-123",
+      name: "毎週の定例会",
+      description: "新しい説明",
+      color: "#22C55E",
+      is_all_day: false,
+      start_at: "2026-03-09T10:00:00Z",
+      end_at: "2026-03-09T11:00:00Z",
+      location: "会議室A",
+      channel_id: "ch-1",
+      channel_name: "general",
+      notifications: [{ key: "n1", num: 1, unit: "hours" }],
+      created_at: "2026-03-09T00:00:00Z",
+      updated_at: "2026-03-09T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const insertBuilder = createMockInsertBuilder({ data: exceptionRecord });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    // descriptionのみ変更、他はシリーズのデフォルト値を使用
+    await service.updateOccurrence("series-1", originalDate, {
+      description: "新しい説明",
+    });
+
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      // シリーズのデフォルト値が使用されること
+      expect(insertCall.name).toBe("毎週の定例会");
+      expect(insertCall.color).toBe("#22C55E");
+      expect(insertCall.is_all_day).toBe(false);
+      expect(insertCall.location).toBe("会議室A");
+      expect(insertCall.channel_id).toBe("ch-1");
+      expect(insertCall.channel_name).toBe("general");
+      expect(insertCall.notifications).toEqual([{ key: "n1", num: 1, unit: "hours" }]);
+      // 説明は入力値が使用されること
+      expect(insertCall.description).toBe("新しい説明");
+      // start_at はオカレンスの元の日付がデフォルト
+      expect(insertCall.start_at).toBe("2026-03-09T10:00:00.000Z");
+      // end_at は元の日付 + duration_minutes がデフォルト
+      expect(insertCall.end_at).toBe("2026-03-09T11:00:00.000Z");
+    }
+  });
+
+  it("should return SERIES_NOT_FOUND when series doesn't exist", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({
+      error: { message: "Row not found", code: "PGRST116" },
+    });
+
+    mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateOccurrence("non-existent", originalDate, {
+      title: "変更",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("SERIES_NOT_FOUND");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when title is empty", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateOccurrence("series-1", originalDate, {
+      title: "",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("タイトルは必須です");
+    }
+
+    // バリデーションエラーの場合、DBにアクセスしない
+    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+  });
+
+  it("should return VALIDATION_ERROR when title exceeds 255 characters", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateOccurrence("series-1", originalDate, {
+      title: "a".repeat(256),
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("255文字以内");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when endAt is before startAt", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateOccurrence("series-1", originalDate, {
+      startAt: new Date("2026-03-09T12:00:00Z"),
+      endAt: new Date("2026-03-09T10:00:00Z"),
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("終了日時は開始日時より後");
+    }
+  });
+
+  it("should return CREATE_FAILED on database insert error", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const insertBuilder = createMockInsertBuilder({
+      error: { message: "Database connection failed" },
+    });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.updateOccurrence("series-1", originalDate, {
+      title: "変更された定例会",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("CREATE_FAILED");
+    }
+  });
+
+  it("should trim title and description in the inserted record", async () => {
+    const exceptionRecord: EventRecord = {
+      id: "exception-trim",
+      guild_id: "guild-123",
+      name: "トリムされたタイトル",
+      description: "トリムされた説明",
+      color: "#22C55E",
+      is_all_day: false,
+      start_at: "2026-03-09T10:00:00Z",
+      end_at: "2026-03-09T11:00:00Z",
+      location: "会議室A",
+      channel_id: "ch-1",
+      channel_name: "general",
+      notifications: [],
+      created_at: "2026-03-09T00:00:00Z",
+      updated_at: "2026-03-09T00:00:00Z",
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const insertBuilder = createMockInsertBuilder({ data: exceptionRecord });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    await service.updateOccurrence("series-1", originalDate, {
+      title: "  トリムされたタイトル  ",
+      description: "  トリムされた説明  ",
+    });
+
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.name).toBe("トリムされたタイトル");
+      expect(insertCall.description).toBe("トリムされた説明");
+    }
+  });
+});
+
+// =============================================================================
+// deleteOccurrence テスト (Task 3.3)
+// =============================================================================
+
+describe("createEventService - deleteOccurrence (Task 3.3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const mockSeries: EventSeriesRecord = {
+    id: "series-1",
+    guild_id: "guild-123",
+    name: "毎週の定例会",
+    description: null,
+    color: "#22C55E",
+    is_all_day: false,
+    rrule: "FREQ=WEEKLY;BYDAY=MO",
+    dtstart: "2026-03-02T10:00:00Z",
+    duration_minutes: 60,
+    location: null,
+    channel_id: null,
+    channel_name: null,
+    notifications: [],
+    exdates: [],
+    created_at: "2026-02-01T00:00:00Z",
+    updated_at: "2026-02-01T00:00:00Z",
+  };
+
+  const occurrenceDate = new Date("2026-03-09T10:00:00Z");
+
+  it("should add occurrence date to exdates successfully (Req 5.4)", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const updateBuilder = createMockSimpleUpdateBuilder({});
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBeUndefined();
+    }
+
+    // exdates に日付が追加された update が呼ばれること
+    const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+    expect(updateCall).toBeDefined();
+    if (updateCall) {
+      expect(updateCall.exdates).toContain("2026-03-09T10:00:00.000Z");
+      expect(updateCall.exdates).toHaveLength(1);
+    }
+
+    // シリーズIDで eq が呼ばれること
+    expect(updateBuilder._mocks.eq).toHaveBeenCalledWith("id", "series-1");
+  });
+
+  it("should append to existing exdates without overwriting", async () => {
+    const seriesWithExdates: EventSeriesRecord = {
+      ...mockSeries,
+      exdates: ["2026-03-02T10:00:00Z"], // Already has one exdate
+    };
+
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: seriesWithExdates });
+    const updateBuilder = createMockSimpleUpdateBuilder({});
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    await service.deleteOccurrence("series-1", occurrenceDate);
+
+    const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
+    expect(updateCall).toBeDefined();
+    if (updateCall) {
+      expect(updateCall.exdates).toHaveLength(2);
+      expect(updateCall.exdates).toContain("2026-03-02T10:00:00Z");
+      expect(updateCall.exdates).toContain("2026-03-09T10:00:00.000Z");
+    }
+  });
+
+  it("should return SERIES_NOT_FOUND when series doesn't exist", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({
+      error: { message: "Row not found", code: "PGRST116" },
+    });
+
+    mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteOccurrence("non-existent", occurrenceDate);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("SERIES_NOT_FOUND");
+    }
+  });
+
+  it("should return DELETE_FAILED on database update error", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const updateBuilder = createMockSimpleUpdateBuilder({
+      error: { message: "Database connection failed" },
+    });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("DELETE_FAILED");
+    }
+  });
+
+  it("should return UNAUTHORIZED on permission denied error", async () => {
+    const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
+    const updateBuilder = createMockSimpleUpdateBuilder({
+      error: { message: "permission denied", code: "42501" },
+    });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(seriesSelectBuilder)
+      .mockReturnValueOnce(updateBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+  });
+
+  it("should handle network errors gracefully", async () => {
+    const mockSelect = vi.fn();
+    const mockEq = vi.fn();
+    const mockSingle = vi.fn();
+
+    const networkError = new TypeError("Failed to fetch");
+    const internalPromise = Promise.reject(networkError);
+
+    const queryBuilder = {
+      select: mockSelect,
+      eq: mockEq,
+      single: mockSingle,
+      then: (
+        onFulfilled?: (value: unknown) => unknown,
+        onRejected?: (reason: unknown) => unknown
+      ) => internalPromise.then(onFulfilled, onRejected),
+      catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    };
+
+    mockSelect.mockReturnValue(queryBuilder);
+    mockEq.mockReturnValue(queryBuilder);
+    mockSingle.mockReturnValue(queryBuilder);
+    mockSupabaseClient.from.mockReturnValue(queryBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("NETWORK_ERROR");
     }
   });
 });
