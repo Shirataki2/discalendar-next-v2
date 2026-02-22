@@ -23,7 +23,7 @@ import {
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
-import { validateRrule } from "./rrule-utils";
+import { expandOccurrences, toSummaryText, validateRrule } from "./rrule-utils";
 
 /**
  * カレンダーエラーコードの定義
@@ -235,6 +235,13 @@ export interface EventServiceInterface {
    * @returns 作成されたシリーズレコードまたはエラー
    */
   createRecurringSeries(input: CreateSeriesInput): Promise<MutationResult<EventSeriesRecord>>;
+
+  /**
+   * 単発イベントと繰り返しイベントのオカレンスを統合取得
+   * @param params - 取得パラメータ
+   * @returns 統合されたイベント一覧またはエラー
+   */
+  fetchEventsWithSeries(params: FetchEventsParams): Promise<FetchEventsResult>;
 }
 
 /**
@@ -728,6 +735,165 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "create");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async fetchEventsWithSeries(params: FetchEventsParams): Promise<FetchEventsResult> {
+      const { guildId, startDate, endDate, signal } = params;
+
+      try {
+        // Step 1: 単発イベントを取得 (series_id IS NULL)
+        let singleEventsQuery = supabase
+          .from("events")
+          .select("*")
+          .eq("guild_id", guildId)
+          .gte("start_at", startDate.toISOString())
+          .lte("start_at", endDate.toISOString())
+          .is("series_id", null);
+
+        if (signal) {
+          singleEventsQuery = singleEventsQuery.abortSignal(signal);
+        }
+
+        const { data: singleEventsData, error: singleEventsError } = await singleEventsQuery;
+
+        if (singleEventsError) {
+          const errorCode = classifySupabaseError(singleEventsError, "fetch");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: singleEventsError.message,
+            },
+          };
+        }
+
+        // Step 2: ギルドのイベントシリーズを取得
+        const { data: seriesData, error: seriesError } = await supabase
+          .from("event_series")
+          .select("*")
+          .eq("guild_id", guildId);
+
+        if (seriesError) {
+          const errorCode = classifySupabaseError(seriesError, "fetch");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: seriesError.message,
+            },
+          };
+        }
+
+        // Step 3: 例外レコードを取得 (series_id IS NOT NULL)
+        const { data: exceptionData, error: exceptionError } = await supabase
+          .from("events")
+          .select("*")
+          .eq("guild_id", guildId)
+          .gte("start_at", startDate.toISOString())
+          .lte("start_at", endDate.toISOString())
+          .not("series_id", "is", null);
+
+        if (exceptionError) {
+          const errorCode = classifySupabaseError(exceptionError, "fetch");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: exceptionError.message,
+            },
+          };
+        }
+
+        const singleEvents = toCalendarEvents(singleEventsData as EventRecord[]);
+        const series = (seriesData ?? []) as EventSeriesRecord[];
+        const exceptions = (exceptionData ?? []) as (EventRecord & { series_id: string; original_date: string })[];
+
+        // Step 4: 例外レコードをシリーズID + 元日付でマップ化
+        const exceptionMap = new Map<string, typeof exceptions[number]>();
+        for (const exc of exceptions) {
+          if (exc.series_id && exc.original_date) {
+            const key = `${exc.series_id}:${new Date(exc.original_date).toISOString()}`;
+            exceptionMap.set(key, exc);
+          }
+        }
+
+        // Step 5: 各シリーズのオカレンスを展開
+        const recurringEvents: CalendarEvent[] = [];
+        for (const s of series) {
+          const dtstart = new Date(s.dtstart);
+          const exdates = s.exdates.map((d) => new Date(d));
+          const rruleSummary = toSummaryText(s.rrule, dtstart);
+
+          const { dates } = expandOccurrences(
+            s.rrule,
+            dtstart,
+            startDate,
+            endDate,
+            exdates,
+          );
+
+          for (const occDate of dates) {
+            const occEnd = new Date(occDate.getTime() + s.duration_minutes * 60 * 1000);
+            const exceptionKey = `${s.id}:${occDate.toISOString()}`;
+            const exception = exceptionMap.get(exceptionKey);
+
+            if (exception) {
+              // 例外レコードで置換
+              const exceptionEvent = toCalendarEvent(exception as EventRecord);
+              recurringEvents.push({
+                ...exceptionEvent,
+                seriesId: s.id,
+                isRecurring: true,
+                rruleSummary,
+                originalDate: occDate,
+              });
+              exceptionMap.delete(exceptionKey);
+            } else {
+              // 通常のオカレンス
+              const channel = s.channel_id && s.channel_name
+                ? { id: s.channel_id, name: s.channel_name }
+                : undefined;
+
+              recurringEvents.push({
+                id: `${s.id}:${occDate.toISOString()}`,
+                title: s.name,
+                start: occDate,
+                end: occEnd,
+                allDay: s.is_all_day,
+                color: s.color,
+                description: s.description ?? undefined,
+                location: s.location ?? undefined,
+                channel,
+                notifications: s.notifications,
+                seriesId: s.id,
+                isRecurring: true,
+                rruleSummary,
+              });
+            }
+          }
+        }
+
+        // Step 6: 単発 + 繰り返しオカレンスを統合
+        return {
+          success: true,
+          data: [...singleEvents, ...recurringEvents],
+        };
+      } catch (error) {
+        const errorCode = classifyException(error);
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
         return {

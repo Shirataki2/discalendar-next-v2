@@ -31,6 +31,7 @@ function createMockEventService(
     updateEvent: vi.fn(),
     deleteEvent: vi.fn(),
     createRecurringSeries: vi.fn(),
+    fetchEventsWithSeries: vi.fn(),
     ...overrides,
   };
 }

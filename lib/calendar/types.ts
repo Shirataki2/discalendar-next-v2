@@ -155,6 +155,14 @@ export interface CalendarEvent {
   channel?: ChannelInfo;
   /** 通知設定 */
   notifications?: NotificationSetting[];
+  /** イベントシリーズID（繰り返しイベントの場合） */
+  seriesId?: string;
+  /** 繰り返しイベントかどうか */
+  isRecurring?: boolean;
+  /** 繰り返しルールの人間可読テキスト（例: 「毎週火曜日」） */
+  rruleSummary?: string;
+  /** オカレンスの元の日付（例外レコードの場合） */
+  originalDate?: Date;
 }
 
 /**

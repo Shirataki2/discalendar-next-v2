@@ -2072,3 +2072,651 @@ describe("createEventService - createRecurringSeries", () => {
     expect(getCalendarErrorMessage("RRULE_PARSE_ERROR")).toBe("繰り返しルールの解析に失敗しました。");
   });
 });
+
+// =============================================================================
+// fetchEventsWithSeries テスト (Task 3.2)
+// =============================================================================
+
+// event_series用 SELECT クエリビルダー
+const createMockSeriesQueryBuilder = (options: {
+  data?: EventSeriesRecord[];
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: options.data ?? null,
+    error: options.error ?? null,
+  };
+
+  const mockSelect = vi.fn();
+  const mockEq = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    select: mockSelect,
+    eq: mockEq,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { select: mockSelect, eq: mockEq },
+  };
+
+  mockSelect.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+// events + 例外レコード取得用のクエリビルダー（is + not フィルタ対応）
+const createMockEventsWithFilterBuilder = (options: {
+  data?: EventRecord[];
+  error?: { message: string; code?: string };
+}) => {
+  const result = {
+    data: options.data ?? null,
+    error: options.error ?? null,
+  };
+
+  const mockSelect = vi.fn();
+  const mockEq = vi.fn();
+  const mockGte = vi.fn();
+  const mockLte = vi.fn();
+  const mockIs = vi.fn();
+  const mockNot = vi.fn();
+  const mockAbortSignal = vi.fn();
+
+  const internalPromise = Promise.resolve(result);
+
+  const queryBuilder = {
+    select: mockSelect,
+    eq: mockEq,
+    gte: mockGte,
+    lte: mockLte,
+    is: mockIs,
+    not: mockNot,
+    abortSignal: mockAbortSignal,
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => internalPromise.then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
+    _mocks: { select: mockSelect, eq: mockEq, gte: mockGte, lte: mockLte, is: mockIs, not: mockNot, abortSignal: mockAbortSignal },
+  };
+
+  mockSelect.mockReturnValue(queryBuilder);
+  mockEq.mockReturnValue(queryBuilder);
+  mockGte.mockReturnValue(queryBuilder);
+  mockLte.mockReturnValue(queryBuilder);
+  mockIs.mockReturnValue(queryBuilder);
+  mockNot.mockReturnValue(queryBuilder);
+  mockAbortSignal.mockReturnValue(queryBuilder);
+
+  return queryBuilder;
+};
+
+describe("createEventService - fetchEventsWithSeries (Task 3.2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const baseParams: FetchEventsParams = {
+    guildId: "guild-123",
+    startDate: new Date("2026-03-01T00:00:00Z"),
+    endDate: new Date("2026-03-31T23:59:59Z"),
+  };
+
+  it("should return only single events when no series exist (Req 9.1)", async () => {
+    const singleEvents: EventRecord[] = [
+      {
+        id: "event-1",
+        guild_id: "guild-123",
+        name: "単発イベント",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2026-03-10T10:00:00Z",
+        end_at: "2026-03-10T12:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2026-03-01T00:00:00Z",
+        updated_at: "2026-03-01T00:00:00Z",
+      },
+    ];
+
+    // 1st call: events (single events, series_id IS NULL)
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: singleEvents });
+    // 2nd call: event_series
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: [] });
+    // 3rd call: events (exception records, series_id IS NOT NULL)
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].title).toBe("単発イベント");
+      expect(result.data[0].isRecurring).toBeFalsy();
+      expect(result.data[0].seriesId).toBeUndefined();
+    }
+  });
+
+  it("should return expanded occurrences for recurring series (Req 1.4, 4.1)", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-1",
+        guild_id: "guild-123",
+        name: "毎週月曜の会議",
+        description: "定例会議",
+        color: "#FF5733",
+        is_all_day: false,
+        rrule: "FREQ=WEEKLY;BYDAY=MO",
+        dtstart: "2026-03-02T10:00:00Z", // Monday
+        duration_minutes: 60,
+        location: "会議室A",
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // March 2026 has 5 Mondays: 2, 9, 16, 23, 30
+      expect(result.data.length).toBeGreaterThanOrEqual(4);
+      for (const event of result.data) {
+        expect(event.isRecurring).toBe(true);
+        expect(event.seriesId).toBe("series-1");
+        expect(event.title).toBe("毎週月曜の会議");
+        expect(event.color).toBe("#FF5733");
+        expect(event.description).toBe("定例会議");
+        expect(event.location).toBe("会議室A");
+        expect(event.rruleSummary).toBeDefined();
+        // Duration should be 60 minutes
+        expect(event.end.getTime() - event.start.getTime()).toBe(60 * 60 * 1000);
+      }
+    }
+  });
+
+  it("should merge single events and recurring occurrences (Req 4.4, 9.3)", async () => {
+    const singleEvents: EventRecord[] = [
+      {
+        id: "event-1",
+        guild_id: "guild-123",
+        name: "単発イベント",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2026-03-15T14:00:00Z",
+        end_at: "2026-03-15T15:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2026-03-01T00:00:00Z",
+        updated_at: "2026-03-01T00:00:00Z",
+      },
+    ];
+
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-1",
+        guild_id: "guild-123",
+        name: "毎日の朝会",
+        description: null,
+        color: "#22C55E",
+        is_all_day: false,
+        rrule: "FREQ=DAILY;COUNT=5",
+        dtstart: "2026-03-10T09:00:00Z",
+        duration_minutes: 30,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: singleEvents });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // 1 single + 5 recurring = 6
+      expect(result.data).toHaveLength(6);
+
+      const singleResult = result.data.find((e) => e.id === "event-1");
+      expect(singleResult).toBeDefined();
+      expect(singleResult?.isRecurring).toBeFalsy();
+
+      const recurringResults = result.data.filter((e) => e.isRecurring);
+      expect(recurringResults).toHaveLength(5);
+    }
+  });
+
+  it("should exclude EXDATE occurrences from results (Req 8.3)", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-1",
+        guild_id: "guild-123",
+        name: "毎日の朝会",
+        description: null,
+        color: "#22C55E",
+        is_all_day: false,
+        rrule: "FREQ=DAILY;COUNT=5",
+        dtstart: "2026-03-10T09:00:00Z",
+        duration_minutes: 30,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: ["2026-03-12T09:00:00Z"], // 3rd occurrence excluded
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // 5 occurrences - 1 EXDATE = 4
+      expect(result.data).toHaveLength(4);
+      // The excluded date should not appear
+      const hasExcludedDate = result.data.some(
+        (e) => e.start.toISOString() === "2026-03-12T09:00:00.000Z"
+      );
+      expect(hasExcludedDate).toBe(false);
+    }
+  });
+
+  it("should replace occurrences with exception records (Req 4.4)", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-1",
+        guild_id: "guild-123",
+        name: "毎日の朝会",
+        description: null,
+        color: "#22C55E",
+        is_all_day: false,
+        rrule: "FREQ=DAILY;COUNT=3",
+        dtstart: "2026-03-10T09:00:00Z",
+        duration_minutes: 30,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    // Exception record: 2nd occurrence edited
+    const exceptionRecords: EventRecord[] = [
+      {
+        id: "exception-1",
+        guild_id: "guild-123",
+        name: "変更された朝会",
+        description: "時間が変わりました",
+        color: "#EF4444",
+        is_all_day: false,
+        start_at: "2026-03-11T10:00:00Z", // Changed time
+        end_at: "2026-03-11T10:30:00Z",
+        location: "別の会議室",
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2026-03-01T00:00:00Z",
+        updated_at: "2026-03-01T00:00:00Z",
+      },
+    ];
+
+    // Add series_id and original_date to exception record
+    const exceptionWithSeries = exceptionRecords.map((r) => ({
+      ...r,
+      series_id: "series-1",
+      original_date: "2026-03-11T09:00:00Z",
+    }));
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: exceptionWithSeries as unknown as EventRecord[] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // 3 occurrences, but 2nd is replaced by exception
+      expect(result.data).toHaveLength(3);
+
+      const exceptionEvent = result.data.find((e) => e.id === "exception-1");
+      expect(exceptionEvent).toBeDefined();
+      expect(exceptionEvent?.title).toBe("変更された朝会");
+      expect(exceptionEvent?.color).toBe("#EF4444");
+      expect(exceptionEvent?.location).toBe("別の会議室");
+      expect(exceptionEvent?.isRecurring).toBe(true);
+      expect(exceptionEvent?.seriesId).toBe("series-1");
+      expect(exceptionEvent?.originalDate).toEqual(new Date("2026-03-11T09:00:00Z"));
+    }
+  });
+
+  it("should generate unique IDs for occurrence events", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-1",
+        guild_id: "guild-123",
+        name: "毎日イベント",
+        description: null,
+        color: "#22C55E",
+        is_all_day: false,
+        rrule: "FREQ=DAILY;COUNT=3",
+        dtstart: "2026-03-10T09:00:00Z",
+        duration_minutes: 30,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const ids = result.data.map((e) => e.id);
+      const uniqueIds = new Set(ids);
+      expect(uniqueIds.size).toBe(ids.length);
+    }
+  });
+
+  it("should handle RRULE parse error gracefully (Req 8.4)", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-bad",
+        guild_id: "guild-123",
+        name: "壊れたシリーズ",
+        description: null,
+        color: "#22C55E",
+        is_all_day: false,
+        rrule: "INVALID_RRULE",
+        dtstart: "2026-03-10T09:00:00Z",
+        duration_minutes: 30,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    // Should still succeed, just skip the broken series
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toHaveLength(0);
+    }
+  });
+
+  it("should return FETCH_FAILED when single events query fails", async () => {
+    const eventsBuilder = createMockEventsWithFilterBuilder({
+      error: { message: "Database connection failed" },
+    });
+
+    mockSupabaseClient.from.mockReturnValueOnce(eventsBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("FETCH_FAILED");
+    }
+  });
+
+  it("should return FETCH_FAILED when series query fails", async () => {
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({
+      error: { message: "Database connection failed" },
+    });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("FETCH_FAILED");
+    }
+  });
+
+  it("should include rruleSummary for recurring events (Req 4.3)", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-1",
+        guild_id: "guild-123",
+        name: "毎週の会議",
+        description: null,
+        color: "#22C55E",
+        is_all_day: false,
+        rrule: "FREQ=WEEKLY;BYDAY=TU",
+        dtstart: "2026-03-03T10:00:00Z", // Tuesday
+        duration_minutes: 60,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.length).toBeGreaterThan(0);
+      for (const event of result.data) {
+        expect(event.rruleSummary).toBeDefined();
+        expect(event.rruleSummary).toContain("火");
+      }
+    }
+  });
+
+  it("should propagate notifications from series to occurrences", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-1",
+        guild_id: "guild-123",
+        name: "通知付き定例",
+        description: null,
+        color: "#22C55E",
+        is_all_day: false,
+        rrule: "FREQ=DAILY;COUNT=2",
+        dtstart: "2026-03-10T09:00:00Z",
+        duration_minutes: 30,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [{ key: "n1", num: 1, unit: "hours" }],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      for (const event of result.data) {
+        expect(event.notifications).toEqual([{ key: "n1", num: 1, unit: "hours" }]);
+      }
+    }
+  });
+
+  it("should support AbortSignal for request cancellation", async () => {
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: [] });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const abortController = new AbortController();
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    await service.fetchEventsWithSeries({
+      ...baseParams,
+      signal: abortController.signal,
+    });
+
+    expect(eventsBuilder._mocks.abortSignal).toHaveBeenCalledWith(abortController.signal);
+  });
+
+  it("should handle all-day series correctly", async () => {
+    const seriesRecords: EventSeriesRecord[] = [
+      {
+        id: "series-allday",
+        guild_id: "guild-123",
+        name: "終日イベント",
+        description: null,
+        color: "#F59E0B",
+        is_all_day: true,
+        rrule: "FREQ=WEEKLY;BYDAY=FR;COUNT=2",
+        dtstart: "2026-03-06T00:00:00Z", // Friday
+        duration_minutes: 1440,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        exdates: [],
+        created_at: "2026-02-01T00:00:00Z",
+        updated_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+
+    const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
+    const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: [] });
+
+    mockSupabaseClient.from
+      .mockReturnValueOnce(eventsBuilder)
+      .mockReturnValueOnce(seriesBuilder)
+      .mockReturnValueOnce(exceptionBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const result = await service.fetchEventsWithSeries(baseParams);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toHaveLength(2);
+      for (const event of result.data) {
+        expect(event.allDay).toBe(true);
+      }
+    }
+  });
+});
