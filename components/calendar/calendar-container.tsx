@@ -601,7 +601,7 @@ export function CalendarContainer({
     const result = await deleteEvent(eventToDelete.id);
 
     if (result.success) {
-      trackEvent("event_deleted", {} as Record<string, never>);
+      trackEvent("event_deleted", {});
       closeConfirmDialog();
       fetchEvents();
     }
@@ -676,7 +676,7 @@ export function CalendarContainer({
       });
 
       if (result.success) {
-        trackEvent("event_resized", {} as Record<string, never>);
+        trackEvent("event_resized", {});
       } else {
         // 失敗時はリバート（最新の表示範囲でrefetch）
         fetchEventsRef.current();

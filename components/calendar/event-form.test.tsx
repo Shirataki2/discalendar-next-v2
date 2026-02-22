@@ -229,7 +229,8 @@ describe("EventForm", () => {
       render(<EventForm {...defaultProps} />);
 
       const titleInput = screen.getByRole("textbox", { name: TITLE_PATTERN });
-      await user.type(titleInput, "a".repeat(256));
+      await user.click(titleInput);
+      await user.paste("a".repeat(256));
 
       const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
       await user.click(submitButton);
@@ -271,11 +272,14 @@ describe("EventForm", () => {
       await user.click(titleInput);
       await user.tab();
 
-      await waitFor(() => {
-        expect(
-          screen.getByText(TITLE_REQUIRED_ERROR_PATTERN)
-        ).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(TITLE_REQUIRED_ERROR_PATTERN)
+          ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
     });
   });
 

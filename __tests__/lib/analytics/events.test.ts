@@ -26,7 +26,7 @@ describe("trackEvent", () => {
   it("event_created を正しいプロパティでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("event_created", {
       is_all_day: true,
       color: "blue",
@@ -43,7 +43,7 @@ describe("trackEvent", () => {
   it("event_updated を変更フィールド情報付きでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("event_updated", {
       changed_fields: ["title", "start_time"],
     });
@@ -56,7 +56,7 @@ describe("trackEvent", () => {
   it("event_deleted をプロパティなしでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("event_deleted", {});
 
     expect(mockCapture).toHaveBeenCalledWith("event_deleted", {});
@@ -65,7 +65,7 @@ describe("trackEvent", () => {
   it("event_moved をメソッド情報付きでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("event_moved", { method: "drag_and_drop" });
 
     expect(mockCapture).toHaveBeenCalledWith("event_moved", {
@@ -76,7 +76,7 @@ describe("trackEvent", () => {
   it("event_resized をプロパティなしでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("event_resized", {});
 
     expect(mockCapture).toHaveBeenCalledWith("event_resized", {});
@@ -85,7 +85,7 @@ describe("trackEvent", () => {
   it("guild_switched をギルドID付きでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("guild_switched", { guild_id: "guild_123" });
 
     expect(mockCapture).toHaveBeenCalledWith("guild_switched", {
@@ -96,7 +96,7 @@ describe("trackEvent", () => {
   it("view_changed をビュータイプ付きでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("view_changed", { view_type: "week" });
 
     expect(mockCapture).toHaveBeenCalledWith("view_changed", {
@@ -107,7 +107,7 @@ describe("trackEvent", () => {
   it("calendar_navigated を方向情報付きでキャプチャする", async () => {
     mockGetDistinctId.mockReturnValue("test-id");
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("calendar_navigated", { direction: "next" });
 
     expect(mockCapture).toHaveBeenCalledWith("calendar_navigated", {
@@ -118,7 +118,7 @@ describe("trackEvent", () => {
   it("PostHog SDKが未初期化の場合、エラーを投げない", async () => {
     mockGetDistinctId.mockReturnValue(undefined);
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
 
     expect(() => {
       trackEvent("event_created", {
@@ -134,7 +134,7 @@ describe("trackEvent", () => {
   it("PostHog SDKが未初期化の場合、captureを呼び出さない", async () => {
     mockGetDistinctId.mockReturnValue(undefined);
 
-    const { trackEvent } = await import("./events");
+    const { trackEvent } = await import("@/lib/analytics/events");
     trackEvent("guild_switched", { guild_id: "guild_456" });
 
     expect(mockCapture).not.toHaveBeenCalled();
@@ -143,7 +143,7 @@ describe("trackEvent", () => {
 
 describe("getChangedEventFields", () => {
   it("変更された文字列フィールドを検出する", async () => {
-    const { getChangedEventFields } = await import("./events");
+    const { getChangedEventFields } = await import("@/lib/analytics/events");
 
     const initial = {
       title: "Meeting",
@@ -170,7 +170,7 @@ describe("getChangedEventFields", () => {
   });
 
   it("変更されたbooleanフィールドを検出する", async () => {
-    const { getChangedEventFields } = await import("./events");
+    const { getChangedEventFields } = await import("@/lib/analytics/events");
 
     const initial = {
       title: "Meeting",
@@ -194,7 +194,7 @@ describe("getChangedEventFields", () => {
   });
 
   it("変更されたDateフィールドを検出する", async () => {
-    const { getChangedEventFields } = await import("./events");
+    const { getChangedEventFields } = await import("@/lib/analytics/events");
 
     const initial = {
       title: "Meeting",
@@ -220,7 +220,7 @@ describe("getChangedEventFields", () => {
   });
 
   it("変更された通知を検出する", async () => {
-    const { getChangedEventFields } = await import("./events");
+    const { getChangedEventFields } = await import("@/lib/analytics/events");
 
     const initial = {
       title: "Meeting",
@@ -243,7 +243,7 @@ describe("getChangedEventFields", () => {
   });
 
   it("変更がない場合は空配列を返す", async () => {
-    const { getChangedEventFields } = await import("./events");
+    const { getChangedEventFields } = await import("@/lib/analytics/events");
 
     const initial = {
       title: "Meeting",
@@ -261,7 +261,7 @@ describe("getChangedEventFields", () => {
   });
 
   it("部分的な初期データを処理する（作成モード）", async () => {
-    const { getChangedEventFields } = await import("./events");
+    const { getChangedEventFields } = await import("@/lib/analytics/events");
 
     const initial = {
       startAt: new Date("2026-01-01T10:00:00"),
@@ -289,17 +289,17 @@ describe("getChangedEventFields", () => {
 
 describe("mapNavigationDirection", () => {
   it('PREVを"prev"にマッピングする', async () => {
-    const { mapNavigationDirection } = await import("./events");
+    const { mapNavigationDirection } = await import("@/lib/analytics/events");
     expect(mapNavigationDirection("PREV")).toBe("prev");
   });
 
   it('NEXTを"next"にマッピングする', async () => {
-    const { mapNavigationDirection } = await import("./events");
+    const { mapNavigationDirection } = await import("@/lib/analytics/events");
     expect(mapNavigationDirection("NEXT")).toBe("next");
   });
 
   it('TODAYを"today"にマッピングする', async () => {
-    const { mapNavigationDirection } = await import("./events");
+    const { mapNavigationDirection } = await import("@/lib/analytics/events");
     expect(mapNavigationDirection("TODAY")).toBe("today");
   });
 });

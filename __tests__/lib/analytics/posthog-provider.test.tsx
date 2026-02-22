@@ -29,12 +29,14 @@ describe("PostHogProvider", () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
     process.env.NEXT_PUBLIC_POSTHOG_HOST = "https://us.i.posthog.com";
 
-    const { PostHogProvider } = await import("./posthog-provider");
+    const { PostHogProvider } = await import(
+      "@/lib/analytics/posthog-provider"
+    );
 
     render(
       <PostHogProvider>
         <div data-testid="child">child content</div>
-      </PostHogProvider>,
+      </PostHogProvider>
     );
 
     expect(screen.getByTestId("child")).toBeInTheDocument();
@@ -44,7 +46,7 @@ describe("PostHogProvider", () => {
         api_host: "https://us.i.posthog.com",
         capture_pageview: false,
         persistence: "memory",
-      }),
+      })
     );
   });
 
@@ -52,12 +54,14 @@ describe("PostHogProvider", () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "";
     process.env.NEXT_PUBLIC_POSTHOG_HOST = "";
 
-    const { PostHogProvider } = await import("./posthog-provider");
+    const { PostHogProvider } = await import(
+      "@/lib/analytics/posthog-provider"
+    );
 
     render(
       <PostHogProvider>
         <div data-testid="child">child content</div>
-      </PostHogProvider>,
+      </PostHogProvider>
     );
 
     expect(screen.getByTestId("child")).toBeInTheDocument();
@@ -67,12 +71,14 @@ describe("PostHogProvider", () => {
   it("子コンポーネントを正しくレンダリングする", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "";
 
-    const { PostHogProvider } = await import("./posthog-provider");
+    const { PostHogProvider } = await import(
+      "@/lib/analytics/posthog-provider"
+    );
 
     render(
       <PostHogProvider>
         <div data-testid="child">child content</div>
-      </PostHogProvider>,
+      </PostHogProvider>
     );
 
     expect(screen.getByTestId("child")).toHaveTextContent("child content");
@@ -86,12 +92,14 @@ describe("PostHogProvider", () => {
       throw new Error("SDK init failed");
     });
 
-    const { PostHogProvider } = await import("./posthog-provider");
+    const { PostHogProvider } = await import(
+      "@/lib/analytics/posthog-provider"
+    );
 
     render(
       <PostHogProvider>
         <div data-testid="child">child content</div>
-      </PostHogProvider>,
+      </PostHogProvider>
     );
 
     expect(screen.getByTestId("child")).toBeInTheDocument();
@@ -101,19 +109,21 @@ describe("PostHogProvider", () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
     process.env.NEXT_PUBLIC_POSTHOG_HOST = "https://us.i.posthog.com";
 
-    const { PostHogProvider } = await import("./posthog-provider");
+    const { PostHogProvider } = await import(
+      "@/lib/analytics/posthog-provider"
+    );
 
     render(
       <PostHogProvider>
         <div>test</div>
-      </PostHogProvider>,
+      </PostHogProvider>
     );
 
     expect(mockInit).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
         capture_pageview: false,
-      }),
+      })
     );
   });
 
@@ -121,19 +131,35 @@ describe("PostHogProvider", () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
     process.env.NEXT_PUBLIC_POSTHOG_HOST = "https://us.i.posthog.com";
 
-    const { PostHogProvider } = await import("./posthog-provider");
+    const { PostHogProvider } = await import(
+      "@/lib/analytics/posthog-provider"
+    );
 
     render(
       <PostHogProvider>
         <div>test</div>
-      </PostHogProvider>,
+      </PostHogProvider>
     );
 
     expect(mockInit).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
         persistence: "memory",
-      }),
+      })
+    );
+  });
+
+  it("loaded コールバックが設定されている", async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+    process.env.NEXT_PUBLIC_POSTHOG_HOST = "https://us.i.posthog.com";
+
+    await import("@/lib/analytics/posthog-provider");
+
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        loaded: expect.any(Function),
+      })
     );
   });
 });

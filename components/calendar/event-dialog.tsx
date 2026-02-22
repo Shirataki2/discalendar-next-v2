@@ -164,10 +164,7 @@ export function EventDialog({
 
         if (result.success) {
           trackEvent("event_updated", {
-            changed_fields: getChangedEventFields(
-              (initialData ?? {}) as Record<string, unknown>,
-              data as unknown as Record<string, unknown>
-            ),
+            changed_fields: getChangedEventFields(initialData ?? {}, data),
           });
           onSuccess();
           onClose();

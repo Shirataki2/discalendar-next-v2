@@ -25,7 +25,7 @@ describe("getPostHogClient", () => {
   it("PostHogが初期化済みの場合、インスタンスを返す", async () => {
     mockGetDistinctId.mockReturnValue("test-distinct-id");
 
-    const { getPostHogClient } = await import("./client");
+    const { getPostHogClient } = await import("@/lib/analytics/client");
     const client = getPostHogClient();
 
     expect(client).toBeDefined();
@@ -35,7 +35,7 @@ describe("getPostHogClient", () => {
   it("PostHogが未初期化の場合、undefinedを返す", async () => {
     mockGetDistinctId.mockReturnValue(undefined);
 
-    const { getPostHogClient } = await import("./client");
+    const { getPostHogClient } = await import("@/lib/analytics/client");
     const client = getPostHogClient();
 
     expect(client).toBeUndefined();
@@ -46,7 +46,7 @@ describe("getPostHogClient", () => {
       throw new Error("PostHog not initialized");
     });
 
-    const { getPostHogClient } = await import("./client");
+    const { getPostHogClient } = await import("@/lib/analytics/client");
     const client = getPostHogClient();
 
     expect(client).toBeUndefined();

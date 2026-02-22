@@ -19,11 +19,11 @@ interface AnalyticsEventMap {
   event_updated: {
     changed_fields: string[];
   };
-  event_deleted: Record<string, never>;
+  event_deleted: Record<never, never>;
   event_moved: {
     method: "drag_and_drop";
   };
-  event_resized: Record<string, never>;
+  event_resized: Record<never, never>;
   guild_switched: {
     guild_id: string;
   };
@@ -48,9 +48,9 @@ export function trackEvent<E extends AnalyticsEventName>(
  * initialとupdatedを比較し、値が異なるフィールド名の配列を返す。
  * Date、配列、プリミティブ型に対応。
  */
-export function getChangedEventFields(
-  initial: Record<string, unknown>,
-  updated: Record<string, unknown>,
+export function getChangedEventFields<T extends object>(
+  initial: Partial<T>,
+  updated: T,
 ): string[] {
   const trackableFields = [
     "title",
@@ -63,12 +63,15 @@ export function getChangedEventFields(
     "notifications",
   ];
 
+  const initialRecord = initial as Record<string, unknown>;
+  const updatedRecord = updated as Record<string, unknown>;
+
   return trackableFields.filter((field) => {
-    const oldVal: unknown = initial[field];
-    const newVal: unknown = updated[field];
+    const oldVal: unknown = initialRecord[field];
+    const newVal: unknown = updatedRecord[field];
 
     // initialに存在しないフィールドは変更とみなす
-    if (!(field in initial)) {
+    if (!(field in initialRecord)) {
       return newVal !== undefined;
     }
 

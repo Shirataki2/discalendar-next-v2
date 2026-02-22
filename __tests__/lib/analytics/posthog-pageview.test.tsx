@@ -36,7 +36,9 @@ describe("PostHogPageView", () => {
     mockUsePathname.mockReturnValue("/dashboard");
     mockUseSearchParams.mockReturnValue(new URLSearchParams());
 
-    const { PostHogPageView } = await import("./posthog-pageview");
+    const { PostHogPageView } = await import(
+      "@/lib/analytics/posthog-pageview"
+    );
     render(<PostHogPageView />);
 
     expect(mockCapture).toHaveBeenCalledWith("$pageview");
@@ -46,7 +48,9 @@ describe("PostHogPageView", () => {
     mockUsePathname.mockReturnValue("/dashboard");
     mockUseSearchParams.mockReturnValue(new URLSearchParams());
 
-    const { PostHogPageView } = await import("./posthog-pageview");
+    const { PostHogPageView } = await import(
+      "@/lib/analytics/posthog-pageview"
+    );
     const { rerender } = render(<PostHogPageView />);
 
     mockCapture.mockClear();
@@ -61,7 +65,9 @@ describe("PostHogPageView", () => {
     mockUsePathname.mockReturnValue("/dashboard");
     mockUseSearchParams.mockReturnValue(new URLSearchParams());
 
-    const { PostHogPageView } = await import("./posthog-pageview");
+    const { PostHogPageView } = await import(
+      "@/lib/analytics/posthog-pageview"
+    );
     const { rerender } = render(<PostHogPageView />);
 
     mockCapture.mockClear();
@@ -76,7 +82,9 @@ describe("PostHogPageView", () => {
     mockUsePathname.mockReturnValue("/dashboard");
     mockUseSearchParams.mockReturnValue(new URLSearchParams());
 
-    const { PostHogPageView } = await import("./posthog-pageview");
+    const { PostHogPageView } = await import(
+      "@/lib/analytics/posthog-pageview"
+    );
     const { rerender } = render(<PostHogPageView />);
 
     mockCapture.mockClear();
@@ -87,7 +95,9 @@ describe("PostHogPageView", () => {
   });
 
   it("DOMに何もレンダリングしない", async () => {
-    const { PostHogPageView } = await import("./posthog-pageview");
+    const { PostHogPageView } = await import(
+      "@/lib/analytics/posthog-pageview"
+    );
     const { container } = render(<PostHogPageView />);
 
     expect(container.innerHTML).toBe("");

@@ -172,7 +172,9 @@ vi.mock("@/components/calendar/calendar-grid", () => ({
 // EventDialogのモック
 vi.mock("@/components/calendar/event-dialog", () => ({
   EventDialog: ({ open }: { open: boolean }) => {
-    if (!open) return null;
+    if (!open) {
+      return null;
+    }
     return <div data-testid="event-dialog">Dialog</div>;
   },
 }));
@@ -190,13 +192,15 @@ vi.mock("@/components/calendar/event-popover", () => ({
     onDelete?: (event: MockEventType) => void;
   }) => {
     capturedOnDelete = onDelete;
-    if (!open) return null;
+    if (!open) {
+      return null;
+    }
     return <div data-testid="event-popover">Popover</div>;
   },
 }));
 
 // ConfirmDialogのモック
-let capturedOnConfirm: (() => void) | undefined;
+let _capturedOnConfirm: (() => void) | undefined;
 vi.mock("@/components/calendar/confirm-dialog", () => ({
   ConfirmDialog: ({
     open,
@@ -208,8 +212,10 @@ vi.mock("@/components/calendar/confirm-dialog", () => ({
     onOpenChange: (open: boolean) => void;
     isLoading?: boolean;
   }) => {
-    capturedOnConfirm = onConfirm;
-    if (!open) return null;
+    _capturedOnConfirm = onConfirm;
+    if (!open) {
+      return null;
+    }
     return (
       <div data-testid="confirm-dialog">
         <button
@@ -234,7 +240,7 @@ describe("CalendarContainer アナリティクストラッキング統合テス�
     capturedOnEventDrop = undefined;
     capturedOnEventResize = undefined;
     capturedOnDelete = undefined;
-    capturedOnConfirm = undefined;
+    _capturedOnConfirm = undefined;
 
     Object.defineProperty(window, "matchMedia", {
       writable: true,

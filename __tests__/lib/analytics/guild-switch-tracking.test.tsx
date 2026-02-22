@@ -81,7 +81,7 @@ vi.mock("@/components/guilds/invitable-guild-card", () => ({
 vi.mock("@/components/ui/select", () => ({
   Select: ({
     children,
-    onValueChange,
+    onValueChange: _onValueChange,
     value,
   }: {
     children: React.ReactNode;

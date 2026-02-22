@@ -50,6 +50,10 @@ const mockSuccessResponse = {
 
 import { EventDialog } from "@/components/calendar/event-dialog";
 
+const TITLE_PATTERN = /タイトル/i;
+const SAVE_PATTERN = /保存/i;
+const FAILURE_PATTERN = /失敗/;
+
 describe("EventDialog アナリティクストラッキング統合テスト", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -72,11 +76,11 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
       );
 
       // タイトルを入力
-      const titleInput = screen.getByRole("textbox", { name: /タイトル/i });
+      const titleInput = screen.getByRole("textbox", { name: TITLE_PATTERN });
       await user.type(titleInput, "新しい予定");
 
       // 保存ボタンをクリック
-      const saveButton = screen.getByRole("button", { name: /保存/i });
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -112,7 +116,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
         />
       );
 
-      const saveButton = screen.getByRole("button", { name: /保存/i });
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -144,7 +148,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
         />
       );
 
-      const saveButton = screen.getByRole("button", { name: /保存/i });
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -173,7 +177,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
         />
       );
 
-      const saveButton = screen.getByRole("button", { name: /保存/i });
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -227,12 +231,12 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
       );
 
       // タイトルを変更
-      const titleInput = screen.getByRole("textbox", { name: /タイトル/i });
+      const titleInput = screen.getByRole("textbox", { name: TITLE_PATTERN });
       await user.clear(titleInput);
       await user.type(titleInput, "変更後の予定");
 
       // 保存ボタンをクリック
-      const saveButton = screen.getByRole("button", { name: /保存/i });
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -269,11 +273,11 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
         />
       );
 
-      const saveButton = screen.getByRole("button", { name: /保存/i });
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/失敗/)).toBeInTheDocument();
+        expect(screen.getByText(FAILURE_PATTERN)).toBeInTheDocument();
       });
 
       expect(mockCapture).not.toHaveBeenCalledWith(
