@@ -47,6 +47,45 @@ export function generateNotificationKey(): string {
 }
 
 /**
+ * Supabaseから取得するイベントシリーズレコード型
+ * event_seriesテーブルのカラム構造に対応
+ */
+export interface EventSeriesRecord {
+  /** シリーズID (UUID) */
+  id: string;
+  /** ギルドID (Discord サーバーID) */
+  guild_id: string;
+  /** イベント名 */
+  name: string;
+  /** イベントの説明 */
+  description: string | null;
+  /** イベントカラー (HEXコード) */
+  color: string;
+  /** 終日イベントフラグ */
+  is_all_day: boolean;
+  /** RFC 5545 RRULE 文字列 */
+  rrule: string;
+  /** シリーズ開始日時 (ISO 8601形式) */
+  dtstart: string;
+  /** オカレンスの持続時間（分） */
+  duration_minutes: number;
+  /** 場所情報 */
+  location: string | null;
+  /** Discordチャンネル ID */
+  channel_id: string | null;
+  /** Discordチャンネル名 */
+  channel_name: string | null;
+  /** 通知設定 (JSONB) */
+  notifications: NotificationSetting[];
+  /** 除外日リスト (TIMESTAMPTZ[]) */
+  exdates: string[];
+  /** 作成日時 (ISO 8601形式) */
+  created_at: string;
+  /** 更新日時 (ISO 8601形式) */
+  updated_at: string;
+}
+
+/**
  * Supabaseから取得するイベントレコード型
  * eventsテーブルのカラム構造に対応
  */

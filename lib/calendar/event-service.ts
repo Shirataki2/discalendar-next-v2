@@ -18,10 +18,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type CalendarEvent,
   type EventRecord,
+  type EventSeriesRecord,
   type NotificationSetting,
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
+import { validateRrule } from "./rrule-utils";
 
 /**
  * カレンダーエラーコードの定義
@@ -36,6 +38,8 @@ export const CALENDAR_ERROR_CODES = [
   "UPDATE_FAILED",
   "DELETE_FAILED",
   "VALIDATION_ERROR",
+  "SERIES_NOT_FOUND",
+  "RRULE_PARSE_ERROR",
 ] as const;
 
 /**
@@ -67,6 +71,8 @@ export const CALENDAR_ERROR_MESSAGES: Record<CalendarErrorCode, string> = {
   UPDATE_FAILED: "イベントの更新に失敗しました。",
   DELETE_FAILED: "イベントの削除に失敗しました。",
   VALIDATION_ERROR: "入力データが不正です。",
+  SERIES_NOT_FOUND: "指定されたイベントシリーズが見つかりません。",
+  RRULE_PARSE_ERROR: "繰り返しルールの解析に失敗しました。",
 };
 
 /**
@@ -161,6 +167,36 @@ export type MutationResult<T> =
   | { success: false; error: CalendarError };
 
 /**
+ * シリーズ作成入力パラメータ
+ */
+export interface CreateSeriesInput {
+  /** ギルドID */
+  guildId: string;
+  /** イベントタイトル */
+  title: string;
+  /** 開始日時 */
+  startAt: Date;
+  /** 終了日時 */
+  endAt: Date;
+  /** イベントの説明 */
+  description?: string;
+  /** 終日フラグ */
+  isAllDay?: boolean;
+  /** イベントカラー (HEXコード) */
+  color?: string;
+  /** 場所情報 */
+  location?: string;
+  /** DiscordチャンネルID */
+  channelId?: string;
+  /** Discordチャンネル名 */
+  channelName?: string;
+  /** 通知設定 */
+  notifications?: NotificationSetting[];
+  /** RFC 5545 RRULE 文字列 */
+  rrule: string;
+}
+
+/**
  * EventServiceインターフェース
  */
 export interface EventServiceInterface {
@@ -192,6 +228,13 @@ export interface EventServiceInterface {
    * @returns 成功時はvoid、失敗時はエラー
    */
   deleteEvent(id: string): Promise<MutationResult<void>>;
+
+  /**
+   * 繰り返しイベントシリーズを作成
+   * @param input - シリーズ作成パラメータ
+   * @returns 作成されたシリーズレコードまたはエラー
+   */
+  createRecurringSeries(input: CreateSeriesInput): Promise<MutationResult<EventSeriesRecord>>;
 }
 
 /**
@@ -564,6 +607,127 @@ export function createEventService(
       } catch (error) {
         // 例外の処理 (ネットワークエラーなど)
         const errorCode = classifyException(error, "update");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        return {
+          success: false,
+          error: {
+            code: errorCode,
+            message: getCalendarErrorMessage(errorCode),
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async createRecurringSeries(input: CreateSeriesInput): Promise<MutationResult<EventSeriesRecord>> {
+      const {
+        guildId,
+        title,
+        startAt,
+        endAt,
+        description,
+        isAllDay = false,
+        color = "#3B82F6",
+        location,
+        channelId,
+        channelName,
+        notifications,
+        rrule,
+      } = input;
+
+      try {
+        // バリデーション: タイトル
+        if (!title || title.trim().length === 0) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: getCalendarErrorMessage("VALIDATION_ERROR"),
+              details: "タイトルは必須です。",
+            },
+          };
+        }
+
+        if (title.length > 255) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: getCalendarErrorMessage("VALIDATION_ERROR"),
+              details: "タイトルは255文字以内で入力してください。",
+            },
+          };
+        }
+
+        // バリデーション: 日時
+        if (startAt >= endAt) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: getCalendarErrorMessage("VALIDATION_ERROR"),
+              details: "終了日時は開始日時より後である必要があります。",
+            },
+          };
+        }
+
+        // バリデーション: RRULE
+        const rruleValidation = validateRrule(rrule);
+        if (!rruleValidation.valid) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: getCalendarErrorMessage("VALIDATION_ERROR"),
+              details: `RRULE文字列が不正です: ${rruleValidation.error}`,
+            },
+          };
+        }
+
+        // duration_minutes を startAt と endAt から算出
+        const durationMinutes = Math.round((endAt.getTime() - startAt.getTime()) / 60000);
+
+        const insertData = {
+          guild_id: guildId,
+          name: title.trim(),
+          description: description?.trim() || null,
+          color,
+          is_all_day: isAllDay,
+          rrule,
+          dtstart: startAt.toISOString(),
+          duration_minutes: durationMinutes,
+          location: location?.trim() || null,
+          channel_id: channelId || null,
+          channel_name: channelName || null,
+          notifications: notifications ?? [],
+          exdates: [],
+        };
+
+        const { data, error } = await supabase
+          .from("event_series")
+          .insert(insertData)
+          .select()
+          .single();
+
+        if (error) {
+          const errorCode = classifySupabaseError(error, "create");
+          return {
+            success: false,
+            error: {
+              code: errorCode,
+              message: getCalendarErrorMessage(errorCode),
+              details: error.message,
+            },
+          };
+        }
+
+        return {
+          success: true,
+          data: data as EventSeriesRecord,
+        };
+      } catch (error) {
+        const errorCode = classifyException(error, "create");
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
         return {

@@ -56,6 +56,7 @@ const createMockEventService = (
     },
   }),
   deleteEvent: fn().mockResolvedValue({ success: true, data: undefined }),
+  createRecurringSeries: fn().mockResolvedValue({ success: true, data: {} }),
   ...overrides,
 });
 
@@ -117,6 +118,7 @@ const createSlowMockEventService = (): EventServiceInterface => ({
       )
   ),
   deleteEvent: fn().mockResolvedValue({ success: true, data: undefined }),
+  createRecurringSeries: fn().mockResolvedValue({ success: true, data: {} }),
 });
 
 // エラーを返すモックEventService
@@ -144,6 +146,13 @@ const createErrorMockEventService = (): EventServiceInterface => ({
     error: {
       code: "DELETE_FAILED",
       message: "イベントの削除に失敗しました。",
+    },
+  }),
+  createRecurringSeries: fn().mockResolvedValue({
+    success: false,
+    error: {
+      code: "CREATE_FAILED",
+      message: "イベントの作成に失敗しました。",
     },
   }),
 });

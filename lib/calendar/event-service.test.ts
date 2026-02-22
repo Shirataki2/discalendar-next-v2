@@ -20,13 +20,14 @@ import {
   type CalendarError,
   type CalendarErrorCode,
   type CreateEventInput,
+  type CreateSeriesInput,
   type UpdateEventInput,
   type FetchEventsParams,
   type FetchEventsResult,
   createEventService,
   getCalendarErrorMessage,
 } from "./event-service";
-import type { CalendarEvent, EventRecord } from "./types";
+import type { CalendarEvent, EventRecord, EventSeriesRecord } from "./types";
 
 // Supabaseクライアントのモック
 const mockSupabaseClient = {
@@ -1755,5 +1756,319 @@ describe("createEventService - notification persistence", () => {
         expect(result.error.message).toBe("イベントの更新に失敗しました。");
       }
     });
+  });
+});
+
+// =============================================================================
+// createRecurringSeries テスト (Task 3.1)
+// =============================================================================
+
+describe("createEventService - createRecurringSeries", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const validSeriesInput: CreateSeriesInput = {
+    guildId: "guild-123",
+    title: "毎週の定例会",
+    startAt: new Date("2026-03-01T10:00:00Z"),
+    endAt: new Date("2026-03-01T11:00:00Z"),
+    rrule: "FREQ=WEEKLY;BYDAY=MO",
+  };
+
+  const mockSeriesRecord: EventSeriesRecord = {
+    id: "series-1",
+    guild_id: "guild-123",
+    name: "毎週の定例会",
+    description: null,
+    color: "#3B82F6",
+    is_all_day: false,
+    rrule: "FREQ=WEEKLY;BYDAY=MO",
+    dtstart: "2026-03-01T10:00:00Z",
+    duration_minutes: 60,
+    location: null,
+    channel_id: null,
+    channel_name: null,
+    notifications: [],
+    exdates: [],
+    created_at: "2026-02-23T12:00:00Z",
+    updated_at: "2026-02-23T12:00:00Z",
+  };
+
+  it("should create series successfully with required fields (Req 1.3, 8.1)", async () => {
+    const insertBuilder = createMockInsertBuilder({ data: mockSeriesRecord as unknown as EventRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.createRecurringSeries(validSeriesInput);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe("series-1");
+      expect(result.data.name).toBe("毎週の定例会");
+      expect(result.data.rrule).toBe("FREQ=WEEKLY;BYDAY=MO");
+      expect(result.data.duration_minutes).toBe(60);
+      expect(result.data.guild_id).toBe("guild-123");
+    }
+
+    expect(mockSupabaseClient.from).toHaveBeenCalledWith("event_series");
+  });
+
+  it("should create series with all optional fields", async () => {
+    const fullRecord: EventSeriesRecord = {
+      ...mockSeriesRecord,
+      id: "series-2",
+      name: "詳細な定例会",
+      description: "毎週の進捗報告会議",
+      color: "#FF5733",
+      is_all_day: false,
+      location: "会議室A",
+      channel_id: "ch-123",
+      channel_name: "meeting",
+      notifications: [{ key: "n1", num: 1, unit: "hours" }],
+    };
+
+    const insertBuilder = createMockInsertBuilder({ data: fullRecord as unknown as EventRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      guildId: "guild-123",
+      title: "詳細な定例会",
+      startAt: new Date("2026-03-01T10:00:00Z"),
+      endAt: new Date("2026-03-01T11:00:00Z"),
+      description: "毎週の進捗報告会議",
+      color: "#FF5733",
+      location: "会議室A",
+      channelId: "ch-123",
+      channelName: "meeting",
+      notifications: [{ key: "n1", num: 1, unit: "hours" }],
+      rrule: "FREQ=WEEKLY;BYDAY=MO",
+    };
+
+    const result = await service.createRecurringSeries(input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe("詳細な定例会");
+      expect(result.data.description).toBe("毎週の進捗報告会議");
+      expect(result.data.color).toBe("#FF5733");
+      expect(result.data.location).toBe("会議室A");
+      expect(result.data.channel_id).toBe("ch-123");
+      expect(result.data.channel_name).toBe("meeting");
+      expect(result.data.notifications).toEqual([{ key: "n1", num: 1, unit: "hours" }]);
+    }
+  });
+
+  it("should calculate duration_minutes from startAt and endAt", async () => {
+    const insertBuilder = createMockInsertBuilder({ data: mockSeriesRecord as unknown as EventRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      ...validSeriesInput,
+      startAt: new Date("2026-03-01T10:00:00Z"),
+      endAt: new Date("2026-03-01T12:30:00Z"), // 150 minutes
+    };
+
+    await service.createRecurringSeries(input);
+
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.duration_minutes).toBe(150);
+    }
+  });
+
+  it("should send correct insert data to Supabase", async () => {
+    const insertBuilder = createMockInsertBuilder({ data: mockSeriesRecord as unknown as EventRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    await service.createRecurringSeries(validSeriesInput);
+
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.guild_id).toBe("guild-123");
+      expect(insertCall.name).toBe("毎週の定例会");
+      expect(insertCall.rrule).toBe("FREQ=WEEKLY;BYDAY=MO");
+      expect(insertCall.dtstart).toBe("2026-03-01T10:00:00.000Z");
+      expect(insertCall.duration_minutes).toBe(60);
+      expect(insertCall.is_all_day).toBe(false);
+      expect(insertCall.color).toBe("#3B82F6");
+      expect(insertCall.exdates).toEqual([]);
+      expect(insertCall.notifications).toEqual([]);
+    }
+  });
+
+  it("should return VALIDATION_ERROR when title is empty", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      ...validSeriesInput,
+      title: "",
+    };
+
+    const result = await service.createRecurringSeries(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("タイトルは必須です");
+    }
+
+    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+  });
+
+  it("should return VALIDATION_ERROR when title exceeds 255 characters", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      ...validSeriesInput,
+      title: "a".repeat(256),
+    };
+
+    const result = await service.createRecurringSeries(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("255文字以内");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when endAt is before startAt", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      ...validSeriesInput,
+      startAt: new Date("2026-03-01T12:00:00Z"),
+      endAt: new Date("2026-03-01T10:00:00Z"),
+    };
+
+    const result = await service.createRecurringSeries(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("終了日時は開始日時より後");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when rrule is empty", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      ...validSeriesInput,
+      rrule: "",
+    };
+
+    const result = await service.createRecurringSeries(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("RRULE");
+    }
+  });
+
+  it("should return VALIDATION_ERROR when rrule is invalid (Req 8.5)", async () => {
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      ...validSeriesInput,
+      rrule: "INVALID_RRULE_STRING",
+    };
+
+    const result = await service.createRecurringSeries(input);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+      expect(result.error.details).toContain("RRULE");
+    }
+  });
+
+  it("should return CREATE_FAILED error on database error", async () => {
+    const insertBuilder = createMockInsertBuilder({
+      error: { message: "Database connection failed" },
+    });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.createRecurringSeries(validSeriesInput);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("CREATE_FAILED");
+    }
+  });
+
+  it("should return UNAUTHORIZED error for permission denied", async () => {
+    const insertBuilder = createMockInsertBuilder({
+      error: { message: "permission denied", code: "42501" },
+    });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    const result = await service.createRecurringSeries(validSeriesInput);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+  });
+
+  it("should trim title and description", async () => {
+    const insertBuilder = createMockInsertBuilder({ data: mockSeriesRecord as unknown as EventRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const input: CreateSeriesInput = {
+      ...validSeriesInput,
+      title: "  トリムされたタイトル  ",
+      description: "  トリムされた説明  ",
+    };
+
+    await service.createRecurringSeries(input);
+
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.name).toBe("トリムされたタイトル");
+      expect(insertCall.description).toBe("トリムされた説明");
+    }
+  });
+
+  it("should use default values for optional fields", async () => {
+    const insertBuilder = createMockInsertBuilder({ data: mockSeriesRecord as unknown as EventRecord });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+
+    await service.createRecurringSeries(validSeriesInput);
+
+    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
+    expect(insertCall).toBeDefined();
+    if (insertCall) {
+      expect(insertCall.is_all_day).toBe(false);
+      expect(insertCall.color).toBe("#3B82F6");
+      expect(insertCall.description).toBeNull();
+      expect(insertCall.location).toBeNull();
+      expect(insertCall.channel_id).toBeNull();
+      expect(insertCall.channel_name).toBeNull();
+      expect(insertCall.notifications).toEqual([]);
+      expect(insertCall.exdates).toEqual([]);
+    }
+  });
+
+  it("should have SERIES_NOT_FOUND and RRULE_PARSE_ERROR error codes defined", () => {
+    expect(CALENDAR_ERROR_CODES).toContain("SERIES_NOT_FOUND");
+    expect(CALENDAR_ERROR_CODES).toContain("RRULE_PARSE_ERROR");
+  });
+
+  it("should return correct message for new error codes", () => {
+    expect(getCalendarErrorMessage("SERIES_NOT_FOUND")).toBe("指定されたイベントシリーズが見つかりません。");
+    expect(getCalendarErrorMessage("RRULE_PARSE_ERROR")).toBe("繰り返しルールの解析に失敗しました。");
   });
 });
