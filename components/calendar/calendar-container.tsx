@@ -223,6 +223,11 @@ function useEditScopeDialog(
       if (!(targetEvent && guildId)) {
         return;
       }
+      // EditScopeDialog は繰り返しイベントにのみ表示されるため、
+      // この時点で targetEvent は必ず isRecurring: true
+      if (!isRecurringEvent(targetEvent)) {
+        return;
+      }
 
       // Task 7.4: 編集モード — スコープ情報を渡してEventDialogを開く
       if (mode === "edit") {
@@ -232,7 +237,7 @@ function useEditScopeDialog(
           id: targetEvent.id,
           data: toEventFormData(targetEvent),
           scope,
-          seriesId: targetEvent.seriesId as string,
+          seriesId: targetEvent.seriesId,
           occurrenceDate: eventOccurrenceDate,
           resetExceptions: options.resetExceptions,
         });
@@ -245,7 +250,7 @@ function useEditScopeDialog(
       setDeleteError(null);
       const result = await deleteOccurrenceAction({
         guildId,
-        seriesId: targetEvent.seriesId as string,
+        seriesId: targetEvent.seriesId,
         scope,
         occurrenceDate: targetEvent.originalDate ?? targetEvent.start,
       });
@@ -324,10 +329,12 @@ function isGuildEmpty(guildId: string | null): boolean {
 }
 
 /**
- * イベントが繰り返しイベントかどうかを判定するヘルパー
+ * イベントが繰り返しイベントかどうかを判定するタイプガード
  */
-function isRecurringEvent(event: CalendarEvent): boolean {
-  return event.isRecurring === true && !!event.seriesId;
+function isRecurringEvent(
+  event: CalendarEvent
+): event is CalendarEvent & { isRecurring: true; seriesId: string } {
+  return event.isRecurring === true;
 }
 
 /**

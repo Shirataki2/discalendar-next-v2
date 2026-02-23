@@ -32,7 +32,7 @@ afterEach(() => {
 
 /**
  * 汎用クエリビルダーモック
- * select/eq/gte/lte/is/not/abortSignal/insert/update/delete/single をサポート
+ * select/eq/gte/lte/is/not/or/abortSignal/insert/upsert/update/delete/single をサポート
  */
 function createFlexibleBuilder<T>(options: {
   data?: T;
@@ -43,8 +43,8 @@ function createFlexibleBuilder<T>(options: {
 
   const builder: Record<string, unknown> = {};
   const chainMethods = [
-    "select", "eq", "gte", "lte", "is", "not",
-    "abortSignal", "insert", "update", "delete", "single",
+    "select", "eq", "gte", "lte", "is", "not", "or",
+    "abortSignal", "insert", "upsert", "update", "delete", "single",
   ];
 
   for (const m of chainMethods) {

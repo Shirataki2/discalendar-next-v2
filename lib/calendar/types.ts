@@ -141,10 +141,10 @@ export interface ChannelInfo {
 export type EditScope = "this" | "all" | "following";
 
 /**
- * カレンダー表示用のイベント型
+ * カレンダー表示用のイベント型（ベース）
  * react-big-calendarが期待するEvent型に準拠
  */
-export interface CalendarEvent {
+type BaseCalendarEvent = {
   /** イベントID */
   id: string;
   /** イベント名 (react-big-calendarではtitleを使用) */
@@ -165,15 +165,25 @@ export interface CalendarEvent {
   channel?: ChannelInfo;
   /** 通知設定 */
   notifications?: NotificationSetting[];
-  /** イベントシリーズID（繰り返しイベントの場合） */
-  seriesId?: string;
-  /** 繰り返しイベントかどうか */
-  isRecurring?: boolean;
-  /** 繰り返しルールの人間可読テキスト（例: 「毎週火曜日」） */
-  rruleSummary?: string;
   /** オカレンスの元の日付（例外レコードの場合） */
   originalDate?: Date;
-}
+};
+
+/**
+ * カレンダー表示用のイベント型
+ *
+ * discriminated union により、`isRecurring: true` の場合に
+ * `seriesId` と `rruleSummary` が必須であることをコンパイル時に保証する。
+ */
+export type CalendarEvent =
+  | ({ isRecurring?: false } & BaseCalendarEvent)
+  | ({
+      isRecurring: true;
+      /** イベントシリーズID（繰り返しイベントの場合は必須） */
+      seriesId: string;
+      /** 繰り返しルールの人間可読テキスト（例: 「毎週火曜日」） */
+      rruleSummary?: string;
+    } & BaseCalendarEvent);
 
 /**
  * JSONB から取得した値が有効な NotificationSetting か判定する型ガード

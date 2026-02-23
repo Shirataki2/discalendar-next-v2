@@ -126,6 +126,7 @@ const createMockInsertBuilder = (options: {
   };
 
   const mockInsert = vi.fn();
+  const mockUpsert = vi.fn();
   const mockSelect = vi.fn();
   const mockSingle = vi.fn();
 
@@ -133,6 +134,7 @@ const createMockInsertBuilder = (options: {
 
   const queryBuilder = {
     insert: mockInsert,
+    upsert: mockUpsert,
     select: mockSelect,
     single: mockSingle,
     then: (
@@ -140,10 +142,11 @@ const createMockInsertBuilder = (options: {
       onRejected?: (reason: unknown) => unknown
     ) => internalPromise.then(onFulfilled, onRejected),
     catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
-    _mocks: { insert: mockInsert, select: mockSelect, single: mockSingle },
+    _mocks: { insert: mockInsert, upsert: mockUpsert, select: mockSelect, single: mockSingle },
   };
 
   mockInsert.mockReturnValue(queryBuilder);
+  mockUpsert.mockReturnValue(queryBuilder);
   mockSelect.mockReturnValue(queryBuilder);
   mockSingle.mockReturnValue(queryBuilder);
 
@@ -2159,7 +2162,7 @@ const createMockSeriesQueryBuilder = (options: {
   return queryBuilder;
 };
 
-// events + 例外レコード取得用のクエリビルダー（is + not フィルタ対応）
+// events + 例外レコード取得用のクエリビルダー（is + not + or フィルタ対応）
 const createMockEventsWithFilterBuilder = (options: {
   data?: EventRecord[];
   error?: { message: string; code?: string };
@@ -2175,6 +2178,7 @@ const createMockEventsWithFilterBuilder = (options: {
   const mockLte = vi.fn();
   const mockIs = vi.fn();
   const mockNot = vi.fn();
+  const mockOr = vi.fn();
   const mockAbortSignal = vi.fn();
 
   const internalPromise = Promise.resolve(result);
@@ -2186,13 +2190,14 @@ const createMockEventsWithFilterBuilder = (options: {
     lte: mockLte,
     is: mockIs,
     not: mockNot,
+    or: mockOr,
     abortSignal: mockAbortSignal,
     then: (
       onFulfilled?: (value: typeof result) => unknown,
       onRejected?: (reason: unknown) => unknown
     ) => internalPromise.then(onFulfilled, onRejected),
     catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
-    _mocks: { select: mockSelect, eq: mockEq, gte: mockGte, lte: mockLte, is: mockIs, not: mockNot, abortSignal: mockAbortSignal },
+    _mocks: { select: mockSelect, eq: mockEq, gte: mockGte, lte: mockLte, is: mockIs, not: mockNot, or: mockOr, abortSignal: mockAbortSignal },
   };
 
   mockSelect.mockReturnValue(queryBuilder);
@@ -2201,6 +2206,7 @@ const createMockEventsWithFilterBuilder = (options: {
   mockLte.mockReturnValue(queryBuilder);
   mockIs.mockReturnValue(queryBuilder);
   mockNot.mockReturnValue(queryBuilder);
+  mockOr.mockReturnValue(queryBuilder);
   mockAbortSignal.mockReturnValue(queryBuilder);
 
   return queryBuilder;
@@ -2909,7 +2915,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
 
     // 1st call: fetch series
     const seriesSelectBuilder = createMockSelectSingleBuilder({ data: mockSeries });
-    // 2nd call: insert exception
+    // 2nd call: upsert exception (insert or update on conflict)
     const insertBuilder = createMockInsertBuilder({ data: exceptionRecord });
 
     mockSupabaseClient.from
@@ -2932,7 +2938,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
     }
   });
 
-  it("should set series_id and original_date on the inserted record", async () => {
+  it("should set series_id and original_date on the upserted record", async () => {
     const exceptionRecord: EventRecord = {
       id: "exception-2",
       guild_id: "guild-123",
@@ -2966,15 +2972,15 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       endAt: new Date("2026-03-09T12:00:00Z"),
     });
 
-    // insertが呼ばれた際の引数を確認
-    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
-    expect(insertCall).toBeDefined();
-    if (insertCall) {
-      expect(insertCall.series_id).toBe("series-1");
-      expect(insertCall.original_date).toBe("2026-03-09T10:00:00.000Z");
+    // upsertが呼ばれた際の引数を確認
+    const upsertCall = insertBuilder._mocks.upsert.mock.calls[0]?.[0];
+    expect(upsertCall).toBeDefined();
+    if (upsertCall) {
+      expect(upsertCall.series_id).toBe("series-1");
+      expect(upsertCall.original_date).toBe("2026-03-09T10:00:00.000Z");
     }
 
-    // event_series テーブルから取得、events テーブルへ挿入
+    // event_series テーブルから取得、events テーブルへ upsert
     expect(mockSupabaseClient.from).toHaveBeenCalledWith("event_series");
     expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
   });
@@ -3012,23 +3018,23 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       description: "新しい説明",
     });
 
-    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
-    expect(insertCall).toBeDefined();
-    if (insertCall) {
+    const upsertCall = insertBuilder._mocks.upsert.mock.calls[0]?.[0];
+    expect(upsertCall).toBeDefined();
+    if (upsertCall) {
       // シリーズのデフォルト値が使用されること
-      expect(insertCall.name).toBe("毎週の定例会");
-      expect(insertCall.color).toBe("#22C55E");
-      expect(insertCall.is_all_day).toBe(false);
-      expect(insertCall.location).toBe("会議室A");
-      expect(insertCall.channel_id).toBe("ch-1");
-      expect(insertCall.channel_name).toBe("general");
-      expect(insertCall.notifications).toEqual([{ key: "n1", num: 1, unit: "hours" }]);
+      expect(upsertCall.name).toBe("毎週の定例会");
+      expect(upsertCall.color).toBe("#22C55E");
+      expect(upsertCall.is_all_day).toBe(false);
+      expect(upsertCall.location).toBe("会議室A");
+      expect(upsertCall.channel_id).toBe("ch-1");
+      expect(upsertCall.channel_name).toBe("general");
+      expect(upsertCall.notifications).toEqual([{ key: "n1", num: 1, unit: "hours" }]);
       // 説明は入力値が使用されること
-      expect(insertCall.description).toBe("新しい説明");
+      expect(upsertCall.description).toBe("新しい説明");
       // start_at はオカレンスの元の日付がデフォルト
-      expect(insertCall.start_at).toBe("2026-03-09T10:00:00.000Z");
+      expect(upsertCall.start_at).toBe("2026-03-09T10:00:00.000Z");
       // end_at は元の日付 + duration_minutes がデフォルト
-      expect(insertCall.end_at).toBe("2026-03-09T11:00:00.000Z");
+      expect(upsertCall.end_at).toBe("2026-03-09T11:00:00.000Z");
     }
   });
 
@@ -3114,7 +3120,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
     }
   });
 
-  it("should trim title and description in the inserted record", async () => {
+  it("should trim title and description in the upserted record", async () => {
     const exceptionRecord: EventRecord = {
       id: "exception-trim",
       guild_id: "guild-123",
@@ -3147,11 +3153,11 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       description: "  トリムされた説明  ",
     });
 
-    const insertCall = insertBuilder._mocks.insert.mock.calls[0]?.[0];
-    expect(insertCall).toBeDefined();
-    if (insertCall) {
-      expect(insertCall.name).toBe("トリムされたタイトル");
-      expect(insertCall.description).toBe("トリムされた説明");
+    const upsertCall = insertBuilder._mocks.upsert.mock.calls[0]?.[0];
+    expect(upsertCall).toBeDefined();
+    if (upsertCall) {
+      expect(upsertCall.name).toBe("トリムされたタイトル");
+      expect(upsertCall.description).toBe("トリムされた説明");
     }
   });
 });

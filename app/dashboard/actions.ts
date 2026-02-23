@@ -24,7 +24,11 @@ import {
   type UpdateSeriesInput,
 } from "@/lib/calendar/event-service";
 import { checkEventPermission } from "@/lib/calendar/permission-check";
-import type { CalendarEvent, EventSeriesRecord } from "@/lib/calendar/types";
+import type {
+  CalendarEvent,
+  EditScope,
+  EventSeriesRecord,
+} from "@/lib/calendar/types";
 import { getUserGuilds } from "@/lib/discord/client";
 import {
   canManageGuild,
@@ -410,8 +414,6 @@ export async function createRecurringEventAction(
 // ──────────────────────────────────────────────
 // Task 4.2 (recurring-events): オカレンス編集・削除
 // ──────────────────────────────────────────────
-
-type EditScope = "this" | "all" | "following";
 
 type UpdateOccurrenceActionInput = {
   guildId: string;

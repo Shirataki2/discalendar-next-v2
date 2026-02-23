@@ -917,13 +917,22 @@ export function createEventService(
         }
 
         // Step 3: 例外レコードを取得 (series_id IS NOT NULL)
-        const { data: exceptionData, error: exceptionError } = await supabase
+        // original_date が範囲内（元のオカレンスが表示期間内）または
+        // start_at が範囲内（移動後の表示先が期間内）の例外を取得する
+        let exceptionQuery = supabase
           .from("events")
           .select("*")
           .eq("guild_id", guildId)
-          .gte("start_at", startDate.toISOString())
-          .lte("start_at", endDate.toISOString())
-          .not("series_id", "is", null);
+          .not("series_id", "is", null)
+          .or(
+            `and(original_date.gte.${startDate.toISOString()},original_date.lte.${endDate.toISOString()}),and(start_at.gte.${startDate.toISOString()},start_at.lte.${endDate.toISOString()})`
+          );
+
+        if (signal) {
+          exceptionQuery = exceptionQuery.abortSignal(signal);
+        }
+
+        const { data: exceptionData, error: exceptionError } = await exceptionQuery;
 
         if (exceptionError) {
           const errorCode = classifySupabaseError(exceptionError, "fetch");
@@ -942,7 +951,12 @@ export function createEventService(
         const exceptions = (exceptionData ?? []) as EventRecord[];
 
         // Step 4: 例外レコードをシリーズID + 元日付でマップ化
+        // シリーズIDマップも作成（Step 5.5 で残余例外の rruleSummary を取得するため）
         const exceptionMap = new Map<string, EventRecord>();
+        const seriesMap = new Map<string, EventSeriesRecord>();
+        for (const s of series) {
+          seriesMap.set(s.id, s);
+        }
         for (const exc of exceptions) {
           if (exc.series_id && exc.original_date) {
             const key = `${exc.series_id}:${new Date(exc.original_date).toISOString()}`;
@@ -1003,6 +1017,25 @@ export function createEventService(
                 rruleSummary,
               });
             }
+          }
+        }
+
+        // Step 5.5: 残余例外を追加（元のオカレンスが範囲外だが移動後 start_at が範囲内）
+        for (const [, exc] of exceptionMap) {
+          const excStartAt = new Date(exc.start_at);
+          if (excStartAt >= startDate && excStartAt <= endDate && exc.series_id) {
+            const exceptionEvent = toCalendarEvent(exc);
+            const parentSeries = seriesMap.get(exc.series_id);
+            const rruleSummary = parentSeries
+              ? toSummaryText(parentSeries.rrule, new Date(parentSeries.dtstart))
+              : undefined;
+            recurringEvents.push({
+              ...exceptionEvent,
+              seriesId: exc.series_id,
+              isRecurring: true,
+              rruleSummary,
+              originalDate: exc.original_date ? new Date(exc.original_date) : undefined,
+            });
           }
         }
 
@@ -1136,7 +1169,7 @@ export function createEventService(
 
         const { data, error } = await supabase
           .from("events")
-          .insert(insertData)
+          .upsert(insertData, { onConflict: "series_id,original_date" })
           .select()
           .single();
 
@@ -1391,7 +1424,8 @@ export function createEventService(
           const { error: deleteError } = await supabase
             .from("events")
             .delete()
-            .eq("series_id", seriesId);
+            .eq("series_id", seriesId)
+            .eq("guild_id", guildId);
 
           if (deleteError) {
             const errorCode = classifySupabaseError(deleteError, "delete");
