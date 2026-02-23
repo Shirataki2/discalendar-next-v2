@@ -8,12 +8,30 @@
  * - 保存成功時にダイアログを閉じて親に通知する
  * - キャンセル時やダイアログ外クリック時に入力内容を破棄して閉じる
  *
- * Requirements: 1.3, 1.5, 1.7, 3.1, 3.2, 3.4, 3.6
+ * タスク7.4: 編集・削除スコープ操作のフック統合
+ * - スコープ付き編集時にupdateOccurrenceActionが適切なスコープで呼ばれる
+ * - SERIES_NOT_FOUND / RRULE_PARSE_ERRORエラーが表示される
+ *
+ * Requirements: 1.3, 1.5, 1.7, 3.1, 3.2, 3.4, 3.6, 5.2, 5.4, 6.1, 6.2, 6.3, 7.1, 7.2
  */
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Server Actionのモック
+vi.mock("@/app/dashboard/actions", () => ({
+  updateOccurrenceAction: vi.fn(),
+}));
+
+import { updateOccurrenceAction } from "@/app/dashboard/actions";
 import { EventDialog, type EventDialogProps } from "./event-dialog";
+
+const mockUpdateOccurrenceAction = vi.mocked(updateOccurrenceAction);
+
+// Task 7.4: テスト用正規表現（トップレベルに定義）
+const SERIES_NOT_FOUND_PATTERN = /イベントシリーズが見つかりません/;
+const RRULE_PARSE_ERROR_PATTERN = /繰り返しルールの解析に失敗しました/;
+const RECURRENCE_PATTERN = /繰り返し/;
 
 // 正規表現パターン
 const CREATE_TITLE_PATTERN = /新規予定作成/i;
@@ -726,6 +744,258 @@ describe("EventDialog", () => {
           screen.getByText(SERIES_CREATE_FAILED_PATTERN)
         ).toBeInTheDocument();
       });
+    });
+  });
+
+  // Task 7.4: スコープ付き繰り返しイベント編集
+  describe("Task 7.4: スコープ付き繰り返しイベント編集", () => {
+    const recurringInitialData = {
+      title: "繰り返し予定",
+      startAt: new Date("2025-12-10T10:00:00"),
+      endAt: new Date("2025-12-10T11:00:00"),
+    };
+
+    const mockScopedSuccessResponse = {
+      success: true as const,
+      data: {
+        id: "event-exc-1",
+        title: "繰り返し予定",
+        start: new Date("2025-12-10T10:00:00"),
+        end: new Date("2025-12-10T11:00:00"),
+        allDay: false,
+        color: "#3B82F6",
+      },
+    };
+
+    it("editScope='this'の場合、updateOccurrenceActionがscope 'this'で呼ばれる (Req 5.2)", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            seriesId: "series-123",
+            scope: "this",
+            occurrenceDate: new Date("2025-12-10T10:00:00"),
+            eventData: expect.objectContaining({
+              title: "繰り返し予定",
+            }),
+          })
+        );
+      });
+    });
+
+    it("editScope='all'の場合、updateOccurrenceActionがscope 'all'で呼ばれる (Req 6.1, 6.2)", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="all"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          resetExceptions
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            seriesId: "series-123",
+            scope: "all",
+            eventData: expect.objectContaining({
+              title: "繰り返し予定",
+              resetExceptions: true,
+            }),
+          })
+        );
+      });
+    });
+
+    it("editScope='following'の場合、updateOccurrenceActionがscope 'following'で呼ばれる (Req 7.1)", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="following"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            seriesId: "series-123",
+            scope: "following",
+            occurrenceDate: new Date("2025-12-10T10:00:00"),
+          })
+        );
+      });
+    });
+
+    it("スコープ付き編集成功時にonSuccessとonCloseが呼ばれる", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      const onClose = vi.fn();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          onClose={onClose}
+          onSuccess={onSuccess}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalledTimes(1);
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("SERIES_NOT_FOUNDエラーが表示される", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue({
+        success: false,
+        error: {
+          code: "SERIES_NOT_FOUND",
+          message: "指定されたイベントシリーズが見つかりません。",
+        },
+      });
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(SERIES_NOT_FOUND_PATTERN)).toBeInTheDocument();
+      });
+    });
+
+    it("RRULE_PARSE_ERRORエラーが表示される", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue({
+        success: false,
+        error: {
+          code: "RRULE_PARSE_ERROR",
+          message: "繰り返しルールの解析に失敗しました。",
+        },
+      });
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="all"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(RRULE_PARSE_ERROR_PATTERN)).toBeInTheDocument();
+      });
+    });
+
+    it("editScopeが未指定の場合、通常のupdateEventが呼ばれる（後方互換）", async () => {
+      const user = userEvent.setup();
+      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          eventId="event-123"
+          initialData={recurringInitialData}
+          mode="edit"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEventService.updateEvent).toHaveBeenCalledWith(
+          "event-123",
+          expect.objectContaining({ title: "繰り返し予定" })
+        );
+        expect(mockUpdateOccurrenceAction).not.toHaveBeenCalled();
+      });
+    });
+
+    it("editScope='this'の場合、繰り返し設定UIが非表示になる", () => {
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      // 繰り返し設定のトグルが表示されないことを確認
+      expect(screen.queryByText(RECURRENCE_PATTERN)).not.toBeInTheDocument();
     });
   });
 });

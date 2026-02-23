@@ -46,6 +46,8 @@ export type EventFormProps = {
   isSubmitting: boolean;
   /** キャンセル時のコールバック */
   onCancel: () => void;
+  /** 繰り返し設定を非表示にするか（単一オカレンス編集時） */
+  hideRecurrence?: boolean;
 };
 
 // エラーメッセージのID（aria-describedby用）
@@ -290,6 +292,7 @@ export function EventForm({
   onSubmit,
   isSubmitting,
   onCancel,
+  hideRecurrence = false,
 }: EventFormProps) {
   const form = useEventForm(defaultValues);
   const recurrenceForm = useRecurrenceForm(recurrenceDefaultValues);
@@ -344,10 +347,12 @@ export function EventForm({
         isSubmitting={isSubmitting}
         label="終了日時"
       />
-      <RecurrenceSettingsControl
-        disabled={isSubmitting}
-        form={recurrenceForm}
-      />
+      {hideRecurrence ? null : (
+        <RecurrenceSettingsControl
+          disabled={isSubmitting}
+          form={recurrenceForm}
+        />
+      )}
       <DescriptionField form={form} isSubmitting={isSubmitting} />
       <ColorField form={form} isSubmitting={isSubmitting} />
       <LocationField form={form} isSubmitting={isSubmitting} />

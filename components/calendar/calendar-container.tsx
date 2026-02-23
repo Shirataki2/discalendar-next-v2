@@ -53,29 +53,67 @@ import { EventDialog } from "./event-dialog";
 import { EventPopover } from "./event-popover";
 
 /**
- * EventDialog状態管理のカスタムフック (Task 7.1, 7.2)
+ * EventDialog状態管理のカスタムフック (Task 7.1, 7.2, 7.4)
  * 新規作成モードと編集モードをサポート
+ * Task 7.4: スコープ付き編集のコンテキスト（editScope, seriesId, occurrenceDate, resetExceptions）を管理
  */
 function useEventDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [eventId, setEventId] = useState<string | undefined>(undefined);
   const [initialData, setInitialData] = useState<Partial<EventFormData>>({});
+  // Task 7.4: スコープ付き編集コンテキスト
+  const [editScope, setEditScope] = useState<EditScope | undefined>(undefined);
+  const [seriesId, setSeriesId] = useState<string | undefined>(undefined);
+  const [occurrenceDate, setOccurrenceDate] = useState<Date | undefined>(
+    undefined
+  );
+  const [resetExceptions, setResetExceptions] = useState(false);
 
   // Task 7.1: 新規作成モードでダイアログを開く
   const openCreateDialog = useCallback((data?: Partial<EventFormData>) => {
     setMode("create");
     setEventId(undefined);
     setInitialData(data ?? {});
+    setEditScope(undefined);
+    setSeriesId(undefined);
+    setOccurrenceDate(undefined);
+    setResetExceptions(false);
     setIsOpen(true);
   }, []);
 
-  // Task 7.2: 編集モードでダイアログを開く
+  // Task 7.2: 編集モードでダイアログを開く（単発イベント用）
   const openEditDialog = useCallback(
     (id: string, data: Partial<EventFormData>) => {
       setMode("edit");
       setEventId(id);
       setInitialData(data);
+      setEditScope(undefined);
+      setSeriesId(undefined);
+      setOccurrenceDate(undefined);
+      setResetExceptions(false);
+      setIsOpen(true);
+    },
+    []
+  );
+
+  // Task 7.4: スコープ付き編集モードでダイアログを開く（繰り返しイベント用）
+  const openEditDialogWithScope = useCallback(
+    (opts: {
+      id: string;
+      data: Partial<EventFormData>;
+      scope: EditScope;
+      seriesId: string;
+      occurrenceDate: Date;
+      resetExceptions: boolean;
+    }) => {
+      setMode("edit");
+      setEventId(opts.id);
+      setInitialData(opts.data);
+      setEditScope(opts.scope);
+      setSeriesId(opts.seriesId);
+      setOccurrenceDate(opts.occurrenceDate);
+      setResetExceptions(opts.resetExceptions);
       setIsOpen(true);
     },
     []
@@ -85,6 +123,10 @@ function useEventDialog() {
     setIsOpen(false);
     setInitialData({});
     setEventId(undefined);
+    setEditScope(undefined);
+    setSeriesId(undefined);
+    setOccurrenceDate(undefined);
+    setResetExceptions(false);
   }, []);
 
   return {
@@ -92,8 +134,13 @@ function useEventDialog() {
     mode,
     eventId,
     initialData,
+    editScope,
+    seriesId,
+    occurrenceDate,
+    resetExceptions,
     openCreateDialog,
     openEditDialog,
+    openEditDialogWithScope,
     closeDialog,
   };
 }
@@ -128,14 +175,24 @@ function useConfirmDialog() {
 }
 
 /**
- * EditScopeDialog状態管理とスコープ操作のカスタムフック (recurring-events Task 7.2)
+ * EditScopeDialog状態管理とスコープ操作のカスタムフック (recurring-events Task 7.2, 7.4)
  * 繰り返しイベントの編集・削除時にスコープ選択ダイアログを表示し、
  * スコープ選択後の操作を実行する
+ *
+ * Task 7.4: 編集モードでスコープ選択後にopenEditDialogWithScopeを呼び出し、
+ * EventDialogにスコープコンテキストを渡す
  */
 function useEditScopeDialog(
   guildId: string | null,
-  openEditDialogRef: React.RefObject<
-    (id: string, data: Partial<EventFormData>) => void
+  openEditDialogWithScopeRef: React.RefObject<
+    (opts: {
+      id: string;
+      data: Partial<EventFormData>;
+      scope: EditScope;
+      seriesId: string;
+      occurrenceDate: Date;
+      resetExceptions: boolean;
+    }) => void
   >,
   fetchEventsRef: React.RefObject<() => Promise<void>>
 ) {
@@ -143,11 +200,13 @@ function useEditScopeDialog(
   const [mode, setMode] = useState<"edit" | "delete">("edit");
   const [targetEvent, setTargetEvent] = useState<CalendarEvent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const openDialog = useCallback(
     (event: CalendarEvent, dialogMode: "edit" | "delete") => {
       setTargetEvent(event);
       setMode(dialogMode);
+      setDeleteError(null);
       setIsOpen(true);
     },
     []
@@ -155,23 +214,35 @@ function useEditScopeDialog(
 
   const closeDialog = useCallback(() => {
     setIsOpen(false);
+    setDeleteError(null);
     setTimeout(() => setTargetEvent(null), 150);
   }, []);
 
   const handleSelect = useCallback(
-    async (scope: EditScope, _options: EditScopeOptions) => {
+    async (scope: EditScope, options: EditScopeOptions) => {
       if (!(targetEvent && guildId)) {
         return;
       }
 
+      // Task 7.4: 編集モード — スコープ情報を渡してEventDialogを開く
       if (mode === "edit") {
-        openEditDialogRef.current(targetEvent.id, toEventFormData(targetEvent));
+        const eventOccurrenceDate =
+          targetEvent.originalDate ?? targetEvent.start;
+        openEditDialogWithScopeRef.current({
+          id: targetEvent.id,
+          data: toEventFormData(targetEvent),
+          scope,
+          seriesId: targetEvent.seriesId as string,
+          occurrenceDate: eventOccurrenceDate,
+          resetExceptions: options.resetExceptions,
+        });
         closeDialog();
         return;
       }
 
       // 削除: スコープに応じてdeleteOccurrenceActionを呼び出す
       setIsDeleting(true);
+      setDeleteError(null);
       const result = await deleteOccurrenceAction({
         guildId,
         seriesId: targetEvent.seriesId as string,
@@ -185,9 +256,18 @@ function useEditScopeDialog(
         trackEvent("event_deleted", { scope });
         closeDialog();
         fetchEventsRef.current();
+      } else {
+        setDeleteError(result.error?.message ?? "削除に失敗しました。");
       }
     },
-    [targetEvent, mode, guildId, openEditDialogRef, fetchEventsRef, closeDialog]
+    [
+      targetEvent,
+      mode,
+      guildId,
+      openEditDialogWithScopeRef,
+      fetchEventsRef,
+      closeDialog,
+    ]
   );
 
   return {
@@ -195,6 +275,7 @@ function useEditScopeDialog(
     mode,
     targetEvent,
     isDeleting,
+    deleteError,
     openDialog,
     closeDialog,
     setIsOpen,
@@ -476,14 +557,19 @@ export function CalendarContainer({
     closePopover,
   } = useEventPopover();
 
-  // Task 7.1, 7.2: EventDialog状態管理（新規作成・編集モード対応）
+  // Task 7.1, 7.2, 7.4: EventDialog状態管理（新規作成・編集モード・スコープ付き編集対応）
   const {
     isOpen: isEventDialogOpen,
     mode: eventDialogMode,
     eventId: editEventId,
     initialData: eventDialogInitialData,
+    editScope: eventDialogEditScope,
+    seriesId: eventDialogSeriesId,
+    occurrenceDate: eventDialogOccurrenceDate,
+    resetExceptions: eventDialogResetExceptions,
     openCreateDialog: openEventDialog,
     openEditDialog,
+    openEditDialogWithScope,
     closeDialog: closeEventDialog,
   } = useEventDialog();
 
@@ -496,11 +582,11 @@ export function CalendarContainer({
     setIsOpen: setConfirmDialogOpen,
   } = useConfirmDialog();
 
-  // recurring-events Task 7.2: openEditDialogのrefを保持（stale closure回避）
-  const openEditDialogRef = useRef(openEditDialog);
-  openEditDialogRef.current = openEditDialog;
+  // recurring-events Task 7.4: openEditDialogWithScopeのrefを保持（stale closure回避）
+  const openEditDialogWithScopeRef = useRef(openEditDialogWithScope);
+  openEditDialogWithScopeRef.current = openEditDialogWithScope;
 
-  // recurring-events Task 7.2: EditScopeDialog状態管理
+  // recurring-events Task 7.2, 7.4: EditScopeDialog状態管理
   const {
     isOpen: isEditScopeDialogOpen,
     mode: editScopeMode,
@@ -509,7 +595,7 @@ export function CalendarContainer({
     openDialog: openEditScopeDialog,
     setIsOpen: setEditScopeDialogOpen,
     handleSelect: handleEditScopeSelect,
-  } = useEditScopeDialog(guildId, openEditDialogRef, fetchEventsRef);
+  } = useEditScopeDialog(guildId, openEditDialogWithScopeRef, fetchEventsRef);
 
   // Task 7.2: useEventMutation for CRUD operations
   const {
@@ -867,17 +953,21 @@ export function CalendarContainer({
         open={isPopoverOpen}
       />
 
-      {/* Task 7.1, 7.2: イベント作成・編集ダイアログ */}
+      {/* Task 7.1, 7.2, 7.4: イベント作成・編集ダイアログ */}
       {guildId ? (
         <EventDialog
+          editScope={eventDialogEditScope}
           eventId={editEventId}
           eventService={eventServiceRef.current}
           guildId={guildId}
           initialData={eventDialogInitialData}
           mode={eventDialogMode}
+          occurrenceDate={eventDialogOccurrenceDate}
           onClose={closeEventDialog}
           onSuccess={handleEventDialogSuccess}
           open={isEventDialogOpen}
+          resetExceptions={eventDialogResetExceptions}
+          seriesId={eventDialogSeriesId}
         />
       ) : null}
 

@@ -20,6 +20,7 @@ interface AnalyticsEventMap {
   };
   event_updated: {
     changed_fields: string[];
+    scope?: string;
   };
   event_deleted: Record<never, never>;
   event_moved: {
