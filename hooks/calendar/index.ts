@@ -41,3 +41,10 @@ export {
   type UseEventMutationReturn,
   useEventMutation,
 } from "./use-event-mutation";
+
+export {
+  type RecurrenceFormData,
+  type RecurrenceValidationErrors,
+  type UseRecurrenceFormReturn,
+  useRecurrenceForm,
+} from "./use-recurrence-form";
