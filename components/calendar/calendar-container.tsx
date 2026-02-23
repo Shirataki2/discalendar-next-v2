@@ -439,8 +439,8 @@ export function CalendarContainer({
     // 取得期間を計算
     const { startDate, endDate } = getDateRange(viewMode, selectedDate);
 
-    // イベント取得（isGuildEmpty チェック通過後なので guildId は非 null）
-    const result = await eventServiceRef.current.fetchEvents({
+    // イベント取得（単発 + 繰り返しオカレンスの統合取得）
+    const result = await eventServiceRef.current.fetchEventsWithSeries({
       guildId: guildId as string,
       startDate,
       endDate,

@@ -26,14 +26,14 @@ let capturedOnSlotSelect: ((slotInfo: SlotSelectInfo) => void) | undefined;
 const mockCreateEvent = vi.fn();
 const mockUpdateEvent = vi.fn();
 const mockDeleteEvent = vi.fn();
-const mockFetchEvents = vi.fn().mockResolvedValue({
+const mockFetchEventsWithSeries = vi.fn().mockResolvedValue({
   success: true,
   data: [],
 });
 
 vi.mock("@/lib/calendar/event-service", () => ({
   createEventService: vi.fn(() => ({
-    fetchEvents: mockFetchEvents,
+    fetchEventsWithSeries: mockFetchEventsWithSeries,
     createEvent: mockCreateEvent,
     updateEvent: mockUpdateEvent,
     deleteEvent: mockDeleteEvent,
@@ -339,7 +339,7 @@ describe("CalendarContainer", () => {
       });
 
       vi.mocked(createEventService).mockReturnValue({
-        fetchEvents: localMockFetchEvents,
+        fetchEventsWithSeries: localMockFetchEvents,
         createEvent: mockCreateEvent,
         updateEvent: mockUpdateEvent,
         deleteEvent: mockDeleteEvent,
@@ -376,7 +376,7 @@ describe("CalendarContainer", () => {
       });
 
       vi.mocked(createEventService).mockReturnValue({
-        fetchEvents: localMockFetchEvents,
+        fetchEventsWithSeries: localMockFetchEvents,
         createEvent: mockCreateEvent,
         updateEvent: mockUpdateEvent,
         deleteEvent: mockDeleteEvent,
@@ -451,15 +451,15 @@ describe("CalendarContainer", () => {
       capturedOnAddClick = undefined;
       capturedOnSlotSelect = undefined;
 
-      // mockFetchEventsをリセットして成功を返すようにする
-      mockFetchEvents.mockResolvedValue({
+      // mockFetchEventsWithSeriesをリセットして成功を返すようにする
+      mockFetchEventsWithSeries.mockResolvedValue({
         success: true,
         data: [],
       });
 
       // createEventServiceのモックをリセット
       vi.mocked(createEventService).mockReturnValue({
-        fetchEvents: mockFetchEvents,
+        fetchEventsWithSeries: mockFetchEventsWithSeries,
         createEvent: mockCreateEvent,
         updateEvent: mockUpdateEvent,
         deleteEvent: mockDeleteEvent,
@@ -587,10 +587,10 @@ describe("CalendarContainer", () => {
 
         // 初回fetchEventsの呼び出しを待つ
         await waitFor(() => {
-          expect(mockFetchEvents).toHaveBeenCalled();
+          expect(mockFetchEventsWithSeries).toHaveBeenCalled();
         });
 
-        const initialCallCount = mockFetchEvents.mock.calls.length;
+        const initialCallCount = mockFetchEventsWithSeries.mock.calls.length;
 
         // 追加ボタンでダイアログを開く
         await waitFor(() => {
@@ -611,7 +611,7 @@ describe("CalendarContainer", () => {
 
         // fetchEventsが再呼び出しされる
         await waitFor(() => {
-          expect(mockFetchEvents.mock.calls.length).toBeGreaterThan(
+          expect(mockFetchEventsWithSeries.mock.calls.length).toBeGreaterThan(
             initialCallCount
           );
         });
@@ -632,15 +632,15 @@ describe("CalendarContainer", () => {
       capturedOnEdit = undefined;
       capturedOnDelete = undefined;
 
-      // mockFetchEventsをリセットして成功を返すようにする
-      mockFetchEvents.mockResolvedValue({
+      // mockFetchEventsWithSeriesをリセットして成功を返すようにする
+      mockFetchEventsWithSeries.mockResolvedValue({
         success: true,
         data: [],
       });
 
       // createEventServiceのモックをリセット
       vi.mocked(createEventService).mockReturnValue({
-        fetchEvents: mockFetchEvents,
+        fetchEventsWithSeries: mockFetchEventsWithSeries,
         createEvent: mockCreateEvent,
         updateEvent: mockUpdateEvent,
         deleteEvent: mockDeleteEvent,
@@ -734,10 +734,10 @@ describe("CalendarContainer", () => {
 
         // 初回fetchEventsの呼び出しを待つ
         await waitFor(() => {
-          expect(mockFetchEvents).toHaveBeenCalled();
+          expect(mockFetchEventsWithSeries).toHaveBeenCalled();
         });
 
-        const initialCallCount = mockFetchEvents.mock.calls.length;
+        const initialCallCount = mockFetchEventsWithSeries.mock.calls.length;
 
         await waitFor(() => {
           expect(capturedOnEdit).toBeDefined();
@@ -767,7 +767,7 @@ describe("CalendarContainer", () => {
 
         // fetchEventsが再呼び出しされる
         await waitFor(() => {
-          expect(mockFetchEvents.mock.calls.length).toBeGreaterThan(
+          expect(mockFetchEventsWithSeries.mock.calls.length).toBeGreaterThan(
             initialCallCount
           );
         });
@@ -834,10 +834,10 @@ describe("CalendarContainer", () => {
 
         // 初回fetchEventsの呼び出しを待つ
         await waitFor(() => {
-          expect(mockFetchEvents).toHaveBeenCalled();
+          expect(mockFetchEventsWithSeries).toHaveBeenCalled();
         });
 
-        const initialCallCount = mockFetchEvents.mock.calls.length;
+        const initialCallCount = mockFetchEventsWithSeries.mock.calls.length;
 
         await waitFor(() => {
           expect(capturedOnDelete).toBeDefined();
@@ -867,7 +867,7 @@ describe("CalendarContainer", () => {
 
         // fetchEventsが再呼び出しされる
         await waitFor(() => {
-          expect(mockFetchEvents.mock.calls.length).toBeGreaterThan(
+          expect(mockFetchEventsWithSeries.mock.calls.length).toBeGreaterThan(
             initialCallCount
           );
         });

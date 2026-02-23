@@ -232,6 +232,67 @@ describe("EventBlock", () => {
     });
   });
 
+  describe("Task 7.1: 繰り返しイベントインジケーター (Req 4.2)", () => {
+    const recurringEvent: CalendarEvent = {
+      id: "series-1:2026-01-05T10:00:00Z",
+      title: "定例ミーティング",
+      start: new Date(2026, 0, 5, 10, 0),
+      end: new Date(2026, 0, 5, 11, 0),
+      allDay: false,
+      color: "#3b82f6",
+      isRecurring: true,
+      seriesId: "series-1",
+      rruleSummary: "毎週月曜日",
+    };
+
+    const nonRecurringEvent: CalendarEvent = {
+      id: "event-1",
+      title: "単発イベント",
+      start: new Date(2026, 0, 5, 14, 0),
+      end: new Date(2026, 0, 5, 15, 0),
+      allDay: false,
+      color: "#22c55e",
+    };
+
+    it("繰り返しイベントに繰り返しアイコンが表示される", () => {
+      renderWithTooltip(
+        <EventBlock event={recurringEvent} title={recurringEvent.title} />
+      );
+
+      expect(screen.getByTestId("recurring-indicator")).toBeInTheDocument();
+    });
+
+    it("単発イベントには繰り返しアイコンが表示されない", () => {
+      renderWithTooltip(
+        <EventBlock event={nonRecurringEvent} title={nonRecurringEvent.title} />
+      );
+
+      expect(
+        screen.queryByTestId("recurring-indicator")
+      ).not.toBeInTheDocument();
+    });
+
+    it("isRecurringがundefinedの場合、繰り返しアイコンが表示されない", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("recurring-indicator")
+      ).not.toBeInTheDocument();
+    });
+
+    it("繰り返しイベントのアクセシブルラベルに繰り返し情報が含まれる", () => {
+      renderWithTooltip(
+        <EventBlock event={recurringEvent} title={recurringEvent.title} />
+      );
+
+      const eventElement = screen.getByTestId("event-block");
+      expect(eventElement).toHaveAttribute(
+        "aria-label",
+        expect.stringContaining("繰り返し")
+      );
+    });
+  });
+
   describe("エッジケース", () => {
     it("説明文が設定されている場合もイベント名のみ表示する", () => {
       const eventWithDescription: CalendarEvent = {

@@ -58,7 +58,7 @@ type MockEventType = {
 let capturedOnDelete: ((event: MockEventType) => void) | undefined;
 
 // EventServiceのモック
-const mockFetchEvents = vi.fn().mockResolvedValue({
+const mockFetchEventsWithSeries = vi.fn().mockResolvedValue({
   success: true,
   data: [],
 });
@@ -68,7 +68,7 @@ const mockDeleteEvent = vi.fn();
 
 vi.mock("@/lib/calendar/event-service", () => ({
   createEventService: vi.fn(() => ({
-    fetchEvents: mockFetchEvents,
+    fetchEventsWithSeries: mockFetchEventsWithSeries,
     createEvent: mockCreateEvent,
     updateEvent: mockUpdateEvent,
     deleteEvent: mockDeleteEvent,
@@ -442,7 +442,7 @@ describe("CalendarContainer アナリティクストラッキング統合テス�
 
       // waitForを使って非同期処理完了を待つ
       await waitFor(() => {
-        expect(mockFetchEvents).toHaveBeenCalled();
+        expect(mockFetchEventsWithSeries).toHaveBeenCalled();
       });
 
       expect(mockTrackEvent).not.toHaveBeenCalledWith(
