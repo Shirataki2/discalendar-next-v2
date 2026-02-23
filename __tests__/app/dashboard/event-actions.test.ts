@@ -35,11 +35,13 @@ vi.mock("@/lib/guilds/guild-config-service", () => ({
 const mockCreateEvent = vi.fn();
 const mockUpdateEvent = vi.fn();
 const mockDeleteEvent = vi.fn();
+const mockCreateRecurringSeries = vi.fn();
 vi.mock("@/lib/calendar/event-service", () => ({
   createEventService: vi.fn(() => ({
     createEvent: mockCreateEvent,
     updateEvent: mockUpdateEvent,
     deleteEvent: mockDeleteEvent,
+    createRecurringSeries: mockCreateRecurringSeries,
     fetchEvents: vi.fn(),
   })),
 }));
@@ -62,9 +64,39 @@ vi.mock("@/lib/discord/client", () => ({
 
 import {
   createEventAction,
+  createRecurringEventAction,
   deleteEventAction,
   updateEventAction,
 } from "@/app/dashboard/actions";
+
+/** テスト用シリーズ入力 */
+const sampleSeriesInput = {
+  guildId: "guild-1",
+  title: "Weekly Meeting",
+  startAt: new Date("2026-03-01T10:00:00Z"),
+  endAt: new Date("2026-03-01T11:00:00Z"),
+  rrule: "FREQ=WEEKLY;BYDAY=TU",
+};
+
+/** テスト用シリーズレコード */
+const sampleSeriesRecord = {
+  id: "series-1",
+  guild_id: "guild-1",
+  name: "Weekly Meeting",
+  description: null,
+  color: "#3B82F6",
+  is_all_day: false,
+  rrule: "FREQ=WEEKLY;BYDAY=TU",
+  dtstart: "2026-03-01T10:00:00Z",
+  duration_minutes: 60,
+  location: null,
+  channel_id: null,
+  channel_name: null,
+  notifications: [],
+  exdates: [],
+  created_at: "2026-03-01T00:00:00Z",
+  updated_at: "2026-03-01T00:00:00Z",
+};
 
 /** テスト用ヘルパー: 権限なしのキャッシュを設定 */
 function setupCacheWithNoPermissions(guildId: string) {
@@ -438,5 +470,167 @@ describe("deleteEventAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockDeleteEvent).toHaveBeenCalled();
+  });
+});
+
+describe("createRecurringEventAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("未認証の場合 UNAUTHORIZED エラーを返す", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: null,
+    });
+
+    const result = await createRecurringEventAction({
+      guildId: "guild-1",
+      eventData: sampleSeriesInput,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+    expect(mockCreateRecurringSeries).not.toHaveBeenCalled();
+  });
+
+  it("restricted ギルドで管理権限がない場合 PERMISSION_DENIED を返す", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithNoPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
+    });
+
+    const result = await createRecurringEventAction({
+      guildId: "guild-1",
+      eventData: sampleSeriesInput,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("PERMISSION_DENIED");
+    }
+    expect(mockCreateRecurringSeries).not.toHaveBeenCalled();
+  });
+
+  it("restricted ギルドで管理権限がある場合にシリーズを作成する", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithAdminPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
+    });
+    mockCreateRecurringSeries.mockResolvedValueOnce({
+      success: true,
+      data: sampleSeriesRecord,
+    });
+
+    const result = await createRecurringEventAction({
+      guildId: "guild-1",
+      eventData: sampleSeriesInput,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe("series-1");
+      expect(result.data.rrule).toBe("FREQ=WEEKLY;BYDAY=TU");
+    }
+    expect(mockCreateRecurringSeries).toHaveBeenCalledWith(sampleSeriesInput);
+  });
+
+  it("非 restricted ギルドでは権限に関係なくシリーズを作成できる", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithNoPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: false },
+    });
+    mockCreateRecurringSeries.mockResolvedValueOnce({
+      success: true,
+      data: sampleSeriesRecord,
+    });
+
+    const result = await createRecurringEventAction({
+      guildId: "guild-1",
+      eventData: sampleSeriesInput,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockCreateRecurringSeries).toHaveBeenCalledWith(sampleSeriesInput);
+  });
+
+  it("EventService がエラーを返した場合にそのエラーを伝播する", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithAdminPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: false },
+    });
+    mockCreateRecurringSeries.mockResolvedValueOnce({
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "不正なRRULE文字列です。",
+      },
+    });
+
+    const result = await createRecurringEventAction({
+      guildId: "guild-1",
+      eventData: sampleSeriesInput,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("既存の createEventAction に影響しない", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithNoPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: false },
+    });
+    mockCreateEvent.mockResolvedValueOnce({
+      success: true,
+      data: { id: "event-1" },
+    });
+
+    const result = await createEventAction({
+      guildId: "guild-1",
+      eventData: {
+        guildId: "guild-1",
+        title: "Single Event",
+        startAt: new Date("2026-03-01T10:00:00Z"),
+        endAt: new Date("2026-03-01T11:00:00Z"),
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockCreateEvent).toHaveBeenCalled();
+    expect(mockCreateRecurringSeries).not.toHaveBeenCalled();
   });
 });

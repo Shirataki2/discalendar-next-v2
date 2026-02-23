@@ -17,12 +17,13 @@ import { revalidatePath } from "next/cache";
 import {
   type CalendarError,
   type CreateEventInput,
+  type CreateSeriesInput,
   createEventService,
   type MutationResult,
   type UpdateEventInput,
 } from "@/lib/calendar/event-service";
 import { checkEventPermission } from "@/lib/calendar/permission-check";
-import type { CalendarEvent } from "@/lib/calendar/types";
+import type { CalendarEvent, EventSeriesRecord } from "@/lib/calendar/types";
 import { getUserGuilds } from "@/lib/discord/client";
 import {
   canManageGuild,
@@ -333,6 +334,36 @@ export async function deleteEventAction(
 
   const eventService = createEventService(auth.supabase);
   return eventService.deleteEvent(input.eventId);
+}
+
+// ──────────────────────────────────────────────
+// Task 4.1 (recurring-events): 繰り返しイベント作成
+// ──────────────────────────────────────────────
+
+type CreateRecurringEventActionInput = {
+  guildId: string;
+  eventData: CreateSeriesInput;
+};
+
+/**
+ * 権限チェック付き繰り返しイベントシリーズ作成 Server Action
+ *
+ * 繰り返し設定が有効なイベントシリーズを作成する。
+ * 既存の createEventAction と並行し、UI 側で繰り返し有無に応じて呼び分ける。
+ *
+ * Requirements: 1.3, 1.5
+ */
+export async function createRecurringEventAction(
+  input: CreateRecurringEventActionInput
+): Promise<MutationResult<EventSeriesRecord>> {
+  const auth = await authorizeEventOperation(input.guildId, "create");
+
+  if (!auth.authorized) {
+    return auth.error;
+  }
+
+  const eventService = createEventService(auth.supabase);
+  return eventService.createRecurringSeries(input.eventData);
 }
 
 // ──────────────────────────────────────────────
