@@ -357,7 +357,7 @@ describe("updateEventAction", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(mockUpdateEvent).toHaveBeenCalledWith("event-1", {
+    expect(mockUpdateEvent).toHaveBeenCalledWith("guild-1", "event-1", {
       title: "Updated",
     });
   });
@@ -459,7 +459,7 @@ describe("deleteEventAction", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(mockDeleteEvent).toHaveBeenCalledWith("event-1");
+    expect(mockDeleteEvent).toHaveBeenCalledWith("guild-1", "event-1");
   });
 
   it("非 restricted ギルドでは権限に関係なくイベントを削除できる", async () => {
@@ -766,6 +766,7 @@ describe("updateOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockUpdateOccurrence).toHaveBeenCalledWith(
+      "guild-1",
       "series-1",
       sampleOccurrenceDate,
       sampleEventUpdate
@@ -791,6 +792,7 @@ describe("updateOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockUpdateSeries).toHaveBeenCalledWith(
+      "guild-1",
       "series-1",
       sampleSeriesUpdate
     );
@@ -820,6 +822,7 @@ describe("updateOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockSplitSeries).toHaveBeenCalledWith(
+      "guild-1",
       "series-1",
       sampleOccurrenceDate,
       sampleSeriesUpdate
@@ -925,6 +928,7 @@ describe("deleteOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockDeleteOccurrence).toHaveBeenCalledWith(
+      "guild-1",
       "series-1",
       sampleOccurrenceDate
     );
@@ -947,7 +951,7 @@ describe("deleteOccurrenceAction", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(mockDeleteSeries).toHaveBeenCalledWith("series-1");
+    expect(mockDeleteSeries).toHaveBeenCalledWith("guild-1", "series-1");
     expect(mockDeleteOccurrence).not.toHaveBeenCalled();
     expect(mockTruncateSeries).not.toHaveBeenCalled();
   });
@@ -968,6 +972,7 @@ describe("deleteOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockTruncateSeries).toHaveBeenCalledWith(
+      "guild-1",
       "series-1",
       sampleOccurrenceDate
     );

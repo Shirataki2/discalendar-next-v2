@@ -318,7 +318,11 @@ export async function updateEventAction(
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.updateEvent(input.eventId, input.eventData);
+  return eventService.updateEvent(
+    input.guildId,
+    input.eventId,
+    input.eventData
+  );
 }
 
 /**
@@ -334,7 +338,7 @@ export async function deleteEventAction(
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.deleteEvent(input.eventId);
+  return eventService.deleteEvent(input.guildId, input.eventId);
 }
 
 // ──────────────────────────────────────────────
@@ -412,17 +416,20 @@ export async function updateOccurrenceAction(
   switch (input.scope) {
     case "this":
       return eventService.updateOccurrence(
+        input.guildId,
         input.seriesId,
         input.occurrenceDate,
         input.eventData as UpdateEventInput
       );
     case "all":
       return eventService.updateSeries(
+        input.guildId,
         input.seriesId,
         input.eventData as UpdateSeriesInput
       );
     case "following":
       return eventService.splitSeries(
+        input.guildId,
         input.seriesId,
         input.occurrenceDate,
         input.eventData as UpdateSeriesInput
@@ -458,13 +465,18 @@ export async function deleteOccurrenceAction(
   switch (input.scope) {
     case "this":
       return eventService.deleteOccurrence(
+        input.guildId,
         input.seriesId,
         input.occurrenceDate
       );
     case "all":
-      return eventService.deleteSeries(input.seriesId);
+      return eventService.deleteSeries(input.guildId, input.seriesId);
     case "following":
-      return eventService.truncateSeries(input.seriesId, input.occurrenceDate);
+      return eventService.truncateSeries(
+        input.guildId,
+        input.seriesId,
+        input.occurrenceDate
+      );
     default: {
       const _exhaustive: never = input.scope;
       return _exhaustive;

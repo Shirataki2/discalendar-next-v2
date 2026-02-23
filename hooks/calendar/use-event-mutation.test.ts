@@ -60,7 +60,7 @@ describe("useEventMutation", () => {
   describe("初期状態", () => {
     it("should initialize with all loading states as false", () => {
       const mockService = createMockEventService();
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       expect(result.current.state.isCreating).toBe(false);
       expect(result.current.state.isUpdating).toBe(false);
@@ -69,7 +69,7 @@ describe("useEventMutation", () => {
 
     it("should initialize with error as null", () => {
       const mockService = createMockEventService();
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       expect(result.current.state.error).toBeNull();
     });
@@ -88,7 +88,7 @@ describe("useEventMutation", () => {
         createEvent: vi.fn().mockReturnValue(pendingPromise),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       act(() => {
         result.current.createEvent({
@@ -115,7 +115,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       await act(async () => {
         await result.current.createEvent({
@@ -138,7 +138,7 @@ describe("useEventMutation", () => {
         createEvent: createEventMock,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       const input: CreateEventInput = {
         guildId: "guild-123",
@@ -164,7 +164,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       let createResult: MutationResult<CalendarEvent> | undefined;
       await act(async () => {
@@ -194,7 +194,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       await act(async () => {
         await result.current.createEvent({
@@ -219,7 +219,7 @@ describe("useEventMutation", () => {
       const onSuccess = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, { onSuccess })
+        useEventMutation(mockService, "guild-123", { onSuccess })
       );
 
       await act(async () => {
@@ -248,7 +248,7 @@ describe("useEventMutation", () => {
       const onError = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, { onError })
+        useEventMutation(mockService, "guild-123", { onError })
       );
 
       await act(async () => {
@@ -277,7 +277,7 @@ describe("useEventMutation", () => {
         updateEvent: vi.fn().mockReturnValue(pendingPromise),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       act(() => {
         result.current.updateEvent("event-1", { title: "更新されたタイトル" });
@@ -299,7 +299,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       await act(async () => {
         await result.current.updateEvent("event-1", {
@@ -319,7 +319,7 @@ describe("useEventMutation", () => {
         updateEvent: updateEventMock,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       const input: UpdateEventInput = {
         title: "更新されたタイトル",
@@ -330,7 +330,7 @@ describe("useEventMutation", () => {
         await result.current.updateEvent("event-1", input);
       });
 
-      expect(updateEventMock).toHaveBeenCalledWith("event-1", input);
+      expect(updateEventMock).toHaveBeenCalledWith("guild-123", "event-1", input);
     });
 
     it("should return success result on successful update", async () => {
@@ -345,7 +345,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       let updateResult: MutationResult<CalendarEvent> | undefined;
       await act(async () => {
@@ -372,7 +372,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       await act(async () => {
         await result.current.updateEvent("event-1", { title: "更新テスト" });
@@ -392,7 +392,7 @@ describe("useEventMutation", () => {
       const onSuccess = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, { onSuccess })
+        useEventMutation(mockService, "guild-123", { onSuccess })
       );
 
       await act(async () => {
@@ -416,7 +416,7 @@ describe("useEventMutation", () => {
       const onError = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, { onError })
+        useEventMutation(mockService, "guild-123", { onError })
       );
 
       await act(async () => {
@@ -438,7 +438,7 @@ describe("useEventMutation", () => {
         deleteEvent: vi.fn().mockReturnValue(pendingPromise),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       act(() => {
         result.current.deleteEvent("event-1");
@@ -460,7 +460,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       await act(async () => {
         await result.current.deleteEvent("event-1");
@@ -478,13 +478,13 @@ describe("useEventMutation", () => {
         deleteEvent: deleteEventMock,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       await act(async () => {
         await result.current.deleteEvent("event-1");
       });
 
-      expect(deleteEventMock).toHaveBeenCalledWith("event-1");
+      expect(deleteEventMock).toHaveBeenCalledWith("guild-123", "event-1");
     });
 
     it("should return success result on successful deletion", async () => {
@@ -495,7 +495,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       let deleteResult: MutationResult<void> | undefined;
       await act(async () => {
@@ -517,7 +517,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       await act(async () => {
         await result.current.deleteEvent("event-1");
@@ -537,7 +537,7 @@ describe("useEventMutation", () => {
       const onSuccess = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, { onSuccess })
+        useEventMutation(mockService, "guild-123", { onSuccess })
       );
 
       await act(async () => {
@@ -561,7 +561,7 @@ describe("useEventMutation", () => {
       const onError = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, { onError })
+        useEventMutation(mockService, "guild-123", { onError })
       );
 
       await act(async () => {
@@ -585,7 +585,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       // まずエラーを発生させる
       await act(async () => {
@@ -622,7 +622,7 @@ describe("useEventMutation", () => {
         createEvent: createEventMock,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       // 最初の作成を開始
       act(() => {
@@ -656,7 +656,7 @@ describe("useEventMutation", () => {
         }),
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       // 作成と削除を同時に実行
       await act(async () => {
@@ -692,7 +692,7 @@ describe("useEventMutation", () => {
         createEvent: createEventMock,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService));
+      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
 
       // 失敗する操作
       await act(async () => {

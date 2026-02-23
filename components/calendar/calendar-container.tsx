@@ -602,7 +602,7 @@ export function CalendarContainer({
     state: mutationState,
     updateEvent,
     deleteEvent,
-  } = useEventMutation(eventServiceRef.current);
+  } = useEventMutation(eventServiceRef.current, guildId as string);
 
   /**
    * イベントデータを取得する

@@ -96,6 +96,7 @@ export interface UseEventMutationReturn {
  */
 export function useEventMutation(
   eventService: EventServiceInterface,
+  guildId: string,
   options?: UseEventMutationOptions
 ): UseEventMutationReturn {
   // ローディング状態
@@ -144,7 +145,7 @@ export function useEventMutation(
       setError(null);
 
       try {
-        const result = await eventService.updateEvent(id, data);
+        const result = await eventService.updateEvent(guildId, id, data);
 
         if (result.success) {
           options?.onSuccess?.();
@@ -158,7 +159,7 @@ export function useEventMutation(
         setIsUpdating(false);
       }
     },
-    [eventService, options]
+    [eventService, guildId, options]
   );
 
   /**
@@ -170,7 +171,7 @@ export function useEventMutation(
       setError(null);
 
       try {
-        const result = await eventService.deleteEvent(id);
+        const result = await eventService.deleteEvent(guildId, id);
 
         if (result.success) {
           options?.onSuccess?.();
@@ -184,7 +185,7 @@ export function useEventMutation(
         setIsDeleting(false);
       }
     },
-    [eventService, options]
+    [eventService, guildId, options]
   );
 
   /**

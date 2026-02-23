@@ -968,7 +968,7 @@ describe("createEventService - updateEvent", () => {
       location: "大阪",
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -1014,7 +1014,7 @@ describe("createEventService - updateEvent", () => {
       title: "部分更新されたタイトル",
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -1060,7 +1060,7 @@ describe("createEventService - updateEvent", () => {
       endAt: new Date("2025-12-20T12:00:00Z"),
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(true);
 
@@ -1080,7 +1080,7 @@ describe("createEventService - updateEvent", () => {
       title: "",
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1097,7 +1097,7 @@ describe("createEventService - updateEvent", () => {
       title: "a".repeat(256),
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1113,7 +1113,7 @@ describe("createEventService - updateEvent", () => {
       endAt: new Date("2025-12-15T10:00:00Z"),
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1133,7 +1133,7 @@ describe("createEventService - updateEvent", () => {
       title: "更新テスト",
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1152,7 +1152,7 @@ describe("createEventService - updateEvent", () => {
       title: "更新テスト",
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1189,7 +1189,7 @@ describe("createEventService - updateEvent", () => {
       description: "  トリムされた説明  ",
     };
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(true);
 
@@ -1228,7 +1228,7 @@ describe("createEventService - updateEvent", () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const input: UpdateEventInput = {};
 
-    const result = await service.updateEvent("event-1", input);
+    const result = await service.updateEvent("guild-1", "event-1", input);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -1248,7 +1248,7 @@ describe("createEventService - deleteEvent", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
 
-    const result = await service.deleteEvent("event-1");
+    const result = await service.deleteEvent("guild-1", "event-1");
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -1266,7 +1266,7 @@ describe("createEventService - deleteEvent", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
 
-    const result = await service.deleteEvent("event-to-delete");
+    const result = await service.deleteEvent("guild-1", "event-to-delete");
 
     expect(result.success).toBe(true);
     // 削除操作はDELETEメソッドを使用し、復元不可能な完全削除を保証
@@ -1282,7 +1282,7 @@ describe("createEventService - deleteEvent", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
 
-    const result = await service.deleteEvent("event-1");
+    const result = await service.deleteEvent("guild-1", "event-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1299,7 +1299,7 @@ describe("createEventService - deleteEvent", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
 
-    const result = await service.deleteEvent("event-1");
+    const result = await service.deleteEvent("guild-1", "event-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1331,7 +1331,7 @@ describe("createEventService - deleteEvent", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
 
-    const result = await service.deleteEvent("event-1");
+    const result = await service.deleteEvent("guild-1", "event-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1347,7 +1347,7 @@ describe("createEventService - deleteEvent", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
 
-    const result = await service.deleteEvent("non-existent-event");
+    const result = await service.deleteEvent("guild-1", "non-existent-event");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1597,7 +1597,7 @@ describe("createEventService - notification persistence", () => {
         notifications,
       };
 
-      const result = await service.updateEvent("event-1", input);
+      const result = await service.updateEvent("guild-1", "event-1", input);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -1643,7 +1643,7 @@ describe("createEventService - notification persistence", () => {
         // notifications は意図的に省略 → 既存値を維持
       };
 
-      const result = await service.updateEvent("event-1", input);
+      const result = await service.updateEvent("guild-1", "event-1", input);
 
       expect(result.success).toBe(true);
 
@@ -1684,7 +1684,7 @@ describe("createEventService - notification persistence", () => {
         notifications: [], // 全通知を削除
       };
 
-      const result = await service.updateEvent("event-1", input);
+      const result = await service.updateEvent("guild-1", "event-1", input);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -1734,7 +1734,7 @@ describe("createEventService - notification persistence", () => {
         notifications,
       };
 
-      const result = await service.updateEvent("event-1", input);
+      const result = await service.updateEvent("guild-1", "event-1", input);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -1795,7 +1795,7 @@ describe("createEventService - notification persistence", () => {
         ],
       };
 
-      const result = await service.updateEvent("event-1", input);
+      const result = await service.updateEvent("guild-1", "event-1", input);
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -2917,7 +2917,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(insertBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateOccurrence("series-1", originalDate, {
+    const result = await service.updateOccurrence("guild-1", "series-1", originalDate, {
       title: "変更された定例会",
       startAt: new Date("2026-03-09T11:00:00Z"),
       endAt: new Date("2026-03-09T12:00:00Z"),
@@ -2960,7 +2960,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(insertBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    await service.updateOccurrence("series-1", originalDate, {
+    await service.updateOccurrence("guild-1", "series-1", originalDate, {
       title: "変更された定例会",
       startAt: new Date("2026-03-09T11:00:00Z"),
       endAt: new Date("2026-03-09T12:00:00Z"),
@@ -3008,7 +3008,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     // descriptionのみ変更、他はシリーズのデフォルト値を使用
-    await service.updateOccurrence("series-1", originalDate, {
+    await service.updateOccurrence("guild-1", "series-1", originalDate, {
       description: "新しい説明",
     });
 
@@ -3040,7 +3040,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
     mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateOccurrence("non-existent", originalDate, {
+    const result = await service.updateOccurrence("guild-1", "non-existent", originalDate, {
       title: "変更",
     });
 
@@ -3052,7 +3052,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
 
   it("should return VALIDATION_ERROR when title is empty", async () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateOccurrence("series-1", originalDate, {
+    const result = await service.updateOccurrence("guild-1", "series-1", originalDate, {
       title: "",
     });
 
@@ -3068,7 +3068,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
 
   it("should return VALIDATION_ERROR when title exceeds 255 characters", async () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateOccurrence("series-1", originalDate, {
+    const result = await service.updateOccurrence("guild-1", "series-1", originalDate, {
       title: "a".repeat(256),
     });
 
@@ -3081,7 +3081,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
 
   it("should return VALIDATION_ERROR when endAt is before startAt", async () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateOccurrence("series-1", originalDate, {
+    const result = await service.updateOccurrence("guild-1", "series-1", originalDate, {
       startAt: new Date("2026-03-09T12:00:00Z"),
       endAt: new Date("2026-03-09T10:00:00Z"),
     });
@@ -3104,7 +3104,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(insertBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateOccurrence("series-1", originalDate, {
+    const result = await service.updateOccurrence("guild-1", "series-1", originalDate, {
       title: "変更された定例会",
     });
 
@@ -3142,7 +3142,7 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(insertBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    await service.updateOccurrence("series-1", originalDate, {
+    await service.updateOccurrence("guild-1", "series-1", originalDate, {
       title: "  トリムされたタイトル  ",
       description: "  トリムされた説明  ",
     });
@@ -3195,7 +3195,7 @@ describe("createEventService - deleteOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(updateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+    const result = await service.deleteOccurrence("guild-1", "series-1", occurrenceDate);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -3228,7 +3228,7 @@ describe("createEventService - deleteOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(updateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    await service.deleteOccurrence("series-1", occurrenceDate);
+    await service.deleteOccurrence("guild-1", "series-1", occurrenceDate);
 
     const updateCall = updateBuilder._mocks.update.mock.calls[0]?.[0];
     expect(updateCall).toBeDefined();
@@ -3247,7 +3247,7 @@ describe("createEventService - deleteOccurrence (Task 3.3)", () => {
     mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteOccurrence("non-existent", occurrenceDate);
+    const result = await service.deleteOccurrence("guild-1", "non-existent", occurrenceDate);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3266,7 +3266,7 @@ describe("createEventService - deleteOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(updateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+    const result = await service.deleteOccurrence("guild-1", "series-1", occurrenceDate);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3285,7 +3285,7 @@ describe("createEventService - deleteOccurrence (Task 3.3)", () => {
       .mockReturnValueOnce(updateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+    const result = await service.deleteOccurrence("guild-1", "series-1", occurrenceDate);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3318,7 +3318,7 @@ describe("createEventService - deleteOccurrence (Task 3.3)", () => {
     mockSupabaseClient.from.mockReturnValue(queryBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteOccurrence("series-1", occurrenceDate);
+    const result = await service.deleteOccurrence("guild-1", "series-1", occurrenceDate);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3435,7 +3435,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);  // UPDATE series
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", { title: "新しい定例会名" });
+    const result = await service.updateSeries("guild-1", "series-1", { title: "新しい定例会名" });
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -3461,7 +3461,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", {
+    const result = await service.updateSeries("guild-1", "series-1", {
       title: "更新後の会議",
       description: "新しい説明",
       color: "#EF4444",
@@ -3507,7 +3507,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", {
+    const result = await service.updateSeries("guild-1", "series-1", {
       rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
       startAt: newStartAt,
       endAt: newEndAt,
@@ -3542,7 +3542,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);   // UPDATE series
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", {
+    const result = await service.updateSeries("guild-1", "series-1", {
       title: "全体更新",
       resetExceptions: true,
     });
@@ -3569,7 +3569,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", {
+    const result = await service.updateSeries("guild-1", "series-1", {
       title: "タイトル変更のみ",
     });
 
@@ -3587,7 +3587,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
     mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("non-existent", { title: "テスト" });
+    const result = await service.updateSeries("guild-1", "non-existent", { title: "テスト" });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3597,7 +3597,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
 
   it("should return VALIDATION_ERROR for empty title", async () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", { title: "" });
+    const result = await service.updateSeries("guild-1", "series-1", { title: "" });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3608,7 +3608,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
   it("should return VALIDATION_ERROR for title exceeding 255 characters", async () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const longTitle = "a".repeat(256);
-    const result = await service.updateSeries("series-1", { title: longTitle });
+    const result = await service.updateSeries("guild-1", "series-1", { title: longTitle });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3618,7 +3618,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
 
   it("should return VALIDATION_ERROR when endAt is before startAt", async () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", {
+    const result = await service.updateSeries("guild-1", "series-1", {
       startAt: new Date("2026-03-02T15:00:00Z"),
       endAt: new Date("2026-03-02T14:00:00Z"),
     });
@@ -3634,7 +3634,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
     mockSupabaseClient.from.mockReturnValueOnce(seriesSelectBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", { rrule: "INVALID_RRULE" });
+    const result = await service.updateSeries("guild-1", "series-1", { rrule: "INVALID_RRULE" });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3653,7 +3653,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", { title: "テスト" });
+    const result = await service.updateSeries("guild-1", "series-1", { title: "テスト" });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3686,7 +3686,7 @@ describe("createEventService - updateSeries (Task 3.4)", () => {
     mockSupabaseClient.from.mockReturnValue(queryBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.updateSeries("series-1", { title: "テスト" });
+    const result = await service.updateSeries("guild-1", "series-1", { title: "テスト" });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3709,7 +3709,7 @@ describe("createEventService - deleteSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesDeleteBuilder);   // DELETE series
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteSeries("series-1");
+    const result = await service.deleteSeries("guild-1", "series-1");
 
     expect(result.success).toBe(true);
 
@@ -3730,7 +3730,7 @@ describe("createEventService - deleteSeries (Task 3.4)", () => {
     mockSupabaseClient.from.mockReturnValueOnce(exceptionDeleteBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteSeries("series-1");
+    const result = await service.deleteSeries("guild-1", "series-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3749,7 +3749,7 @@ describe("createEventService - deleteSeries (Task 3.4)", () => {
       .mockReturnValueOnce(seriesDeleteBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteSeries("series-1");
+    const result = await service.deleteSeries("guild-1", "series-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3765,7 +3765,7 @@ describe("createEventService - deleteSeries (Task 3.4)", () => {
     mockSupabaseClient.from.mockReturnValueOnce(exceptionDeleteBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteSeries("series-1");
+    const result = await service.deleteSeries("guild-1", "series-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3795,7 +3795,7 @@ describe("createEventService - deleteSeries (Task 3.4)", () => {
     mockSupabaseClient.from.mockReturnValue(queryBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.deleteSeries("series-1");
+    const result = await service.deleteSeries("guild-1", "series-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -3873,7 +3873,7 @@ describe("createEventService - splitSeries (Task 3.5)", () => {
       .mockReturnValueOnce(seriesInsertBuilder);  // INSERT new
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.splitSeries("series-1", splitDate, newInput);
+    const result = await service.splitSeries("guild-1", "series-1", splitDate, newInput);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -3928,7 +3928,7 @@ describe("createEventService - splitSeries (Task 3.5)", () => {
       .mockReturnValueOnce(seriesInsertBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.splitSeries("series-1", splitDate, newInput);
+    const result = await service.splitSeries("guild-1", "series-1", splitDate, newInput);
 
     expect(result.success).toBe(true);
 
@@ -3955,6 +3955,7 @@ describe("createEventService - splitSeries (Task 3.5)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const result = await service.splitSeries(
+      "guild-1",
       "non-existent",
       new Date("2026-04-06T10:00:00Z"),
       { rrule: "FREQ=DAILY" },
@@ -3991,7 +3992,7 @@ describe("createEventService - splitSeries (Task 3.5)", () => {
       .mockReturnValueOnce(rollbackUpdateBuilder); // UPDATE original (復元)
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.splitSeries("series-1", splitDate, { rrule: "FREQ=DAILY" });
+    const result = await service.splitSeries("guild-1", "series-1", splitDate, { rrule: "FREQ=DAILY" });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -4019,6 +4020,7 @@ describe("createEventService - splitSeries (Task 3.5)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const result = await service.splitSeries(
+      "guild-1",
       "series-1",
       new Date("2026-04-06T10:00:00Z"),
       { rrule: "FREQ=DAILY" },
@@ -4056,6 +4058,7 @@ describe("createEventService - splitSeries (Task 3.5)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const result = await service.splitSeries(
+      "guild-1",
       "series-1",
       new Date("2026-04-06T10:00:00Z"),
       { rrule: "FREQ=DAILY" },
@@ -4105,7 +4108,7 @@ describe("createEventService - splitSeries (Task 3.5)", () => {
       .mockReturnValueOnce(seriesInsertBuilder);
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.splitSeries("series-1", splitDate, { rrule: "FREQ=DAILY" });
+    const result = await service.splitSeries("guild-1", "series-1", splitDate, { rrule: "FREQ=DAILY" });
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -4160,7 +4163,7 @@ describe("createEventService - truncateSeries (Task 3.5)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);          // UPDATE
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.truncateSeries("series-1", untilDate);
+    const result = await service.truncateSeries("guild-1", "series-1", untilDate);
 
     expect(result.success).toBe(true);
 
@@ -4200,7 +4203,7 @@ describe("createEventService - truncateSeries (Task 3.5)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);          // UPDATE
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.truncateSeries("series-1", untilDate);
+    const result = await service.truncateSeries("guild-1", "series-1", untilDate);
 
     expect(result.success).toBe(true);
 
@@ -4221,6 +4224,7 @@ describe("createEventService - truncateSeries (Task 3.5)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const result = await service.truncateSeries(
+      "guild-1",
       "non-existent",
       new Date("2026-04-06T10:00:00Z"),
     );
@@ -4245,6 +4249,7 @@ describe("createEventService - truncateSeries (Task 3.5)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const result = await service.truncateSeries(
+      "guild-1",
       "series-1",
       new Date("2026-04-06T10:00:00Z"),
     );
@@ -4281,6 +4286,7 @@ describe("createEventService - truncateSeries (Task 3.5)", () => {
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const result = await service.truncateSeries(
+      "guild-1",
       "series-1",
       new Date("2026-04-06T10:00:00Z"),
     );
@@ -4312,7 +4318,7 @@ describe("createEventService - truncateSeries (Task 3.5)", () => {
       .mockReturnValueOnce(seriesUpdateBuilder);        // UPDATE
 
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-    const result = await service.truncateSeries("series-1", untilDate);
+    const result = await service.truncateSeries("guild-1", "series-1", untilDate);
 
     expect(result.success).toBe(true);
 

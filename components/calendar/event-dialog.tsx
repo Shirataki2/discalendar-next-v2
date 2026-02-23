@@ -209,7 +209,10 @@ export function EventDialog({
   const [isScopedUpdating, setIsScopedUpdating] = useState(false);
 
   // useEventMutation hook for CRUD operations
-  const { state, createEvent, updateEvent } = useEventMutation(eventService);
+  const { state, createEvent, updateEvent } = useEventMutation(
+    eventService,
+    guildId
+  );
 
   // ダイアログタイトル
   const dialogTitle = mode === "create" ? "新規予定作成" : "予定を編集";

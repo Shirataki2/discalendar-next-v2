@@ -247,14 +247,15 @@ export interface EventServiceInterface {
    * @param input - 更新パラメータ（部分更新に対応）
    * @returns 更新されたイベントまたは エラー
    */
-  updateEvent(id: string, input: UpdateEventInput): Promise<MutationResult<CalendarEvent>>;
+  updateEvent(guildId: string, id: string, input: UpdateEventInput): Promise<MutationResult<CalendarEvent>>;
 
   /**
    * イベントを完全に削除
+   * @param guildId - ギルドID（IDOR防止用スコープ）
    * @param id - 削除するイベントのID
    * @returns 成功時はvoid、失敗時はエラー
    */
-  deleteEvent(id: string): Promise<MutationResult<void>>;
+  deleteEvent(guildId: string, id: string): Promise<MutationResult<void>>;
 
   /**
    * 繰り返しイベントシリーズを作成
@@ -272,12 +273,14 @@ export interface EventServiceInterface {
 
   /**
    * 単一オカレンスを編集（例外レコード作成）
+   * @param guildId - ギルドID（IDOR防止用スコープ）
    * @param seriesId - シリーズID
    * @param originalDate - 元のオカレンス日付
    * @param input - 更新パラメータ
    * @returns 作成された例外イベントまたはエラー
    */
   updateOccurrence(
+    guildId: string,
     seriesId: string,
     originalDate: Date,
     input: UpdateEventInput
@@ -285,44 +288,52 @@ export interface EventServiceInterface {
 
   /**
    * 単一オカレンスを削除（EXDATE追加）
+   * @param guildId - ギルドID（IDOR防止用スコープ）
    * @param seriesId - シリーズID
    * @param occurrenceDate - 削除するオカレンス日付
    * @returns 成功時はvoid、失敗時はエラー
    */
   deleteOccurrence(
+    guildId: string,
     seriesId: string,
     occurrenceDate: Date
   ): Promise<MutationResult<void>>;
 
   /**
    * シリーズ全体を更新
+   * @param guildId - ギルドID（IDOR防止用スコープ）
    * @param seriesId - シリーズID
    * @param input - 更新パラメータ（部分更新に対応）
    * @returns 更新されたシリーズレコードまたはエラー
    */
   updateSeries(
+    guildId: string,
     seriesId: string,
     input: UpdateSeriesInput
   ): Promise<MutationResult<EventSeriesRecord>>;
 
   /**
    * シリーズ全体を削除（関連する例外レコードも含む）
+   * @param guildId - ギルドID（IDOR防止用スコープ）
    * @param seriesId - シリーズID
    * @returns 成功時はvoid、失敗時はエラー
    */
   deleteSeries(
+    guildId: string,
     seriesId: string
   ): Promise<MutationResult<void>>;
 
   /**
    * シリーズを分割（これ以降の編集）
    * 元のシリーズを分割日の前日で終了させ、新しいシリーズを分割日から作成する
+   * @param guildId - ギルドID（IDOR防止用スコープ）
    * @param seriesId - 元のシリーズID
    * @param splitDate - 分割日（新シリーズの開始日）
    * @param newInput - 新シリーズに適用する変更（未指定フィールドは元シリーズから継承）
    * @returns 作成された新シリーズレコードまたはエラー
    */
   splitSeries(
+    guildId: string,
     seriesId: string,
     splitDate: Date,
     newInput: UpdateSeriesInput
@@ -331,11 +342,13 @@ export interface EventServiceInterface {
   /**
    * シリーズを切り詰め（これ以降の削除）
    * RRULEにUNTILパラメータを設定し、指定日以降のオカレンスを生成しないようにする
+   * @param guildId - ギルドID（IDOR防止用スコープ）
    * @param seriesId - シリーズID
    * @param untilDate - この日以降のオカレンスを停止する日付
    * @returns 成功時はvoid、失敗時はエラー
    */
   truncateSeries(
+    guildId: string,
     seriesId: string,
     untilDate: Date
   ): Promise<MutationResult<void>>;
@@ -602,7 +615,7 @@ export function createEventService(
       }
     },
 
-    async updateEvent(id: string, input: UpdateEventInput): Promise<MutationResult<CalendarEvent>> {
+    async updateEvent(guildId: string, id: string, input: UpdateEventInput): Promise<MutationResult<CalendarEvent>> {
       const {
         title,
         startAt,
@@ -682,11 +695,12 @@ export function createEventService(
           updateData.notifications = notifications;
         }
 
-        // SupabaseへのUPDATE操作
+        // SupabaseへのUPDATE操作（guild_idでスコープしてIDOR防止）
         const { data, error } = await supabase
           .from("events")
           .update(updateData)
           .eq("id", id)
+          .eq("guild_id", guildId)
           .select()
           .single();
 
@@ -1013,6 +1027,7 @@ export function createEventService(
     },
 
     async updateOccurrence(
+      guildId: string,
       seriesId: string,
       originalDate: Date,
       input: UpdateEventInput
@@ -1080,11 +1095,12 @@ export function createEventService(
           }
         }
 
-        // シリーズを取得して存在確認 + デフォルト値の取得
+        // シリーズを取得して存在確認 + デフォルト値の取得（guild_idでスコープしてIDOR防止）
         const { data: seriesData, error: seriesError } = await supabase
           .from("event_series")
           .select("*")
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .single();
 
         if (seriesError || !seriesData) {
@@ -1163,15 +1179,17 @@ export function createEventService(
     },
 
     async deleteOccurrence(
+      guildId: string,
       seriesId: string,
       occurrenceDate: Date
     ): Promise<MutationResult<void>> {
       try {
-        // シリーズを取得して存在確認 + 現在のexdatesを取得
+        // シリーズを取得して存在確認 + 現在のexdatesを取得（guild_idでスコープしてIDOR防止）
         const { data: seriesData, error: seriesError } = await supabase
           .from("event_series")
           .select("*")
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .single();
 
         if (seriesError || !seriesData) {
@@ -1188,11 +1206,12 @@ export function createEventService(
         const series = seriesData as EventSeriesRecord;
         const updatedExdates = [...series.exdates, occurrenceDate.toISOString()];
 
-        // exdatesを更新
+        // exdatesを更新（guild_idでスコープしてIDOR防止）
         const { error: updateError } = await supabase
           .from("event_series")
           .update({ exdates: updatedExdates })
-          .eq("id", seriesId);
+          .eq("id", seriesId)
+          .eq("guild_id", guildId);
 
         if (updateError) {
           const errorCode = classifySupabaseError(updateError, "delete");
@@ -1232,13 +1251,14 @@ export function createEventService(
      * deleteOccurrence() で EXDATE 追加を使用してください。
      * このメソッドはレコードの物理削除を行います。
      */
-    async deleteEvent(id: string): Promise<MutationResult<void>> {
+    async deleteEvent(guildId: string, id: string): Promise<MutationResult<void>> {
       try {
-        // SupabaseへのDELETE操作
+        // SupabaseへのDELETE操作（guild_idでスコープしてIDOR防止）
         const { error } = await supabase
           .from("events")
           .delete()
-          .eq("id", id);
+          .eq("id", id)
+          .eq("guild_id", guildId);
 
         // Supabaseエラーの処理
         if (error) {
@@ -1275,6 +1295,7 @@ export function createEventService(
     },
 
     async updateSeries(
+      guildId: string,
       seriesId: string,
       input: UpdateSeriesInput
     ): Promise<MutationResult<EventSeriesRecord>> {
@@ -1331,11 +1352,12 @@ export function createEventService(
           }
         }
 
-        // シリーズを取得して存在確認
+        // シリーズを取得して存在確認（guild_idでスコープしてIDOR防止）
         const { data: seriesData, error: seriesError } = await supabase
           .from("event_series")
           .select("*")
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .single();
 
         if (seriesError || !seriesData) {
@@ -1424,6 +1446,7 @@ export function createEventService(
           .from("event_series")
           .update(updateData)
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .select()
           .single();
 
@@ -1458,13 +1481,14 @@ export function createEventService(
       }
     },
 
-    async deleteSeries(seriesId: string): Promise<MutationResult<void>> {
+    async deleteSeries(guildId: string, seriesId: string): Promise<MutationResult<void>> {
       try {
-        // Step 1: 関連する例外レコードを削除
+        // Step 1: 関連する例外レコードを削除（guild_idでスコープしてIDOR防止）
         const { error: deleteExceptionsError } = await supabase
           .from("events")
           .delete()
-          .eq("series_id", seriesId);
+          .eq("series_id", seriesId)
+          .eq("guild_id", guildId);
 
         if (deleteExceptionsError) {
           const errorCode = classifySupabaseError(deleteExceptionsError, "delete");
@@ -1478,11 +1502,12 @@ export function createEventService(
           };
         }
 
-        // Step 2: シリーズを削除
+        // Step 2: シリーズを削除（guild_idでスコープしてIDOR防止）
         const { error: deleteSeriesError } = await supabase
           .from("event_series")
           .delete()
-          .eq("id", seriesId);
+          .eq("id", seriesId)
+          .eq("guild_id", guildId);
 
         if (deleteSeriesError) {
           const errorCode = classifySupabaseError(deleteSeriesError, "delete");
@@ -1516,16 +1541,18 @@ export function createEventService(
     },
 
     async splitSeries(
+      guildId: string,
       seriesId: string,
       splitDate: Date,
       newInput: UpdateSeriesInput
     ): Promise<MutationResult<EventSeriesRecord>> {
       try {
-        // Step 1: 元シリーズを取得して存在確認
+        // Step 1: 元シリーズを取得して存在確認（guild_idでスコープしてIDOR防止）
         const { data: seriesData, error: seriesError } = await supabase
           .from("event_series")
           .select("*")
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .single();
 
         if (seriesError || !seriesData) {
@@ -1542,7 +1569,7 @@ export function createEventService(
         const originalSeries = seriesData as EventSeriesRecord;
         const originalRrule = originalSeries.rrule;
 
-        // Step 2: 元シリーズのRRULEにUNTILを追加（分割日の前日23:59:59 UTC）
+        // Step 2: 元シリーズのRRULEにUNTILを追加（分割日の前日23:59:59 UTC）（guild_idでスコープしてIDOR防止）
         const untilDate = new Date(splitDate.getTime() - 1);
         const untilStr = formatDateUTC(untilDate);
         const updatedRrule = addUntilToRrule(originalRrule, untilStr);
@@ -1551,6 +1578,7 @@ export function createEventService(
           .from("event_series")
           .update({ rrule: updatedRrule })
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .select()
           .single();
 
@@ -1596,11 +1624,12 @@ export function createEventService(
           .single();
 
         if (insertError) {
-          // 補償処理: 元シリーズのRRULEを復元
+          // 補償処理: 元シリーズのRRULEを復元（guild_idでスコープしてIDOR防止）
           const { error: compensationError } = await supabase
             .from("event_series")
             .update({ rrule: originalRrule })
             .eq("id", seriesId)
+            .eq("guild_id", guildId)
             .select()
             .single();
 
@@ -1648,15 +1677,17 @@ export function createEventService(
     },
 
     async truncateSeries(
+      guildId: string,
       seriesId: string,
       untilDate: Date
     ): Promise<MutationResult<void>> {
       try {
-        // Step 1: シリーズを取得して存在確認
+        // Step 1: シリーズを取得して存在確認（guild_idでスコープしてIDOR防止）
         const { data: seriesData, error: seriesError } = await supabase
           .from("event_series")
           .select("*")
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .single();
 
         if (seriesError || !seriesData) {
@@ -1672,11 +1703,12 @@ export function createEventService(
 
         const series = seriesData as EventSeriesRecord;
 
-        // Step 2: 指定日以降の例外レコードを削除
+        // Step 2: 指定日以降の例外レコードを削除（guild_idでスコープしてIDOR防止）
         const { error: deleteExceptionsError } = await supabase
           .from("events")
           .delete()
           .eq("series_id", seriesId)
+          .eq("guild_id", guildId)
           .gte("original_date", untilDate.toISOString());
 
         if (deleteExceptionsError) {
@@ -1706,6 +1738,7 @@ export function createEventService(
             exdates: filteredExdates,
           })
           .eq("id", seriesId)
+          .eq("guild_id", guildId)
           .select()
           .single();
 
