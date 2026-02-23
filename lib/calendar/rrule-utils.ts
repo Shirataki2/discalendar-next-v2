@@ -271,9 +271,15 @@ export function toSummaryText(rrule: string, dtstart: Date): string {
  * @param rrule - RRULE 文字列
  * @returns バリデーション結果
  */
+const MAX_RRULE_LENGTH = 1000;
+
 export function validateRrule(rrule: string): RruleValidationResult {
   if (!rrule || rrule.trim().length === 0) {
     return { valid: false, error: "RRULE文字列が空です。" };
+  }
+
+  if (rrule.length > MAX_RRULE_LENGTH) {
+    return { valid: false, error: `RRULE文字列が長すぎます（最大${MAX_RRULE_LENGTH}文字）。` };
   }
 
   // FREQ が含まれていることを確認

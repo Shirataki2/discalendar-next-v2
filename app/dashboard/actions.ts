@@ -45,6 +45,23 @@ const UNAUTHORIZED_ERROR: CalendarError = {
   message: "認証が必要です。再度ログインしてください。",
 };
 
+/** guild_id のフォーマット検証（英数字・ハイフンのみ、1〜30文字） */
+const GUILD_ID_REGEX = /^[\w-]{1,30}$/;
+
+/**
+ * MutationResult からデバッグ用の details フィールドを除去する
+ *
+ * Server Action → クライアントの境界で使用し、
+ * Supabase の内部エラーメッセージがクライアントに漏洩するのを防ぐ。
+ */
+function sanitizeResult<T>(result: MutationResult<T>): MutationResult<T> {
+  if (result.success) {
+    return result;
+  }
+  const { details: _details, ...error } = result.error;
+  return { success: false, error };
+}
+
 // ──────────────────────────────────────────────
 // サーバー側権限解決ヘルパー
 // ──────────────────────────────────────────────
@@ -229,14 +246,27 @@ async function authorizeEventOperation(
   guildId: string,
   operation: "create" | "update" | "delete"
 ): Promise<
-  | { authorized: true; supabase: Awaited<ReturnType<typeof createClient>> }
-  | { authorized: false; error: MutationResult<never> }
+  | { success: true; supabase: Awaited<ReturnType<typeof createClient>> }
+  | { success: false; error: MutationResult<never> }
 > {
+  if (!GUILD_ID_REGEX.test(guildId)) {
+    return {
+      success: false,
+      error: {
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "ギルドIDの形式が不正です。",
+        },
+      },
+    };
+  }
+
   const result = await resolveServerAuth(guildId);
 
   if (!result.success) {
     return {
-      authorized: false,
+      success: false,
       error: {
         success: false,
         error: {
@@ -254,7 +284,7 @@ async function authorizeEventOperation(
 
   if (!configResult.success) {
     return {
-      authorized: false,
+      success: false,
       error: {
         success: false,
         error: {
@@ -273,7 +303,7 @@ async function authorizeEventOperation(
 
   if (!permCheck.allowed) {
     return {
-      authorized: false,
+      success: false,
       error: {
         success: false,
         error: {
@@ -286,7 +316,7 @@ async function authorizeEventOperation(
     };
   }
 
-  return { authorized: true, supabase: auth.supabase };
+  return { success: true, supabase: auth.supabase };
 }
 
 /**
@@ -297,12 +327,12 @@ export async function createEventAction(
 ): Promise<MutationResult<CalendarEvent>> {
   const auth = await authorizeEventOperation(input.guildId, "create");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.createEvent(input.eventData);
+  return sanitizeResult(await eventService.createEvent(input.eventData));
 }
 
 /**
@@ -313,15 +343,17 @@ export async function updateEventAction(
 ): Promise<MutationResult<CalendarEvent>> {
   const auth = await authorizeEventOperation(input.guildId, "update");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.updateEvent(
-    input.guildId,
-    input.eventId,
-    input.eventData
+  return sanitizeResult(
+    await eventService.updateEvent(
+      input.guildId,
+      input.eventId,
+      input.eventData
+    )
   );
 }
 
@@ -333,12 +365,14 @@ export async function deleteEventAction(
 ): Promise<MutationResult<void>> {
   const auth = await authorizeEventOperation(input.guildId, "delete");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.deleteEvent(input.guildId, input.eventId);
+  return sanitizeResult(
+    await eventService.deleteEvent(input.guildId, input.eventId)
+  );
 }
 
 // ──────────────────────────────────────────────
@@ -363,12 +397,14 @@ export async function createRecurringEventAction(
 ): Promise<MutationResult<EventSeriesRecord>> {
   const auth = await authorizeEventOperation(input.guildId, "create");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.createRecurringSeries(input.eventData);
+  return sanitizeResult(
+    await eventService.createRecurringSeries(input.eventData)
+  );
 }
 
 // ──────────────────────────────────────────────
@@ -407,7 +443,7 @@ export async function updateOccurrenceAction(
 ): Promise<MutationResult<CalendarEvent | EventSeriesRecord>> {
   const auth = await authorizeEventOperation(input.guildId, "update");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
@@ -415,24 +451,30 @@ export async function updateOccurrenceAction(
 
   switch (input.scope) {
     case "this":
-      return eventService.updateOccurrence(
-        input.guildId,
-        input.seriesId,
-        input.occurrenceDate,
-        input.eventData as UpdateEventInput
+      return sanitizeResult(
+        await eventService.updateOccurrence(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate,
+          input.eventData as UpdateEventInput
+        )
       );
     case "all":
-      return eventService.updateSeries(
-        input.guildId,
-        input.seriesId,
-        input.eventData as UpdateSeriesInput
+      return sanitizeResult(
+        await eventService.updateSeries(
+          input.guildId,
+          input.seriesId,
+          input.eventData as UpdateSeriesInput
+        )
       );
     case "following":
-      return eventService.splitSeries(
-        input.guildId,
-        input.seriesId,
-        input.occurrenceDate,
-        input.eventData as UpdateSeriesInput
+      return sanitizeResult(
+        await eventService.splitSeries(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate,
+          input.eventData as UpdateSeriesInput
+        )
       );
     default: {
       const _exhaustive: never = input.scope;
@@ -456,7 +498,7 @@ export async function deleteOccurrenceAction(
 ): Promise<MutationResult<void>> {
   const auth = await authorizeEventOperation(input.guildId, "delete");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
@@ -464,18 +506,24 @@ export async function deleteOccurrenceAction(
 
   switch (input.scope) {
     case "this":
-      return eventService.deleteOccurrence(
-        input.guildId,
-        input.seriesId,
-        input.occurrenceDate
+      return sanitizeResult(
+        await eventService.deleteOccurrence(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate
+        )
       );
     case "all":
-      return eventService.deleteSeries(input.guildId, input.seriesId);
+      return sanitizeResult(
+        await eventService.deleteSeries(input.guildId, input.seriesId)
+      );
     case "following":
-      return eventService.truncateSeries(
-        input.guildId,
-        input.seriesId,
-        input.occurrenceDate
+      return sanitizeResult(
+        await eventService.truncateSeries(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate
+        )
       );
     default: {
       const _exhaustive: never = input.scope;

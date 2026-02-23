@@ -1583,7 +1583,8 @@ export function createEventService(
           .single();
 
         if (updateError || !updatedData) {
-          const errorCode = classifySupabaseError(updateError ?? { message: "Update returned no data" }, "update");
+          const fallbackError = { message: "Update returned no data", code: undefined, details: undefined, hint: undefined };
+          const errorCode = classifySupabaseError(updateError ?? fallbackError, "update");
           return {
             success: false,
             error: {

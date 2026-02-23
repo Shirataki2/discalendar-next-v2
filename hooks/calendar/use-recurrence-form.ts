@@ -63,7 +63,7 @@ export interface UseRecurrenceFormReturn {
   /** フォーム全体が有効かどうか */
   isValid: boolean;
   /** フィールドの値を変更する */
-  handleChange: (field: keyof RecurrenceFormData, value: unknown) => void;
+  handleChange: <F extends keyof RecurrenceFormData>(field: F, value: RecurrenceFormData[F]) => void;
   /** フィールドのフォーカスが外れたときに呼び出す */
   handleBlur: (field: string) => void;
   /** フォーム全体をバリデーションする（dtstartはuntilバリデーションに使用） */
@@ -169,7 +169,7 @@ export function useRecurrenceForm(
   const [lastDtstart, setLastDtstart] = useState<Date | undefined>();
 
   const handleChange = useCallback(
-    (field: keyof RecurrenceFormData, value: unknown) => {
+    <F extends keyof RecurrenceFormData>(field: F, value: RecurrenceFormData[F]) => {
       setValues((prev) => {
         const newValues = { ...prev, [field]: value };
 
