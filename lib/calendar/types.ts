@@ -135,6 +135,12 @@ export interface ChannelInfo {
 }
 
 /**
+ * 編集スコープ
+ * 繰り返しイベントの編集・削除時に対象範囲を指定する
+ */
+export type EditScope = "this" | "all" | "following";
+
+/**
  * カレンダー表示用のイベント型
  * react-big-calendarが期待するEvent型に準拠
  */

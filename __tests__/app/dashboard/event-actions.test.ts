@@ -36,12 +36,24 @@ const mockCreateEvent = vi.fn();
 const mockUpdateEvent = vi.fn();
 const mockDeleteEvent = vi.fn();
 const mockCreateRecurringSeries = vi.fn();
+const mockUpdateOccurrence = vi.fn();
+const mockDeleteOccurrence = vi.fn();
+const mockUpdateSeries = vi.fn();
+const mockDeleteSeries = vi.fn();
+const mockSplitSeries = vi.fn();
+const mockTruncateSeries = vi.fn();
 vi.mock("@/lib/calendar/event-service", () => ({
   createEventService: vi.fn(() => ({
     createEvent: mockCreateEvent,
     updateEvent: mockUpdateEvent,
     deleteEvent: mockDeleteEvent,
     createRecurringSeries: mockCreateRecurringSeries,
+    updateOccurrence: mockUpdateOccurrence,
+    deleteOccurrence: mockDeleteOccurrence,
+    updateSeries: mockUpdateSeries,
+    deleteSeries: mockDeleteSeries,
+    splitSeries: mockSplitSeries,
+    truncateSeries: mockTruncateSeries,
     fetchEvents: vi.fn(),
   })),
 }));
@@ -66,7 +78,9 @@ import {
   createEventAction,
   createRecurringEventAction,
   deleteEventAction,
+  deleteOccurrenceAction,
   updateEventAction,
+  updateOccurrenceAction,
 } from "@/app/dashboard/actions";
 
 /** テスト用シリーズ入力 */
@@ -632,5 +646,381 @@ describe("createRecurringEventAction", () => {
     expect(result.success).toBe(true);
     expect(mockCreateEvent).toHaveBeenCalled();
     expect(mockCreateRecurringSeries).not.toHaveBeenCalled();
+  });
+});
+
+// ──────────────────────────────────────────────
+// Task 4.2: オカレンス編集・削除アクション
+// ──────────────────────────────────────────────
+
+/** テスト用: 認証済み + 権限あり状態をセットアップ */
+function setupAuthorizedUser(guildId: string) {
+  mockGetUser.mockResolvedValueOnce({
+    data: { user: { id: "user-1" } },
+    error: null,
+  });
+  setupCacheWithAdminPermissions(guildId);
+  mockGetGuildConfig.mockResolvedValueOnce({
+    success: true,
+    data: { guildId, restricted: false },
+  });
+}
+
+/** テスト用オカレンス日付 */
+const sampleOccurrenceDate = new Date("2026-03-08T10:00:00Z");
+
+/** テスト用更新データ（単一オカレンス向け） */
+const sampleEventUpdate = { title: "Updated Title" };
+
+/** テスト用更新データ（シリーズ向け） */
+const sampleSeriesUpdate = {
+  title: "Updated Series",
+  rrule: "FREQ=WEEKLY;BYDAY=WE",
+};
+
+/** テスト用CalendarEventレスポンス */
+const sampleCalendarEvent = {
+  id: "event-exc-1",
+  title: "Updated Title",
+  start: new Date("2026-03-08T10:00:00Z"),
+  end: new Date("2026-03-08T11:00:00Z"),
+  allDay: false,
+  color: "#3B82F6",
+  seriesId: "series-1",
+  isRecurring: true,
+  originalDate: sampleOccurrenceDate,
+};
+
+describe("updateOccurrenceAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("未認証の場合 UNAUTHORIZED エラーを返す", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: null,
+    });
+
+    const result = await updateOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+      eventData: sampleEventUpdate,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+    expect(mockUpdateOccurrence).not.toHaveBeenCalled();
+    expect(mockUpdateSeries).not.toHaveBeenCalled();
+    expect(mockSplitSeries).not.toHaveBeenCalled();
+  });
+
+  it("restricted ギルドで管理権限がない場合 PERMISSION_DENIED を返す", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithNoPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
+    });
+
+    const result = await updateOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+      eventData: sampleEventUpdate,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("PERMISSION_DENIED");
+    }
+    expect(mockUpdateOccurrence).not.toHaveBeenCalled();
+  });
+
+  it("scope 'this' の場合 updateOccurrence に委譲する", async () => {
+    setupAuthorizedUser("guild-1");
+    mockUpdateOccurrence.mockResolvedValueOnce({
+      success: true,
+      data: sampleCalendarEvent,
+    });
+
+    const result = await updateOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+      eventData: sampleEventUpdate,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockUpdateOccurrence).toHaveBeenCalledWith(
+      "series-1",
+      sampleOccurrenceDate,
+      sampleEventUpdate
+    );
+    expect(mockUpdateSeries).not.toHaveBeenCalled();
+    expect(mockSplitSeries).not.toHaveBeenCalled();
+  });
+
+  it("scope 'all' の場合 updateSeries に委譲する", async () => {
+    setupAuthorizedUser("guild-1");
+    mockUpdateSeries.mockResolvedValueOnce({
+      success: true,
+      data: { ...sampleSeriesRecord, name: "Updated Series" },
+    });
+
+    const result = await updateOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "all",
+      occurrenceDate: sampleOccurrenceDate,
+      eventData: sampleSeriesUpdate,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockUpdateSeries).toHaveBeenCalledWith(
+      "series-1",
+      sampleSeriesUpdate
+    );
+    expect(mockUpdateOccurrence).not.toHaveBeenCalled();
+    expect(mockSplitSeries).not.toHaveBeenCalled();
+  });
+
+  it("scope 'following' の場合 splitSeries に委譲する", async () => {
+    setupAuthorizedUser("guild-1");
+    const newSeriesRecord = {
+      ...sampleSeriesRecord,
+      id: "series-2",
+      dtstart: "2026-03-08T10:00:00Z",
+    };
+    mockSplitSeries.mockResolvedValueOnce({
+      success: true,
+      data: newSeriesRecord,
+    });
+
+    const result = await updateOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "following",
+      occurrenceDate: sampleOccurrenceDate,
+      eventData: sampleSeriesUpdate,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockSplitSeries).toHaveBeenCalledWith(
+      "series-1",
+      sampleOccurrenceDate,
+      sampleSeriesUpdate
+    );
+    expect(mockUpdateOccurrence).not.toHaveBeenCalled();
+    expect(mockUpdateSeries).not.toHaveBeenCalled();
+  });
+
+  it("EventService がエラーを返した場合にそのエラーを伝播する", async () => {
+    setupAuthorizedUser("guild-1");
+    mockUpdateOccurrence.mockResolvedValueOnce({
+      success: false,
+      error: {
+        code: "SERIES_NOT_FOUND",
+        message: "指定されたイベントシリーズが見つかりません。",
+      },
+    });
+
+    const result = await updateOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "nonexistent",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+      eventData: sampleEventUpdate,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("SERIES_NOT_FOUND");
+    }
+  });
+});
+
+describe("deleteOccurrenceAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("未認証の場合 UNAUTHORIZED エラーを返す", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: null,
+    });
+
+    const result = await deleteOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("UNAUTHORIZED");
+    }
+    expect(mockDeleteOccurrence).not.toHaveBeenCalled();
+    expect(mockDeleteSeries).not.toHaveBeenCalled();
+    expect(mockTruncateSeries).not.toHaveBeenCalled();
+  });
+
+  it("restricted ギルドで管理権限がない場合 PERMISSION_DENIED を返す", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithNoPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: true },
+    });
+
+    const result = await deleteOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("PERMISSION_DENIED");
+    }
+    expect(mockDeleteOccurrence).not.toHaveBeenCalled();
+  });
+
+  it("scope 'this' の場合 deleteOccurrence に委譲する", async () => {
+    setupAuthorizedUser("guild-1");
+    mockDeleteOccurrence.mockResolvedValueOnce({
+      success: true,
+      data: undefined,
+    });
+
+    const result = await deleteOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockDeleteOccurrence).toHaveBeenCalledWith(
+      "series-1",
+      sampleOccurrenceDate
+    );
+    expect(mockDeleteSeries).not.toHaveBeenCalled();
+    expect(mockTruncateSeries).not.toHaveBeenCalled();
+  });
+
+  it("scope 'all' の場合 deleteSeries に委譲する", async () => {
+    setupAuthorizedUser("guild-1");
+    mockDeleteSeries.mockResolvedValueOnce({
+      success: true,
+      data: undefined,
+    });
+
+    const result = await deleteOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "all",
+      occurrenceDate: sampleOccurrenceDate,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockDeleteSeries).toHaveBeenCalledWith("series-1");
+    expect(mockDeleteOccurrence).not.toHaveBeenCalled();
+    expect(mockTruncateSeries).not.toHaveBeenCalled();
+  });
+
+  it("scope 'following' の場合 truncateSeries に委譲する", async () => {
+    setupAuthorizedUser("guild-1");
+    mockTruncateSeries.mockResolvedValueOnce({
+      success: true,
+      data: undefined,
+    });
+
+    const result = await deleteOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "following",
+      occurrenceDate: sampleOccurrenceDate,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockTruncateSeries).toHaveBeenCalledWith(
+      "series-1",
+      sampleOccurrenceDate
+    );
+    expect(mockDeleteOccurrence).not.toHaveBeenCalled();
+    expect(mockDeleteSeries).not.toHaveBeenCalled();
+  });
+
+  it("EventService がエラーを返した場合にそのエラーを伝播する", async () => {
+    setupAuthorizedUser("guild-1");
+    mockDeleteSeries.mockResolvedValueOnce({
+      success: false,
+      error: {
+        code: "DELETE_FAILED",
+        message: "イベントの削除に失敗しました。",
+      },
+    });
+
+    const result = await deleteOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "all",
+      occurrenceDate: sampleOccurrenceDate,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("DELETE_FAILED");
+    }
+  });
+
+  it("非 restricted ギルドでは権限に関係なく削除できる", async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    setupCacheWithNoPermissions("guild-1");
+    mockGetGuildConfig.mockResolvedValueOnce({
+      success: true,
+      data: { guildId: "guild-1", restricted: false },
+    });
+    mockDeleteOccurrence.mockResolvedValueOnce({
+      success: true,
+      data: undefined,
+    });
+
+    const result = await deleteOccurrenceAction({
+      guildId: "guild-1",
+      seriesId: "series-1",
+      scope: "this",
+      occurrenceDate: sampleOccurrenceDate,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockDeleteOccurrence).toHaveBeenCalled();
   });
 });

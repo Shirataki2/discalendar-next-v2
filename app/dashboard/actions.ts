@@ -21,6 +21,7 @@ import {
   createEventService,
   type MutationResult,
   type UpdateEventInput,
+  type UpdateSeriesInput,
 } from "@/lib/calendar/event-service";
 import { checkEventPermission } from "@/lib/calendar/permission-check";
 import type { CalendarEvent, EventSeriesRecord } from "@/lib/calendar/types";
@@ -364,6 +365,111 @@ export async function createRecurringEventAction(
 
   const eventService = createEventService(auth.supabase);
   return eventService.createRecurringSeries(input.eventData);
+}
+
+// ──────────────────────────────────────────────
+// Task 4.2 (recurring-events): オカレンス編集・削除
+// ──────────────────────────────────────────────
+
+type EditScope = "this" | "all" | "following";
+
+type UpdateOccurrenceActionInput = {
+  guildId: string;
+  seriesId: string;
+  scope: EditScope;
+  occurrenceDate: Date;
+  eventData: UpdateEventInput | UpdateSeriesInput;
+};
+
+type DeleteOccurrenceActionInput = {
+  guildId: string;
+  seriesId: string;
+  scope: EditScope;
+  occurrenceDate: Date;
+};
+
+/**
+ * 権限チェック付きオカレンス編集 Server Action
+ *
+ * 編集スコープに応じて適切な EventService メソッドに委譲する:
+ * - "this": updateOccurrence（例外レコード作成）
+ * - "all": updateSeries（シリーズ全体更新）
+ * - "following": splitSeries（シリーズ分割）
+ *
+ * Requirements: 5.2, 6.1, 6.2, 7.1
+ */
+export async function updateOccurrenceAction(
+  input: UpdateOccurrenceActionInput
+): Promise<MutationResult<CalendarEvent | EventSeriesRecord>> {
+  const auth = await authorizeEventOperation(input.guildId, "update");
+
+  if (!auth.authorized) {
+    return auth.error;
+  }
+
+  const eventService = createEventService(auth.supabase);
+
+  switch (input.scope) {
+    case "this":
+      return eventService.updateOccurrence(
+        input.seriesId,
+        input.occurrenceDate,
+        input.eventData as UpdateEventInput
+      );
+    case "all":
+      return eventService.updateSeries(
+        input.seriesId,
+        input.eventData as UpdateSeriesInput
+      );
+    case "following":
+      return eventService.splitSeries(
+        input.seriesId,
+        input.occurrenceDate,
+        input.eventData as UpdateSeriesInput
+      );
+    default: {
+      const _exhaustive: never = input.scope;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
+ * 権限チェック付きオカレンス削除 Server Action
+ *
+ * 削除スコープに応じて適切な EventService メソッドに委譲する:
+ * - "this": deleteOccurrence（EXDATE 追加）
+ * - "all": deleteSeries（シリーズ全体削除）
+ * - "following": truncateSeries（シリーズ切り詰め）
+ *
+ * Requirements: 5.4, 6.3, 7.2
+ */
+export async function deleteOccurrenceAction(
+  input: DeleteOccurrenceActionInput
+): Promise<MutationResult<void>> {
+  const auth = await authorizeEventOperation(input.guildId, "delete");
+
+  if (!auth.authorized) {
+    return auth.error;
+  }
+
+  const eventService = createEventService(auth.supabase);
+
+  switch (input.scope) {
+    case "this":
+      return eventService.deleteOccurrence(
+        input.seriesId,
+        input.occurrenceDate
+      );
+    case "all":
+      return eventService.deleteSeries(input.seriesId);
+    case "following":
+      return eventService.truncateSeries(input.seriesId, input.occurrenceDate);
+    default: {
+      const _exhaustive: never = input.scope;
+      return _exhaustive;
+    }
+  }
 }
 
 // ──────────────────────────────────────────────
