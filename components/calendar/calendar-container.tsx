@@ -34,6 +34,7 @@
 
 import { endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { deleteOccurrenceAction } from "@/app/dashboard/actions";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
 import { useCalendarState } from "@/hooks/calendar/use-calendar-state";
 import { useCalendarUrlSync } from "@/hooks/calendar/use-calendar-url-sync";
@@ -41,11 +42,13 @@ import type { EventFormData } from "@/hooks/calendar/use-event-form";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
 import { mapNavigationDirection, trackEvent } from "@/lib/analytics/events";
 import { createEventService } from "@/lib/calendar/event-service";
-import type { CalendarEvent } from "@/lib/calendar/types";
+import type { CalendarEvent, EditScope } from "@/lib/calendar/types";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarGrid } from "./calendar-grid";
 import { CalendarToolbar } from "./calendar-toolbar";
 import { ConfirmDialog } from "./confirm-dialog";
+import type { EditScopeOptions } from "./edit-scope-dialog";
+import { EditScopeDialog } from "./edit-scope-dialog";
 import { EventDialog } from "./event-dialog";
 import { EventPopover } from "./event-popover";
 
@@ -125,6 +128,81 @@ function useConfirmDialog() {
 }
 
 /**
+ * EditScopeDialog状態管理とスコープ操作のカスタムフック (recurring-events Task 7.2)
+ * 繰り返しイベントの編集・削除時にスコープ選択ダイアログを表示し、
+ * スコープ選択後の操作を実行する
+ */
+function useEditScopeDialog(
+  guildId: string | null,
+  openEditDialogRef: React.RefObject<
+    (id: string, data: Partial<EventFormData>) => void
+  >,
+  fetchEventsRef: React.RefObject<() => Promise<void>>
+) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState<"edit" | "delete">("edit");
+  const [targetEvent, setTargetEvent] = useState<CalendarEvent | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openDialog = useCallback(
+    (event: CalendarEvent, dialogMode: "edit" | "delete") => {
+      setTargetEvent(event);
+      setMode(dialogMode);
+      setIsOpen(true);
+    },
+    []
+  );
+
+  const closeDialog = useCallback(() => {
+    setIsOpen(false);
+    setTimeout(() => setTargetEvent(null), 150);
+  }, []);
+
+  const handleSelect = useCallback(
+    async (scope: EditScope, _options: EditScopeOptions) => {
+      if (!(targetEvent && guildId)) {
+        return;
+      }
+
+      if (mode === "edit") {
+        openEditDialogRef.current(targetEvent.id, toEventFormData(targetEvent));
+        closeDialog();
+        return;
+      }
+
+      // 削除: スコープに応じてdeleteOccurrenceActionを呼び出す
+      setIsDeleting(true);
+      const result = await deleteOccurrenceAction({
+        guildId,
+        seriesId: targetEvent.seriesId as string,
+        scope,
+        occurrenceDate: targetEvent.originalDate ?? targetEvent.start,
+      });
+
+      setIsDeleting(false);
+
+      if (result.success) {
+        trackEvent("event_deleted", { scope });
+        closeDialog();
+        fetchEventsRef.current();
+      }
+    },
+    [targetEvent, mode, guildId, openEditDialogRef, fetchEventsRef, closeDialog]
+  );
+
+  return {
+    isOpen,
+    mode,
+    targetEvent,
+    isDeleting,
+    openDialog,
+    closeDialog,
+    setIsOpen,
+    handleSelect,
+  };
+}
+
+/**
  * ナビゲーションアクションに基づいて新しい日付を計算する
  */
 function calculateNavigationDate(
@@ -162,6 +240,29 @@ function toDate(value: Date | string): Date {
  */
 function isGuildEmpty(guildId: string | null): boolean {
   return !guildId || guildId.trim() === "";
+}
+
+/**
+ * イベントが繰り返しイベントかどうかを判定するヘルパー
+ */
+function isRecurringEvent(event: CalendarEvent): boolean {
+  return event.isRecurring === true && !!event.seriesId;
+}
+
+/**
+ * CalendarEventからEventFormData（部分）に変換するヘルパー
+ */
+function toEventFormData(event: CalendarEvent): Partial<EventFormData> {
+  return {
+    title: event.title,
+    startAt: event.start,
+    endAt: event.end,
+    isAllDay: event.allDay,
+    color: event.color,
+    description: event.description ?? "",
+    location: event.location ?? "",
+    notifications: event.notifications ?? [],
+  };
 }
 
 /**
@@ -339,6 +440,7 @@ function useEventPopover() {
  * <CalendarContainer guildId="123456789" />
  * ```
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: CalendarContainer is the top-level orchestrator managing multiple dialog flows (event/confirm/edit-scope), recurring event routing adds minimal branching
 export function CalendarContainer({
   guildId,
   canEditEvents = true,
@@ -393,6 +495,21 @@ export function CalendarContainer({
     closeDialog: closeConfirmDialog,
     setIsOpen: setConfirmDialogOpen,
   } = useConfirmDialog();
+
+  // recurring-events Task 7.2: openEditDialogのrefを保持（stale closure回避）
+  const openEditDialogRef = useRef(openEditDialog);
+  openEditDialogRef.current = openEditDialog;
+
+  // recurring-events Task 7.2: EditScopeDialog状態管理
+  const {
+    isOpen: isEditScopeDialogOpen,
+    mode: editScopeMode,
+    targetEvent: editScopeTargetEvent,
+    isDeleting: isScopeDeleting,
+    openDialog: openEditScopeDialog,
+    setIsOpen: setEditScopeDialogOpen,
+    handleSelect: handleEditScopeSelect,
+  } = useEditScopeDialog(guildId, openEditDialogRef, fetchEventsRef);
 
   // Task 7.2: useEventMutation for CRUD operations
   const {
@@ -554,43 +671,40 @@ export function CalendarContainer({
   }, [closeEventDialog, closePopover, fetchEvents]);
 
   /**
-   * Task 7.2: 編集ボタンクリックハンドラー (Req 2.3, 3.1)
-   * EventPopoverの編集ボタンクリック時に呼ばれる
+   * Task 7.2: 編集ボタンクリックハンドラー (Req 2.3, 3.1, 5.1)
+   * 繰り返しイベントの場合はEditScopeDialogを経由する
    */
   const handleEditEvent = useCallback(
     (event: CalendarEvent) => {
-      // CalendarEventからEventFormDataに変換
-      const formData: Partial<EventFormData> = {
-        title: event.title,
-        startAt: event.start,
-        endAt: event.end,
-        isAllDay: event.allDay,
-        color: event.color,
-        description: event.description ?? "",
-        location: event.location ?? "",
-        notifications: event.notifications ?? [],
-      };
-      openEditDialog(event.id, formData);
       closePopover();
+      if (isRecurringEvent(event)) {
+        openEditScopeDialog(event, "edit");
+        return;
+      }
+      openEditDialog(event.id, toEventFormData(event));
     },
-    [openEditDialog, closePopover]
+    [openEditDialog, closePopover, openEditScopeDialog]
   );
 
   /**
-   * Task 7.2: 削除ボタンクリックハンドラー (Req 4.1)
-   * EventPopoverの削除ボタンクリック時に呼ばれる
+   * Task 7.2: 削除ボタンクリックハンドラー (Req 4.1, 5.3)
+   * 繰り返しイベントの場合はEditScopeDialogを経由する
    */
   const handleDeleteEvent = useCallback(
     (event: CalendarEvent) => {
-      openConfirmDialog(event);
       closePopover();
+      if (isRecurringEvent(event)) {
+        openEditScopeDialog(event, "delete");
+        return;
+      }
+      openConfirmDialog(event);
     },
-    [openConfirmDialog, closePopover]
+    [openConfirmDialog, closePopover, openEditScopeDialog]
   );
 
   /**
    * Task 7.2: 削除確認ハンドラー (Req 4.2, 4.3)
-   * ConfirmDialogの確認ボタンクリック時に呼ばれる
+   * ConfirmDialogの確認ボタンクリック時に呼ばれる（単発イベント用）
    * Analytics: event_deleted イベントをトラッキング
    */
   const handleConfirmDelete = useCallback(async () => {
@@ -641,7 +755,6 @@ export function CalendarContainer({
       if (result.success) {
         trackEvent("event_moved", { method: "drag_and_drop" });
       } else {
-        // 失敗時はリバート（最新の表示範囲でrefetch）
         fetchEventsRef.current();
       }
     },
@@ -678,7 +791,6 @@ export function CalendarContainer({
       if (result.success) {
         trackEvent("event_resized", {});
       } else {
-        // 失敗時はリバート（最新の表示範囲でrefetch）
         fetchEventsRef.current();
       }
     },
@@ -769,13 +881,23 @@ export function CalendarContainer({
         />
       ) : null}
 
-      {/* Task 7.2: 削除確認ダイアログ */}
+      {/* Task 7.2: 削除確認ダイアログ（単発イベント用） */}
       <ConfirmDialog
         eventTitle={eventToDelete?.title ?? ""}
         isLoading={mutationState.isDeleting}
         onConfirm={handleConfirmDelete}
         onOpenChange={setConfirmDialogOpen}
         open={isConfirmDialogOpen}
+      />
+
+      {/* recurring-events Task 7.2: 繰り返しイベント編集・削除スコープ選択ダイアログ */}
+      <EditScopeDialog
+        eventTitle={editScopeTargetEvent?.title ?? ""}
+        isLoading={isScopeDeleting}
+        mode={editScopeMode}
+        onOpenChange={setEditScopeDialogOpen}
+        onSelect={handleEditScopeSelect}
+        open={isEditScopeDialogOpen}
       />
     </div>
   );
