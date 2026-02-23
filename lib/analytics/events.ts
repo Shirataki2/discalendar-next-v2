@@ -15,6 +15,8 @@ interface AnalyticsEventMap {
     is_all_day: boolean;
     color: string;
     has_notifications: boolean;
+    is_recurring?: boolean;
+    frequency?: string;
   };
   event_updated: {
     changed_fields: string[];

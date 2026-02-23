@@ -23,13 +23,22 @@ const SAVE_PATTERN = /保存/i;
 const CANCEL_PATTERN = /キャンセル/i;
 const CLOSE_BUTTON_PATTERN = /close/i;
 const CREATE_FAILED_ERROR_PATTERN = /イベントの作成に失敗しました/i;
+const SERIES_CREATE_FAILED_PATTERN = /シリーズの作成に失敗しました/;
 
-// モックのEventService
+// モックのEventService（EventServiceInterface全メソッド）
 const mockEventService = {
   fetchEvents: vi.fn(),
   createEvent: vi.fn(),
   updateEvent: vi.fn(),
   deleteEvent: vi.fn(),
+  createRecurringSeries: vi.fn(),
+  fetchEventsWithSeries: vi.fn(),
+  updateOccurrence: vi.fn(),
+  deleteOccurrence: vi.fn(),
+  updateSeries: vi.fn(),
+  deleteSeries: vi.fn(),
+  splitSeries: vi.fn(),
+  truncateSeries: vi.fn(),
 };
 
 // 成功時のモックレスポンス
@@ -572,6 +581,151 @@ describe("EventDialog", () => {
 
       const dialog = screen.getByRole("dialog");
       expect(dialog).toHaveAttribute("aria-labelledby");
+    });
+  });
+
+  // Task 7.3: 繰り返しイベント作成の統合
+  describe("Task 7.3: 繰り返しイベント作成の統合", () => {
+    const mockSeriesSuccessResponse = {
+      success: true as const,
+      data: {
+        id: "series-123",
+        guildId: "guild-123",
+        title: "繰り返し予定",
+        rrule: "FREQ=DAILY;INTERVAL=1",
+        dtstart: new Date("2025-12-10T10:00:00"),
+        duration: 3_600_000,
+        description: null,
+        isAllDay: false,
+        color: "#3B82F6",
+        location: null,
+        channelId: null,
+        channelName: null,
+        exdates: [],
+        notifications: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    };
+
+    it("繰り返し設定有効で保存するとcreateRecurringSeriesが呼ばれる (Req 1.3)", async () => {
+      const user = userEvent.setup();
+      mockEventService.createRecurringSeries.mockResolvedValue(
+        mockSeriesSuccessResponse
+      );
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "繰り返し予定" }}
+          mode="create"
+          recurrenceDefaultValues={{
+            isRecurring: true,
+            frequency: "daily",
+          }}
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEventService.createRecurringSeries).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            title: "繰り返し予定",
+            rrule: expect.any(String),
+          })
+        );
+      });
+    });
+
+    it("繰り返し設定無効で保存すると既存のcreateEventが呼ばれる (Req 1.5)", async () => {
+      const user = userEvent.setup();
+      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "通常予定" }}
+          mode="create"
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEventService.createEvent).toHaveBeenCalled();
+        expect(mockEventService.createRecurringSeries).not.toHaveBeenCalled();
+      });
+    });
+
+    it("繰り返しイベント作成成功時にonSuccessとonCloseが呼ばれる (Req 1.5)", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      const onClose = vi.fn();
+      mockEventService.createRecurringSeries.mockResolvedValue(
+        mockSeriesSuccessResponse
+      );
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "繰り返し予定" }}
+          mode="create"
+          onClose={onClose}
+          onSuccess={onSuccess}
+          recurrenceDefaultValues={{
+            isRecurring: true,
+            frequency: "daily",
+          }}
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalledTimes(1);
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("繰り返しイベント作成失敗時にエラーメッセージが表示される", async () => {
+      const user = userEvent.setup();
+      mockEventService.createRecurringSeries.mockResolvedValue({
+        success: false,
+        error: {
+          code: "CREATE_FAILED",
+          message: "シリーズの作成に失敗しました。",
+        },
+      });
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "繰り返し予定" }}
+          mode="create"
+          recurrenceDefaultValues={{
+            isRecurring: true,
+            frequency: "daily",
+          }}
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(SERIES_CREATE_FAILED_PATTERN)
+        ).toBeInTheDocument();
+      });
     });
   });
 });

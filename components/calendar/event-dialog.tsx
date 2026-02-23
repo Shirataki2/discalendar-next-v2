@@ -23,12 +23,15 @@ import {
 } from "@/components/ui/dialog";
 import type { EventFormData } from "@/hooks/calendar/use-event-form";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
+import type { RecurrenceFormData } from "@/hooks/calendar/use-recurrence-form";
 import { getChangedEventFields, trackEvent } from "@/lib/analytics/events";
 import type {
   CreateEventInput,
+  CreateSeriesInput,
   EventServiceInterface,
   UpdateEventInput,
 } from "@/lib/calendar/event-service";
+import { buildRruleString } from "@/lib/calendar/rrule-utils";
 import { EventForm } from "./event-form";
 
 /**
@@ -68,6 +71,36 @@ function toUpdateEventInput(data: EventFormData): UpdateEventInput {
 }
 
 /**
+ * EventFormDataと繰り返し設定からCreateSeriesInputに変換する
+ */
+function toCreateSeriesInput(
+  guildId: string,
+  data: EventFormData,
+  recurrence: RecurrenceFormData
+): CreateSeriesInput {
+  return {
+    guildId,
+    title: data.title,
+    startAt: data.startAt,
+    endAt: data.endAt,
+    description: data.description || undefined,
+    isAllDay: data.isAllDay,
+    color: data.color,
+    location: data.location || undefined,
+    notifications: data.notifications,
+    rrule: buildRruleString({
+      frequency: recurrence.frequency,
+      interval: recurrence.interval,
+      byDay: recurrence.byDay.length > 0 ? recurrence.byDay : undefined,
+      monthlyMode:
+        recurrence.frequency === "monthly" ? recurrence.monthlyMode : undefined,
+      endCondition: recurrence.endCondition,
+      dtstart: data.startAt,
+    }),
+  };
+}
+
+/**
  * EventDialogコンポーネントのProps
  */
 export type EventDialogProps = {
@@ -81,6 +114,8 @@ export type EventDialogProps = {
   eventService: EventServiceInterface;
   /** 初期値（期間選択時の開始・終了日時、編集時の既存データ） */
   initialData?: Partial<EventFormData>;
+  /** 繰り返し設定の初期値 */
+  recurrenceDefaultValues?: Partial<RecurrenceFormData>;
   /** 編集時のイベントID */
   eventId?: string;
   /** ダイアログを閉じるときのコールバック */
@@ -128,12 +163,15 @@ export function EventDialog({
   guildId,
   eventService,
   initialData,
+  recurrenceDefaultValues,
   eventId,
   onClose,
   onSuccess,
 }: EventDialogProps) {
   // エラー状態
   const [error, setError] = useState<string | null>(null);
+  // シリーズ作成中のローディング状態
+  const [isCreatingSeries, setIsCreatingSeries] = useState(false);
 
   // useEventMutation hook for CRUD operations
   const { state, createEvent, updateEvent } = useEventMutation(eventService);
@@ -146,14 +184,27 @@ export function EventDialog({
       : "予定の詳細を編集してください";
 
   // 送信中かどうか
-  const isSubmitting = state.isCreating || state.isUpdating;
+  const isSubmitting = state.isCreating || state.isUpdating || isCreatingSeries;
 
   /**
    * フォーム送信ハンドラー
    */
   const handleSubmit = useCallback(
-    async (data: EventFormData) => {
+    async (data: EventFormData, recurrence: RecurrenceFormData) => {
       setError(null);
+
+      function handleResult(
+        opResult: { success: boolean; error?: { message: string } },
+        onSuccessAction: () => void
+      ) {
+        if (opResult.success) {
+          onSuccessAction();
+          onSuccess();
+          onClose();
+        } else {
+          setError(opResult.error?.message ?? "不明なエラーが発生しました。");
+        }
+      }
 
       if (mode === "edit") {
         if (!eventId) {
@@ -161,37 +212,50 @@ export function EventDialog({
           return;
         }
         const result = await updateEvent(eventId, toUpdateEventInput(data));
-
-        if (result.success) {
+        handleResult(result, () => {
           trackEvent("event_updated", {
             changed_fields: getChangedEventFields(initialData ?? {}, data),
           });
-          onSuccess();
-          onClose();
-        } else {
-          setError(result.error.message);
+        });
+        return;
+      }
+
+      // 繰り返し設定が有効な場合、シリーズとして作成
+      if (recurrence.isRecurring) {
+        setIsCreatingSeries(true);
+        try {
+          const result = await eventService.createRecurringSeries(
+            toCreateSeriesInput(guildId, data, recurrence)
+          );
+          handleResult(result, () => {
+            trackEvent("event_created", {
+              is_all_day: data.isAllDay,
+              color: data.color,
+              has_notifications: data.notifications.length > 0,
+              is_recurring: true,
+              frequency: recurrence.frequency,
+            });
+          });
+        } finally {
+          setIsCreatingSeries(false);
         }
         return;
       }
 
       const result = await createEvent(toCreateEventInput(guildId, data));
-
-      if (result.success) {
+      handleResult(result, () => {
         trackEvent("event_created", {
           is_all_day: data.isAllDay,
           color: data.color,
           has_notifications: data.notifications.length > 0,
         });
-        onSuccess();
-        onClose();
-      } else {
-        setError(result.error.message);
-      }
+      });
     },
     [
       mode,
       guildId,
       eventId,
+      eventService,
       initialData,
       createEvent,
       updateEvent,
@@ -248,6 +312,7 @@ export function EventDialog({
           isSubmitting={isSubmitting}
           onCancel={handleCancel}
           onSubmit={handleSubmit}
+          recurrenceDefaultValues={recurrenceDefaultValues}
         />
       </DialogContent>
     </Dialog>
