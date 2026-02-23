@@ -77,7 +77,7 @@ export interface EventSeriesRecord {
   channel_name: string | null;
   /** 通知設定 (JSONB) */
   notifications: NotificationSetting[];
-  /** 除外日リスト (TIMESTAMPTZ[]) */
+  /** 除外日リスト (ISO 8601 文字列配列: "2026-01-15T10:00:00Z" 形式) */
   exdates: string[];
   /** 作成日時 (ISO 8601形式) */
   created_at: string;
@@ -114,6 +114,10 @@ export interface EventRecord {
   channel_name: string | null;
   /** 通知設定 (JSONB) */
   notifications: NotificationSetting[];
+  /** イベントシリーズID（例外オカレンスの場合のみ） */
+  series_id: string | null;
+  /** 元のオカレンス日付（例外オカレンスの場合のみ、ISO 8601形式） */
+  original_date: string | null;
   /** 作成日時 (ISO 8601形式) */
   created_at: string;
   /** 更新日時 (ISO 8601形式) */
@@ -166,6 +170,22 @@ export interface CalendarEvent {
 }
 
 /**
+ * JSONB から取得した値が有効な NotificationSetting か判定する型ガード
+ */
+function isValidNotificationSetting(
+  n: unknown,
+): n is NotificationSetting & { key?: string } {
+  return (
+    typeof n === "object" &&
+    n !== null &&
+    "num" in n &&
+    "unit" in n &&
+    typeof (n as Record<string, unknown>).num === "number" &&
+    typeof (n as Record<string, unknown>).unit === "string"
+  );
+}
+
+/**
  * EventRecordからCalendarEventへの変換関数
  *
  * @param record - Supabaseから取得したイベントレコード
@@ -190,15 +210,7 @@ export function toCalendarEvent(record: EventRecord): CalendarEvent {
     channel,
     notifications: Array.isArray(record.notifications)
       ? record.notifications
-          .filter(
-            (n): n is NotificationSetting & { key?: string } =>
-              typeof n === "object" &&
-              n !== null &&
-              "num" in n &&
-              "unit" in n &&
-              typeof n.num === "number" &&
-              typeof n.unit === "string",
-          )
+          .filter(isValidNotificationSetting)
           .map((n) => ({
             ...n,
             key:

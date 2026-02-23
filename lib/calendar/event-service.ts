@@ -23,7 +23,7 @@ import {
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
-import { expandOccurrences, toSummaryText, validateRrule } from "./rrule-utils";
+import { expandOccurrences, formatDateUTC, toSummaryText, validateRrule } from "./rrule-utils";
 
 /**
  * カレンダーエラーコードの定義
@@ -479,7 +479,7 @@ export function createEventService(
       } catch (error) {
         // 例外の処理 (ネットワークエラー、AbortErrorなど)
         const errorCode = classifyException(error);
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -556,6 +556,8 @@ export function createEventService(
           channel_id: channelId || null,
           channel_name: channelName || null,
           notifications: notifications ?? [],
+          series_id: null,
+          original_date: null,
         };
 
         const { data, error } = await supabase
@@ -587,7 +589,7 @@ export function createEventService(
       } catch (error) {
         // 例外の処理 (ネットワークエラーなど)
         const errorCode = classifyException(error);
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -711,7 +713,7 @@ export function createEventService(
       } catch (error) {
         // 例外の処理 (ネットワークエラーなど)
         const errorCode = classifyException(error, "update");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -832,7 +834,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "create");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -877,10 +879,16 @@ export function createEventService(
         }
 
         // Step 2: ギルドのイベントシリーズを取得
-        const { data: seriesData, error: seriesError } = await supabase
+        let seriesQuery = supabase
           .from("event_series")
           .select("*")
           .eq("guild_id", guildId);
+
+        if (signal) {
+          seriesQuery = seriesQuery.abortSignal(signal);
+        }
+
+        const { data: seriesData, error: seriesError } = await seriesQuery;
 
         if (seriesError) {
           const errorCode = classifySupabaseError(seriesError, "fetch");
@@ -917,10 +925,10 @@ export function createEventService(
 
         const singleEvents = toCalendarEvents(singleEventsData as EventRecord[]);
         const series = (seriesData ?? []) as EventSeriesRecord[];
-        const exceptions = (exceptionData ?? []) as (EventRecord & { series_id: string; original_date: string })[];
+        const exceptions = (exceptionData ?? []) as EventRecord[];
 
         // Step 4: 例外レコードをシリーズID + 元日付でマップ化
-        const exceptionMap = new Map<string, typeof exceptions[number]>();
+        const exceptionMap = new Map<string, EventRecord>();
         for (const exc of exceptions) {
           if (exc.series_id && exc.original_date) {
             const key = `${exc.series_id}:${new Date(exc.original_date).toISOString()}`;
@@ -950,7 +958,7 @@ export function createEventService(
 
             if (exception) {
               // 例外レコードで置換
-              const exceptionEvent = toCalendarEvent(exception as EventRecord);
+              const exceptionEvent = toCalendarEvent(exception);
               recurringEvents.push({
                 ...exceptionEvent,
                 seriesId: s.id,
@@ -991,7 +999,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error);
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1009,6 +1017,18 @@ export function createEventService(
       originalDate: Date,
       input: UpdateEventInput
     ): Promise<MutationResult<CalendarEvent>> {
+      // ガード: seriesId が空の場合はバリデーションエラー
+      if (!seriesId || seriesId.trim().length === 0) {
+        return {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: getCalendarErrorMessage("VALIDATION_ERROR"),
+            details: "シリーズIDは必須です。単発イベントにはupdateEvent()を使用してください。",
+          },
+        };
+      }
+
       const {
         title,
         startAt,
@@ -1129,7 +1149,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "create");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1192,7 +1212,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "delete");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1205,6 +1225,13 @@ export function createEventService(
       }
     },
 
+    /**
+     * イベントを完全に削除する
+     *
+     * 注意: 繰り返しイベントの単一オカレンスを非表示にする場合は
+     * deleteOccurrence() で EXDATE 追加を使用してください。
+     * このメソッドはレコードの物理削除を行います。
+     */
     async deleteEvent(id: string): Promise<MutationResult<void>> {
       try {
         // SupabaseへのDELETE操作
@@ -1234,7 +1261,7 @@ export function createEventService(
       } catch (error) {
         // 例外の処理 (ネットワークエラーなど)
         const errorCode = classifyException(error, "delete");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1418,7 +1445,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "update");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1475,7 +1502,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "delete");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1517,24 +1544,24 @@ export function createEventService(
 
         // Step 2: 元シリーズのRRULEにUNTILを追加（分割日の前日23:59:59 UTC）
         const untilDate = new Date(splitDate.getTime() - 1);
-        const untilStr = formatUntilDate(untilDate);
+        const untilStr = formatDateUTC(untilDate);
         const updatedRrule = addUntilToRrule(originalRrule, untilStr);
 
-        const { error: updateError } = await supabase
+        const { data: updatedData, error: updateError } = await supabase
           .from("event_series")
           .update({ rrule: updatedRrule })
           .eq("id", seriesId)
           .select()
           .single();
 
-        if (updateError) {
-          const errorCode = classifySupabaseError(updateError, "update");
+        if (updateError || !updatedData) {
+          const errorCode = classifySupabaseError(updateError ?? { message: "Update returned no data" }, "update");
           return {
             success: false,
             error: {
               code: errorCode,
               message: getCalendarErrorMessage(errorCode),
-              details: updateError.message,
+              details: updateError?.message ?? "Update returned no data",
             },
           };
         }
@@ -1570,12 +1597,25 @@ export function createEventService(
 
         if (insertError) {
           // 補償処理: 元シリーズのRRULEを復元
-          await supabase
+          const { error: compensationError } = await supabase
             .from("event_series")
             .update({ rrule: originalRrule })
             .eq("id", seriesId)
             .select()
             .single();
+
+          if (compensationError) {
+            // 補償処理自体が失敗した場合、データ不整合の可能性がある
+            const errorCode = classifySupabaseError(insertError, "create");
+            return {
+              success: false,
+              error: {
+                code: errorCode,
+                message: getCalendarErrorMessage(errorCode),
+                details: `新シリーズ作成失敗: ${insertError.message}。元シリーズのRRULE復元にも失敗: ${compensationError.message}`,
+              },
+            };
+          }
 
           const errorCode = classifySupabaseError(insertError, "create");
           return {
@@ -1594,7 +1634,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "update");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1653,7 +1693,7 @@ export function createEventService(
 
         // Step 3: RRULEにUNTILを追加し、未来のexdatesをフィルタリング
         const untilDateBefore = new Date(untilDate.getTime() - 1);
-        const untilStr = formatUntilDate(untilDateBefore);
+        const untilStr = formatDateUTC(untilDateBefore);
         const updatedRrule = addUntilToRrule(series.rrule, untilStr);
         const filteredExdates = series.exdates.filter(
           (exdate) => new Date(exdate).getTime() < untilDate.getTime()
@@ -1687,7 +1727,7 @@ export function createEventService(
         };
       } catch (error) {
         const errorCode = classifyException(error, "update");
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
 
         return {
           success: false,
@@ -1719,15 +1759,3 @@ function addUntilToRrule(rrule: string, untilStr: string): string {
   return `${result};UNTIL=${untilStr}`;
 }
 
-/**
- * DateをUTC RRULEフォーマットのUNTIL文字列に変換する
- */
-function formatUntilDate(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
-  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
-}

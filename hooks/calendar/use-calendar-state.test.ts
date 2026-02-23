@@ -11,7 +11,7 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CalendarError } from "@/lib/calendar";
+import type { CalendarError } from "@/lib/calendar/event-service";
 import { useCalendarState } from "./use-calendar-state";
 
 describe("useCalendarState", () => {

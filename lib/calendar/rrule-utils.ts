@@ -178,8 +178,7 @@ export function expandOccurrences(
     const dates = rruleSet.between(rangeStart, rangeEnd, true);
 
     return { dates, truncated: false };
-  } catch (error) {
-    console.error("RRULE parse error:", error);
+  } catch {
     return { dates: [], truncated: false };
   }
 }
@@ -290,7 +289,7 @@ export function validateRrule(rrule: string): RruleValidationResult {
 // =============================================================================
 
 /** Date を UTC の RRULE 日付文字列に変換する */
-function formatDateUTC(date: Date): string {
+export function formatDateUTC(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");

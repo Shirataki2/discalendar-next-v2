@@ -61,6 +61,12 @@ const mockSupabaseClient = {
   },
 };
 
+// テスト間の mockReturnValueOnce キュー漏れを防止
+// vi.clearAllMocks() は実装キューをクリアしないため、mockReset で確実にリセット
+afterEach(() => {
+  mockSupabaseClient.from.mockReset();
+});
+
 // Supabaseクエリビルダーのモック
 // Supabaseのクエリビルダーはthenableなので、awaitできるようにする
 const createMockQueryBuilder = (options: {
@@ -252,6 +258,8 @@ describe("createEventService", () => {
           channel_id: null,
           channel_name: null,
           notifications: [],
+          series_id: null,
+          original_date: null,
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -417,6 +425,8 @@ describe("createEventService", () => {
           channel_id: "ch-1",
           channel_name: "general",
           notifications: [],
+          series_id: null,
+          original_date: null,
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -433,6 +443,8 @@ describe("createEventService", () => {
           channel_id: null,
           channel_name: null,
           notifications: [],
+          series_id: null,
+          original_date: null,
           created_at: "2025-12-01T00:00:00Z",
           updated_at: "2025-12-01T00:00:00Z",
         },
@@ -549,6 +561,8 @@ describe("createEventService - createEvent", () => {
       channel_id: null,
       channel_name: null,
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -593,6 +607,8 @@ describe("createEventService - createEvent", () => {
       channel_id: "ch-123",
       channel_name: "general",
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -798,6 +814,8 @@ describe("createEventService - createEvent", () => {
       channel_id: null,
       channel_name: null,
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -845,6 +863,8 @@ describe("createEventService - createEvent", () => {
       channel_id: null,
       channel_name: null,
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T09:00:00Z",
     };
@@ -928,6 +948,8 @@ describe("createEventService - updateEvent", () => {
       channel_id: "ch-1",
       channel_name: "general",
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -978,6 +1000,8 @@ describe("createEventService - updateEvent", () => {
       channel_id: null,
       channel_name: null,
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1021,6 +1045,8 @@ describe("createEventService - updateEvent", () => {
       channel_id: null,
       channel_name: null,
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1148,6 +1174,8 @@ describe("createEventService - updateEvent", () => {
       channel_id: null,
       channel_name: null,
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1188,6 +1216,8 @@ describe("createEventService - updateEvent", () => {
       channel_id: null,
       channel_name: null,
       notifications: [],
+      series_id: null,
+      original_date: null,
       created_at: "2025-12-15T09:00:00Z",
       updated_at: "2025-12-15T10:00:00Z",
     };
@@ -1362,6 +1392,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications,
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T09:00:00Z",
       };
@@ -1407,6 +1439,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications: [],
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T09:00:00Z",
       };
@@ -1449,6 +1483,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications: [],
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T09:00:00Z",
       };
@@ -1498,6 +1534,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications,
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T09:00:00Z",
       };
@@ -1545,6 +1583,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications,
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T10:00:00Z",
       };
@@ -1588,6 +1628,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications: [{ key: "existing", num: 1, unit: "hours" as const }],
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T10:00:00Z",
       };
@@ -1628,6 +1670,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications: [],
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T10:00:00Z",
       };
@@ -1674,6 +1718,8 @@ describe("createEventService - notification persistence", () => {
         channel_id: null,
         channel_name: null,
         notifications,
+        series_id: null,
+        original_date: null,
         created_at: "2025-12-15T09:00:00Z",
         updated_at: "2025-12-15T10:00:00Z",
       };
@@ -2090,22 +2136,25 @@ const createMockSeriesQueryBuilder = (options: {
 
   const mockSelect = vi.fn();
   const mockEq = vi.fn();
+  const mockAbortSignal = vi.fn();
 
   const internalPromise = Promise.resolve(result);
 
   const queryBuilder = {
     select: mockSelect,
     eq: mockEq,
+    abortSignal: mockAbortSignal,
     then: (
       onFulfilled?: (value: typeof result) => unknown,
       onRejected?: (reason: unknown) => unknown
     ) => internalPromise.then(onFulfilled, onRejected),
     catch: (onRejected: (reason: unknown) => unknown) => internalPromise.catch(onRejected),
-    _mocks: { select: mockSelect, eq: mockEq },
+    _mocks: { select: mockSelect, eq: mockEq, abortSignal: mockAbortSignal },
   };
 
   mockSelect.mockReturnValue(queryBuilder);
   mockEq.mockReturnValue(queryBuilder);
+  mockAbortSignal.mockReturnValue(queryBuilder);
 
   return queryBuilder;
 };
@@ -2183,6 +2232,8 @@ describe("createEventService - fetchEventsWithSeries (Task 3.2)", () => {
         channel_id: null,
         channel_name: null,
         notifications: [],
+        series_id: null,
+        original_date: null,
         created_at: "2026-03-01T00:00:00Z",
         updated_at: "2026-03-01T00:00:00Z",
       },
@@ -2279,6 +2330,8 @@ describe("createEventService - fetchEventsWithSeries (Task 3.2)", () => {
         channel_id: null,
         channel_name: null,
         notifications: [],
+        series_id: null,
+        original_date: null,
         created_at: "2026-03-01T00:00:00Z",
         updated_at: "2026-03-01T00:00:00Z",
       },
@@ -2414,21 +2467,16 @@ describe("createEventService - fetchEventsWithSeries (Task 3.2)", () => {
         channel_id: null,
         channel_name: null,
         notifications: [],
+        series_id: "series-1",
+        original_date: "2026-03-11T09:00:00Z",
         created_at: "2026-03-01T00:00:00Z",
         updated_at: "2026-03-01T00:00:00Z",
       },
     ];
 
-    // Add series_id and original_date to exception record
-    const exceptionWithSeries = exceptionRecords.map((r) => ({
-      ...r,
-      series_id: "series-1",
-      original_date: "2026-03-11T09:00:00Z",
-    }));
-
     const eventsBuilder = createMockEventsWithFilterBuilder({ data: [] });
     const seriesBuilder = createMockSeriesQueryBuilder({ data: seriesRecords });
-    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: exceptionWithSeries as unknown as EventRecord[] });
+    const exceptionBuilder = createMockEventsWithFilterBuilder({ data: exceptionRecords });
 
     mockSupabaseClient.from
       .mockReturnValueOnce(eventsBuilder)
@@ -2853,6 +2901,8 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       channel_id: "ch-1",
       channel_name: "general",
       notifications: [{ key: "n1", num: 1, unit: "hours" }],
+      series_id: "series-1",
+      original_date: "2026-03-09T10:00:00Z",
       created_at: "2026-03-09T00:00:00Z",
       updated_at: "2026-03-09T00:00:00Z",
     };
@@ -2896,6 +2946,8 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       channel_id: "ch-1",
       channel_name: "general",
       notifications: [{ key: "n1", num: 1, unit: "hours" }],
+      series_id: "series-1",
+      original_date: "2026-03-09T10:00:00Z",
       created_at: "2026-03-09T00:00:00Z",
       updated_at: "2026-03-09T00:00:00Z",
     };
@@ -2941,6 +2993,8 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       channel_id: "ch-1",
       channel_name: "general",
       notifications: [{ key: "n1", num: 1, unit: "hours" }],
+      series_id: "series-1",
+      original_date: "2026-03-09T10:00:00Z",
       created_at: "2026-03-09T00:00:00Z",
       updated_at: "2026-03-09T00:00:00Z",
     };
@@ -3074,6 +3128,8 @@ describe("createEventService - updateOccurrence (Task 3.3)", () => {
       channel_id: "ch-1",
       channel_name: "general",
       notifications: [],
+      series_id: "series-1",
+      original_date: "2026-03-09T10:00:00Z",
       created_at: "2026-03-09T00:00:00Z",
       updated_at: "2026-03-09T00:00:00Z",
     };
