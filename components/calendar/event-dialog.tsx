@@ -321,9 +321,8 @@ export function EventDialog({
       if (recurrence.isRecurring) {
         setIsCreatingSeries(true);
         try {
-          const result = await eventService.createRecurringSeries(
-            toCreateSeriesInput(guildId, data, recurrence)
-          );
+          const input = toCreateSeriesInput(guildId, data, recurrence);
+          const result = await eventService.createRecurringSeries(input);
           handleResult(result, () => {
             trackEvent("event_created", {
               is_all_day: data.isAllDay,

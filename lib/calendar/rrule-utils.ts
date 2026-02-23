@@ -129,8 +129,17 @@ export function buildRruleString(input: RruleBuildInput): string {
 
   const rule = new RRule(options);
 
-  // RRule.toString() は "RRULE:" プレフィックスを含む場合があるので除去
-  return rule.toString().replace(/^RRULE:/, "");
+  // RRule.toString() は dtstart 指定時に "DTSTART:...\nRRULE:..." 形式で出力するため
+  // RRULE 部分のみを抽出する（DTSTART は event_series.start_at で別途管理）
+  const output = rule.toString();
+  const rruleLine = output
+    .split("\n")
+    .find((line) => line.startsWith("RRULE:"));
+  if (rruleLine) {
+    return rruleLine.replace(/^RRULE:/, "");
+  }
+  // RRULE: プレフィックスのみの場合（DTSTART なし）
+  return output.replace(/^RRULE:/, "");
 }
 
 /**
