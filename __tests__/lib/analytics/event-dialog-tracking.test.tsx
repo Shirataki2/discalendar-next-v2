@@ -21,13 +21,25 @@ vi.mock("posthog-js", () => {
   return { default: posthog };
 });
 
-// EventServiceのモック
-const mockEventService = {
-  fetchEvents: vi.fn(),
-  createEvent: vi.fn(),
-  updateEvent: vi.fn(),
-  deleteEvent: vi.fn(),
-};
+// Server Actionsのモック
+const mockCreateEventAction = vi.fn();
+const mockUpdateEventAction = vi.fn();
+vi.mock("@/app/dashboard/actions", () => ({
+  createEventAction: (...args: unknown[]) => mockCreateEventAction(...args),
+  updateEventAction: (...args: unknown[]) => mockUpdateEventAction(...args),
+  deleteEventAction: vi
+    .fn()
+    .mockResolvedValue({ success: true, data: undefined }),
+  createRecurringEventAction: vi
+    .fn()
+    .mockResolvedValue({ success: true, data: {} }),
+  updateOccurrenceAction: vi
+    .fn()
+    .mockResolvedValue({ success: true, data: {} }),
+  deleteOccurrenceAction: vi
+    .fn()
+    .mockResolvedValue({ success: true, data: undefined }),
+}));
 
 const mockSuccessResponse = {
   success: true as const,
@@ -62,11 +74,10 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
   describe("イベント作成時のトラッキング (Req 3.1)", () => {
     it("イベント作成成功時にevent_createdがキャプチャされる", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
-          eventService={mockEventService}
           guildId="guild-123"
           mode="create"
           onClose={vi.fn()}
@@ -97,11 +108,10 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
 
     it("終日イベント作成時にis_all_dayがtrueでキャプチャされる", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
-          eventService={mockEventService}
           guildId="guild-123"
           initialData={{
             title: "終日予定",
@@ -131,11 +141,10 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
 
     it("通知ありイベント作成時にhas_notificationsがtrueでキャプチャされる", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
-          eventService={mockEventService}
           guildId="guild-123"
           initialData={{
             title: "通知あり予定",
@@ -163,11 +172,10 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
 
     it("PIIがトラッキングプロパティに含まれない (Req 3.6)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
-          eventService={mockEventService}
           guildId="guild-123"
           initialData={{ title: "秘密の予定" }}
           mode="create"
@@ -204,7 +212,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
   describe("イベント編集時のトラッキング (Req 3.2)", () => {
     it("イベント編集成功時にevent_updatedがchanged_fieldsと共にキャプチャされる", async () => {
       const user = userEvent.setup();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "元の予定",
@@ -220,7 +228,6 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
       render(
         <EventDialog
           eventId="event-123"
-          eventService={mockEventService}
           guildId="guild-123"
           initialData={initialData}
           mode="edit"
@@ -253,7 +260,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
   describe("イベント作成失敗時のトラッキング", () => {
     it("作成失敗時にはevent_createdがキャプチャされない", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue({
+      mockCreateEventAction.mockResolvedValue({
         success: false,
         error: {
           code: "CREATE_FAILED",
@@ -263,7 +270,6 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
 
       render(
         <EventDialog
-          eventService={mockEventService}
           guildId="guild-123"
           initialData={{ title: "失敗する予定" }}
           mode="create"

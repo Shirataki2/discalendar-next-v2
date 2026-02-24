@@ -29,11 +29,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { UseRecurrenceFormReturn } from "@/hooks/calendar/use-recurrence-form";
-import type {
-  EndCondition,
-  MonthlyMode,
-  RecurrenceFrequency,
-  Weekday,
+import {
+  type EndCondition,
+  isWeekday,
+  type MonthlyMode,
+  type RecurrenceFrequency,
+  type Weekday,
 } from "@/lib/calendar/rrule-utils";
 import { cn } from "@/lib/utils";
 
@@ -219,10 +220,13 @@ function MonthlyModeSelector({
     if (monthlyMode.type !== "nthWeekday") {
       return;
     }
+    if (!isWeekday(weekday)) {
+      return;
+    }
     form.handleChange("monthlyMode", {
       type: "nthWeekday",
       n: monthlyMode.n,
-      weekday: weekday as Weekday,
+      weekday,
     } satisfies MonthlyMode);
   }
 

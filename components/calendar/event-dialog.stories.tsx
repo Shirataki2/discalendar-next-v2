@@ -11,208 +11,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
-import type { EventServiceInterface } from "@/lib/calendar/event-service";
 import { EventDialog } from "./event-dialog";
-
-// モックのEventService
-const createMockEventService = (
-  overrides?: Partial<EventServiceInterface>
-): EventServiceInterface => ({
-  fetchEvents: fn().mockResolvedValue({ success: true, data: [] }),
-  createEvent: fn().mockResolvedValue({
-    success: true,
-    data: {
-      id: "event-123",
-      guildId: "guild-123",
-      title: "新しいイベント",
-      description: "",
-      color: "#3B82F6",
-      isAllDay: false,
-      startAt: new Date(),
-      endAt: new Date(),
-      location: null,
-      channelId: null,
-      channelName: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  }),
-  updateEvent: fn().mockResolvedValue({
-    success: true,
-    data: {
-      id: "event-123",
-      guildId: "guild-123",
-      title: "更新されたイベント",
-      description: "",
-      color: "#3B82F6",
-      isAllDay: false,
-      startAt: new Date(),
-      endAt: new Date(),
-      location: null,
-      channelId: null,
-      channelName: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  }),
-  deleteEvent: fn().mockResolvedValue({ success: true, data: undefined }),
-  createRecurringSeries: fn().mockResolvedValue({ success: true, data: {} }),
-  fetchEventsWithSeries: fn().mockResolvedValue({ success: true, data: [] }),
-  updateOccurrence: fn().mockResolvedValue({ success: true, data: {} }),
-  deleteOccurrence: fn().mockResolvedValue({ success: true, data: undefined }),
-  updateSeries: fn().mockResolvedValue({ success: true, data: {} }),
-  deleteSeries: fn().mockResolvedValue({ success: true, data: undefined }),
-  splitSeries: fn().mockResolvedValue({ success: true, data: {} }),
-  truncateSeries: fn().mockResolvedValue({ success: true, data: undefined }),
-  ...overrides,
-});
-
-// 遅延するモックEventService
-const createSlowMockEventService = (): EventServiceInterface => ({
-  fetchEvents: fn().mockResolvedValue({ success: true, data: [] }),
-  createEvent: fn().mockImplementation(
-    () =>
-      new Promise((resolve) =>
-        setTimeout(
-          () =>
-            resolve({
-              success: true,
-              data: {
-                id: "event-123",
-                guildId: "guild-123",
-                title: "新しいイベント",
-                description: "",
-                color: "#3B82F6",
-                isAllDay: false,
-                startAt: new Date(),
-                endAt: new Date(),
-                location: null,
-                channelId: null,
-                channelName: null,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              },
-            }),
-          3000
-        )
-      )
-  ),
-  updateEvent: fn().mockImplementation(
-    () =>
-      new Promise((resolve) =>
-        setTimeout(
-          () =>
-            resolve({
-              success: true,
-              data: {
-                id: "event-123",
-                guildId: "guild-123",
-                title: "更新されたイベント",
-                description: "",
-                color: "#3B82F6",
-                isAllDay: false,
-                startAt: new Date(),
-                endAt: new Date(),
-                location: null,
-                channelId: null,
-                channelName: null,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              },
-            }),
-          3000
-        )
-      )
-  ),
-  deleteEvent: fn().mockResolvedValue({ success: true, data: undefined }),
-  createRecurringSeries: fn().mockResolvedValue({ success: true, data: {} }),
-  fetchEventsWithSeries: fn().mockResolvedValue({ success: true, data: [] }),
-  updateOccurrence: fn().mockResolvedValue({ success: true, data: {} }),
-  deleteOccurrence: fn().mockResolvedValue({ success: true, data: undefined }),
-  updateSeries: fn().mockResolvedValue({ success: true, data: {} }),
-  deleteSeries: fn().mockResolvedValue({ success: true, data: undefined }),
-  splitSeries: fn().mockResolvedValue({ success: true, data: {} }),
-  truncateSeries: fn().mockResolvedValue({ success: true, data: undefined }),
-});
-
-// エラーを返すモックEventService
-const createErrorMockEventService = (): EventServiceInterface => ({
-  fetchEvents: fn().mockResolvedValue({ success: true, data: [] }),
-  createEvent: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "CREATE_FAILED",
-      message: "イベントの作成に失敗しました。",
-      details:
-        "サーバーエラーが発生しました。しばらくしてから再試行してください。",
-    },
-  }),
-  updateEvent: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "UPDATE_FAILED",
-      message: "イベントの更新に失敗しました。",
-      details: "サーバーエラーが発生しました。",
-    },
-  }),
-  deleteEvent: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "DELETE_FAILED",
-      message: "イベントの削除に失敗しました。",
-    },
-  }),
-  createRecurringSeries: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "CREATE_FAILED",
-      message: "イベントの作成に失敗しました。",
-    },
-  }),
-  fetchEventsWithSeries: fn().mockResolvedValue({ success: true, data: [] }),
-  updateOccurrence: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "UPDATE_FAILED",
-      message: "イベントの更新に失敗しました。",
-    },
-  }),
-  deleteOccurrence: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "DELETE_FAILED",
-      message: "イベントの削除に失敗しました。",
-    },
-  }),
-  updateSeries: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "UPDATE_FAILED",
-      message: "イベントの更新に失敗しました。",
-    },
-  }),
-  deleteSeries: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "DELETE_FAILED",
-      message: "イベントの削除に失敗しました。",
-    },
-  }),
-  splitSeries: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "UPDATE_FAILED",
-      message: "イベントの更新に失敗しました。",
-    },
-  }),
-  truncateSeries: fn().mockResolvedValue({
-    success: false,
-    error: {
-      code: "UPDATE_FAILED",
-      message: "イベントの更新に失敗しました。",
-    },
-  }),
-});
 
 const meta: Meta<typeof EventDialog> = {
   title: "Calendar/EventDialog",
@@ -258,7 +57,6 @@ export const CreateMode: Story = {
     open: true,
     mode: "create",
     guildId: "guild-123",
-    eventService: createMockEventService(),
     onClose: fn(),
     onSuccess: fn(),
   },
@@ -273,7 +71,6 @@ export const CreateModeWithInitialDates: Story = {
     open: true,
     mode: "create",
     guildId: "guild-123",
-    eventService: createMockEventService(),
     initialData: {
       startAt: new Date(2025, 11, 10, 10, 0),
       endAt: new Date(2025, 11, 10, 11, 0),
@@ -292,7 +89,6 @@ export const EditMode: Story = {
     open: true,
     mode: "edit",
     guildId: "guild-123",
-    eventService: createMockEventService(),
     eventId: "event-123",
     initialData: {
       title: "チームミーティング",
@@ -317,7 +113,6 @@ export const EditModeAllDay: Story = {
     open: true,
     mode: "edit",
     guildId: "guild-123",
-    eventService: createMockEventService(),
     eventId: "event-456",
     initialData: {
       title: "年末休暇",
@@ -342,7 +137,6 @@ export const Loading: Story = {
     open: true,
     mode: "create",
     guildId: "guild-123",
-    eventService: createSlowMockEventService(),
     initialData: {
       title: "テスト予定",
       startAt: new Date(2025, 11, 15, 14, 0),
@@ -370,7 +164,6 @@ export const ErrorState: Story = {
     open: true,
     mode: "create",
     guildId: "guild-123",
-    eventService: createErrorMockEventService(),
     initialData: {
       title: "エラーテスト",
       startAt: new Date(2025, 11, 20, 10, 0),
@@ -398,7 +191,6 @@ export const Closed: Story = {
     open: false,
     mode: "create",
     guildId: "guild-123",
-    eventService: createMockEventService(),
     onClose: fn(),
     onSuccess: fn(),
   },

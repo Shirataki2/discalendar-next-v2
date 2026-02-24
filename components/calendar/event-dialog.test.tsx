@@ -18,14 +18,26 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Server Actionのモック
+// Server Actionsのモック
 vi.mock("@/app/dashboard/actions", () => ({
+  createEventAction: vi.fn(),
+  updateEventAction: vi.fn(),
+  deleteEventAction: vi.fn(),
+  createRecurringEventAction: vi.fn(),
   updateOccurrenceAction: vi.fn(),
 }));
 
-import { updateOccurrenceAction } from "@/app/dashboard/actions";
+import {
+  createEventAction,
+  createRecurringEventAction,
+  updateEventAction,
+  updateOccurrenceAction,
+} from "@/app/dashboard/actions";
 import { EventDialog, type EventDialogProps } from "./event-dialog";
 
+const mockCreateEventAction = vi.mocked(createEventAction);
+const mockUpdateEventAction = vi.mocked(updateEventAction);
+const mockCreateRecurringEventAction = vi.mocked(createRecurringEventAction);
 const mockUpdateOccurrenceAction = vi.mocked(updateOccurrenceAction);
 
 // Task 7.4: テスト用正規表現（トップレベルに定義）
@@ -42,22 +54,6 @@ const CANCEL_PATTERN = /キャンセル/i;
 const CLOSE_BUTTON_PATTERN = /close/i;
 const CREATE_FAILED_ERROR_PATTERN = /イベントの作成に失敗しました/i;
 const SERIES_CREATE_FAILED_PATTERN = /シリーズの作成に失敗しました/;
-
-// モックのEventService（EventServiceInterface全メソッド）
-const mockEventService = {
-  fetchEvents: vi.fn(),
-  createEvent: vi.fn(),
-  updateEvent: vi.fn(),
-  deleteEvent: vi.fn(),
-  createRecurringSeries: vi.fn(),
-  fetchEventsWithSeries: vi.fn(),
-  updateOccurrence: vi.fn(),
-  deleteOccurrence: vi.fn(),
-  updateSeries: vi.fn(),
-  deleteSeries: vi.fn(),
-  splitSeries: vi.fn(),
-  truncateSeries: vi.fn(),
-};
 
 // 成功時のモックレスポンス
 const mockSuccessResponse = {
@@ -84,7 +80,6 @@ describe("EventDialog", () => {
     open: true,
     mode: "create",
     guildId: "guild-123",
-    eventService: mockEventService,
     onClose: vi.fn(),
     onSuccess: vi.fn(),
   };
@@ -162,9 +157,9 @@ describe("EventDialog", () => {
 
   // Task 5.2: 新規作成フロー
   describe("Task 5.2: 新規作成フロー", () => {
-    it("有効なデータで保存時にcreateEventが呼ばれる (Req 1.3)", async () => {
+    it("有効なデータで保存時にcreateEventActionが呼ばれる (Req 1.3)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(<EventDialog {...defaultProps} mode="create" />);
 
@@ -179,10 +174,13 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+        expect(mockCreateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
             guildId: "guild-123",
-            title: "新しい予定",
+            eventData: expect.objectContaining({
+              guildId: "guild-123",
+              title: "新しい予定",
+            }),
           })
         );
       });
@@ -191,7 +189,7 @@ describe("EventDialog", () => {
     it("保存成功時にonSuccessが呼ばれる (Req 1.5)", async () => {
       const user = userEvent.setup();
       const onSuccess = vi.fn();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
@@ -214,7 +212,7 @@ describe("EventDialog", () => {
     it("保存成功時にonCloseが呼ばれる (Req 1.5)", async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
@@ -237,9 +235,9 @@ describe("EventDialog", () => {
 
   // Task 5.2: 編集フロー
   describe("Task 5.2: 編集フロー", () => {
-    it("編集モードで保存時にupdateEventが呼ばれる (Req 3.3)", async () => {
+    it("編集モードで保存時にupdateEventActionが呼ばれる (Req 3.3)", async () => {
       const user = userEvent.setup();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "既存の予定",
@@ -268,10 +266,13 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.updateEvent).toHaveBeenCalledWith(
-          "event-123",
+        expect(mockUpdateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: "更新された予定",
+            guildId: "guild-123",
+            eventId: "event-123",
+            eventData: expect.objectContaining({
+              title: "更新された予定",
+            }),
           })
         );
       });
@@ -281,7 +282,7 @@ describe("EventDialog", () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
       const onSuccess = vi.fn();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "既存の予定",
@@ -325,7 +326,7 @@ describe("EventDialog", () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it("キャンセル時にcreateEvent/updateEventが呼ばれない (Req 1.7)", async () => {
+    it("キャンセル時にServer Actionsが呼ばれない (Req 1.7)", async () => {
       const user = userEvent.setup();
 
       render(<EventDialog {...defaultProps} />);
@@ -339,8 +340,8 @@ describe("EventDialog", () => {
       const cancelButton = screen.getByRole("button", { name: CANCEL_PATTERN });
       await user.click(cancelButton);
 
-      expect(mockEventService.createEvent).not.toHaveBeenCalled();
-      expect(mockEventService.updateEvent).not.toHaveBeenCalled();
+      expect(mockCreateEventAction).not.toHaveBeenCalled();
+      expect(mockUpdateEventAction).not.toHaveBeenCalled();
     });
 
     it("閉じるボタンクリック時にonCloseが呼ばれる (Req 1.7)", async () => {
@@ -365,7 +366,7 @@ describe("EventDialog", () => {
     it("保存中はフォームが無効になる", async () => {
       const user = userEvent.setup();
       // 遅延するPromiseを作成
-      mockEventService.createEvent.mockImplementation(
+      mockCreateEventAction.mockImplementation(
         () =>
           new Promise((resolve) =>
             setTimeout(() => resolve(mockSuccessResponse), 100)
@@ -395,7 +396,7 @@ describe("EventDialog", () => {
   describe("Task 5.2: エラーハンドリング", () => {
     it("保存失敗時にエラーメッセージが表示される", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue({
+      mockCreateEventAction.mockResolvedValue({
         success: false,
         error: {
           code: "CREATE_FAILED",
@@ -425,7 +426,7 @@ describe("EventDialog", () => {
     it("保存失敗時にダイアログは開いたままになる", async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
-      mockEventService.createEvent.mockResolvedValue({
+      mockCreateEventAction.mockResolvedValue({
         success: false,
         error: {
           code: "CREATE_FAILED",
@@ -459,9 +460,9 @@ describe("EventDialog", () => {
 
   // Task 5: 通知データの受け渡し
   describe("Task 5: 通知データの受け渡し", () => {
-    it("新規作成時にnotificationsがcreateEventに渡される (Req 2.1)", async () => {
+    it("新規作成時にnotificationsがcreateEventActionに渡される (Req 2.1)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "テスト予定",
@@ -485,20 +486,22 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+        expect(mockCreateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            notifications: expect.arrayContaining([
-              expect.objectContaining({ num: 10, unit: "minutes" }),
-              expect.objectContaining({ num: 1, unit: "hours" }),
-            ]),
+            eventData: expect.objectContaining({
+              notifications: expect.arrayContaining([
+                expect.objectContaining({ num: 10, unit: "minutes" }),
+                expect.objectContaining({ num: 1, unit: "hours" }),
+              ]),
+            }),
           })
         );
       });
     });
 
-    it("編集時にnotificationsがupdateEventに渡される (Req 2.3)", async () => {
+    it("編集時にnotificationsがupdateEventActionに渡される (Req 2.3)", async () => {
       const user = userEvent.setup();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "既存の予定",
@@ -520,12 +523,14 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.updateEvent).toHaveBeenCalledWith(
-          "event-123",
+        expect(mockUpdateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            notifications: expect.arrayContaining([
-              expect.objectContaining({ num: 3, unit: "days" }),
-            ]),
+            eventId: "event-123",
+            eventData: expect.objectContaining({
+              notifications: expect.arrayContaining([
+                expect.objectContaining({ num: 3, unit: "days" }),
+              ]),
+            }),
           })
         );
       });
@@ -533,7 +538,7 @@ describe("EventDialog", () => {
 
     it("通知なしで保存時にnotificationsが空配列として渡される (Req 2.4)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "通知なし予定",
@@ -553,9 +558,11 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+        expect(mockCreateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            notifications: [],
+            eventData: expect.objectContaining({
+              notifications: [],
+            }),
           })
         );
       });
@@ -626,9 +633,9 @@ describe("EventDialog", () => {
       },
     };
 
-    it("繰り返し設定有効で保存するとcreateRecurringSeriesが呼ばれる (Req 1.3)", async () => {
+    it("繰り返し設定有効で保存するとcreateRecurringEventActionが呼ばれる (Req 1.3)", async () => {
       const user = userEvent.setup();
-      mockEventService.createRecurringSeries.mockResolvedValue(
+      mockCreateRecurringEventAction.mockResolvedValue(
         mockSeriesSuccessResponse
       );
 
@@ -649,19 +656,22 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createRecurringSeries).toHaveBeenCalledWith(
+        expect(mockCreateRecurringEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
             guildId: "guild-123",
-            title: "繰り返し予定",
-            rrule: expect.any(String),
+            eventData: expect.objectContaining({
+              guildId: "guild-123",
+              title: "繰り返し予定",
+              rrule: expect.any(String),
+            }),
           })
         );
       });
     });
 
-    it("繰り返し設定無効で保存すると既存のcreateEventが呼ばれる (Req 1.5)", async () => {
+    it("繰り返し設定無効で保存すると既存のcreateEventActionが呼ばれる (Req 1.5)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
@@ -676,8 +686,8 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createEvent).toHaveBeenCalled();
-        expect(mockEventService.createRecurringSeries).not.toHaveBeenCalled();
+        expect(mockCreateEventAction).toHaveBeenCalled();
+        expect(mockCreateRecurringEventAction).not.toHaveBeenCalled();
       });
     });
 
@@ -685,7 +695,7 @@ describe("EventDialog", () => {
       const user = userEvent.setup();
       const onSuccess = vi.fn();
       const onClose = vi.fn();
-      mockEventService.createRecurringSeries.mockResolvedValue(
+      mockCreateRecurringEventAction.mockResolvedValue(
         mockSeriesSuccessResponse
       );
 
@@ -715,7 +725,7 @@ describe("EventDialog", () => {
 
     it("繰り返しイベント作成失敗時にエラーメッセージが表示される", async () => {
       const user = userEvent.setup();
-      mockEventService.createRecurringSeries.mockResolvedValue({
+      mockCreateRecurringEventAction.mockResolvedValue({
         success: false,
         error: {
           code: "CREATE_FAILED",
@@ -956,9 +966,9 @@ describe("EventDialog", () => {
       });
     });
 
-    it("editScopeが未指定の場合、通常のupdateEventが呼ばれる（後方互換）", async () => {
+    it("editScopeが未指定の場合、通常のupdateEventActionが呼ばれる（後方互換）", async () => {
       const user = userEvent.setup();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
@@ -973,9 +983,11 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.updateEvent).toHaveBeenCalledWith(
-          "event-123",
-          expect.objectContaining({ title: "繰り返し予定" })
+        expect(mockUpdateEventAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventId: "event-123",
+            eventData: expect.objectContaining({ title: "繰り返し予定" }),
+          })
         );
         expect(mockUpdateOccurrenceAction).not.toHaveBeenCalled();
       });

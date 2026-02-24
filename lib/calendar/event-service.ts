@@ -1574,6 +1574,10 @@ export function createEventService(
       }
     },
 
+    // NOTE: splitSeries は「元シリーズの UNTIL 更新 → 新シリーズ INSERT」の2ステップで
+    // 構成されており、アトミックではない。INSERT 失敗時は元シリーズの RRULE を補償処理で
+    // 復元するが、補償処理自体が失敗するとデータ不整合が発生する可能性がある。
+    // 根本解決には Supabase RPC によるトランザクション化が必要。
     async splitSeries(
       guildId: string,
       seriesId: string,

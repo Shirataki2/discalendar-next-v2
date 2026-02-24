@@ -19,7 +19,10 @@
  */
 
 import { useCallback, useState } from "react";
-import { updateOccurrenceAction } from "@/app/dashboard/actions";
+import {
+  createRecurringEventAction,
+  updateOccurrenceAction,
+} from "@/app/dashboard/actions";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +37,6 @@ import { getChangedEventFields, trackEvent } from "@/lib/analytics/events";
 import type {
   CreateEventInput,
   CreateSeriesInput,
-  EventServiceInterface,
   UpdateEventInput,
   UpdateSeriesInput,
 } from "@/lib/calendar/event-service";
@@ -154,8 +156,6 @@ export type EventDialogProps = {
   mode: "create" | "edit";
   /** ギルドID */
   guildId: string;
-  /** EventServiceインスタンス */
-  eventService: EventServiceInterface;
   /** 初期値（期間選択時の開始・終了日時、編集時の既存データ） */
   initialData?: Partial<EventFormData>;
   /** 繰り返し設定の初期値 */
@@ -181,7 +181,7 @@ export type EventDialogProps = {
  *
  * 新規作成モードと編集モードを切り替えて使用できます。
  * EventFormコンポーネントを内包し、フォーム送信時に
- * EventServiceを使用してCRUD操作を実行します。
+ * Server Actions経由でCRUD操作を実行します。
  *
  * スコープ付き編集（editScope指定時）は、updateOccurrenceAction
  * を呼び出して繰り返しイベントの部分・全体・以降編集を行います。
@@ -190,7 +190,6 @@ export function EventDialog({
   open,
   mode,
   guildId,
-  eventService,
   initialData,
   recurrenceDefaultValues,
   eventId,
@@ -208,11 +207,8 @@ export function EventDialog({
   // スコープ付き更新中のローディング状態
   const [isScopedUpdating, setIsScopedUpdating] = useState(false);
 
-  // useEventMutation hook for CRUD operations
-  const { state, createEvent, updateEvent } = useEventMutation(
-    eventService,
-    guildId
-  );
+  // useEventMutation hook for CRUD operations (Server Actions経由)
+  const { state, createEvent, updateEvent } = useEventMutation(guildId);
 
   // ダイアログタイトル
   const dialogTitle = mode === "create" ? "新規予定作成" : "予定を編集";
@@ -320,12 +316,15 @@ export function EventDialog({
         return;
       }
 
-      // 繰り返し設定が有効な場合、シリーズとして作成
+      // 繰り返し設定が有効な場合、シリーズとして作成（Server Action経由）
       if (recurrence.isRecurring) {
         setIsCreatingSeries(true);
         try {
           const input = toCreateSeriesInput(guildId, data, recurrence);
-          const result = await eventService.createRecurringSeries(input);
+          const result = await createRecurringEventAction({
+            guildId,
+            eventData: input,
+          });
           handleResult(result, () => {
             trackEvent("event_created", {
               is_all_day: data.isAllDay,
@@ -354,7 +353,6 @@ export function EventDialog({
       mode,
       guildId,
       eventId,
-      eventService,
       initialData,
       handleScopedEdit,
       handleResult,

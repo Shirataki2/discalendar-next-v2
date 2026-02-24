@@ -18,6 +18,13 @@ export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 /** 曜日 (RFC 5545 準拠) */
 export type Weekday = "MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU";
 
+const WEEKDAY_VALUES: readonly string[] = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+
+/** 値が有効な Weekday かどうかを判定する型ガード */
+export function isWeekday(value: string): value is Weekday {
+  return WEEKDAY_VALUES.includes(value);
+}
+
 /** 月の繰り返しモード */
 export type MonthlyMode =
   | { type: "dayOfMonth"; day: number }

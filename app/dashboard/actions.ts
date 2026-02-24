@@ -141,7 +141,7 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     };
   }
 
-  // TODO: Discord API 結果をキャッシュに反映する
+  // TODO(DIS-15): Discord API 結果をキャッシュに反映する
   // setCachedGuilds は GuildWithPermissions[]（DB結合済み）を要求するため、
   // ここでは直接利用できない。user_guilds テーブル導入時にキャッシュ更新を追加する。
 
@@ -323,6 +323,10 @@ async function authorizeEventOperation(
   return { success: true, supabase: auth.supabase };
 }
 
+// NOTE: イベント操作の Server Actions では revalidatePath を呼び出さない。
+// 現在イベントデータは Client Component で fetchEvents() による手動再取得パターンを
+// 採用しているため、サーバー側のキャッシュ無効化は不要。
+
 /**
  * 権限チェック付きイベント作成 Server Action
  */
@@ -415,13 +419,28 @@ export async function createRecurringEventAction(
 // Task 4.2 (recurring-events): オカレンス編集・削除
 // ──────────────────────────────────────────────
 
-type UpdateOccurrenceActionInput = {
-  guildId: string;
-  seriesId: string;
-  scope: EditScope;
-  occurrenceDate: Date;
-  eventData: UpdateEventInput | UpdateSeriesInput;
-};
+type UpdateOccurrenceActionInput =
+  | {
+      guildId: string;
+      seriesId: string;
+      scope: "this";
+      occurrenceDate: Date;
+      eventData: UpdateEventInput;
+    }
+  | {
+      guildId: string;
+      seriesId: string;
+      scope: "all";
+      occurrenceDate: Date;
+      eventData: UpdateSeriesInput;
+    }
+  | {
+      guildId: string;
+      seriesId: string;
+      scope: "following";
+      occurrenceDate: Date;
+      eventData: UpdateSeriesInput;
+    };
 
 type DeleteOccurrenceActionInput = {
   guildId: string;
@@ -458,7 +477,7 @@ export async function updateOccurrenceAction(
           input.guildId,
           input.seriesId,
           input.occurrenceDate,
-          input.eventData as UpdateEventInput
+          input.eventData
         )
       );
     case "all":
@@ -466,7 +485,7 @@ export async function updateOccurrenceAction(
         await eventService.updateSeries(
           input.guildId,
           input.seriesId,
-          input.eventData as UpdateSeriesInput
+          input.eventData
         )
       );
     case "following":
@@ -475,11 +494,11 @@ export async function updateOccurrenceAction(
           input.guildId,
           input.seriesId,
           input.occurrenceDate,
-          input.eventData as UpdateSeriesInput
+          input.eventData
         )
       );
     default: {
-      const _exhaustive: never = input.scope;
+      const _exhaustive: never = input;
       return _exhaustive;
     }
   }

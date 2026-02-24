@@ -1,46 +1,41 @@
 /**
  * useEventMutationのユニットテスト
  *
- * タスク4.1: EventServiceを使用したミューテーション操作を管理するカスタムフックを作成する
+ * タスク4.1: Server Actionsを使用したミューテーション操作を管理するカスタムフックを作成する
  * - 作成・更新・削除の各操作のローディング状態を管理する
- * - EventServiceの各メソッドを呼び出してCRUD操作を実行する
+ * - Server Actions経由でCRUD操作を実行する
  * - 操作成功時と失敗時のコールバックをサポートする
  * - エラー状態の保持とクリア機能を提供する
  *
  * Requirements: 1.4, 3.3, 4.2
  */
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   CalendarError,
   CreateEventInput,
-  EventServiceInterface,
   MutationResult,
   UpdateEventInput,
 } from "@/lib/calendar/event-service";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { useEventMutation } from "./use-event-mutation";
 
-// モックEventService作成ヘルパー
-function createMockEventService(
-  overrides?: Partial<EventServiceInterface>
-): EventServiceInterface {
-  return {
-    fetchEvents: vi.fn(),
-    createEvent: vi.fn(),
-    updateEvent: vi.fn(),
-    deleteEvent: vi.fn(),
-    createRecurringSeries: vi.fn(),
-    fetchEventsWithSeries: vi.fn(),
-    updateOccurrence: vi.fn(),
-    deleteOccurrence: vi.fn(),
-    updateSeries: vi.fn(),
-    deleteSeries: vi.fn(),
-    splitSeries: vi.fn(),
-    truncateSeries: vi.fn(),
-    ...overrides,
-  };
-}
+// Server Actionsのモック
+vi.mock("@/app/dashboard/actions", () => ({
+  createEventAction: vi.fn(),
+  updateEventAction: vi.fn(),
+  deleteEventAction: vi.fn(),
+}));
+
+import {
+  createEventAction,
+  deleteEventAction,
+  updateEventAction,
+} from "@/app/dashboard/actions";
+
+const mockCreateEventAction = vi.mocked(createEventAction);
+const mockUpdateEventAction = vi.mocked(updateEventAction);
+const mockDeleteEventAction = vi.mocked(deleteEventAction);
 
 // テスト用のモックCalendarEvent
 const mockCalendarEvent: CalendarEvent = {
@@ -59,8 +54,7 @@ describe("useEventMutation", () => {
 
   describe("初期状態", () => {
     it("should initialize with all loading states as false", () => {
-      const mockService = createMockEventService();
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       expect(result.current.state.isCreating).toBe(false);
       expect(result.current.state.isUpdating).toBe(false);
@@ -68,8 +62,7 @@ describe("useEventMutation", () => {
     });
 
     it("should initialize with error as null", () => {
-      const mockService = createMockEventService();
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       expect(result.current.state.error).toBeNull();
     });
@@ -84,11 +77,9 @@ describe("useEventMutation", () => {
         }
       );
 
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockReturnValue(pendingPromise),
-      });
+      mockCreateEventAction.mockReturnValue(pendingPromise);
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       act(() => {
         result.current.createEvent({
@@ -108,14 +99,12 @@ describe("useEventMutation", () => {
     });
 
     it("should set isCreating to false after successful creation", async () => {
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockCalendarEvent,
-        }),
+      mockCreateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       await act(async () => {
         await result.current.createEvent({
@@ -129,16 +118,13 @@ describe("useEventMutation", () => {
       expect(result.current.state.isCreating).toBe(false);
     });
 
-    it("should call EventService.createEvent with correct input", async () => {
-      const createEventMock = vi.fn().mockResolvedValue({
+    it("should call createEventAction with correct input", async () => {
+      mockCreateEventAction.mockResolvedValue({
         success: true,
         data: mockCalendarEvent,
       });
-      const mockService = createMockEventService({
-        createEvent: createEventMock,
-      });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       const input: CreateEventInput = {
         guildId: "guild-123",
@@ -153,18 +139,19 @@ describe("useEventMutation", () => {
         await result.current.createEvent(input);
       });
 
-      expect(createEventMock).toHaveBeenCalledWith(input);
+      expect(mockCreateEventAction).toHaveBeenCalledWith({
+        guildId: "guild-123",
+        eventData: input,
+      });
     });
 
     it("should return success result on successful creation", async () => {
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockCalendarEvent,
-        }),
+      mockCreateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       let createResult: MutationResult<CalendarEvent> | undefined;
       await act(async () => {
@@ -187,14 +174,12 @@ describe("useEventMutation", () => {
         code: "CREATE_FAILED",
         message: "イベントの作成に失敗しました。",
       };
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockResolvedValue({
-          success: false,
-          error: mockError,
-        }),
+      mockCreateEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       await act(async () => {
         await result.current.createEvent({
@@ -210,16 +195,14 @@ describe("useEventMutation", () => {
     });
 
     it("should call onSuccess callback after successful creation", async () => {
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockCalendarEvent,
-        }),
+      mockCreateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
       });
       const onSuccess = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, "guild-123", { onSuccess })
+        useEventMutation("guild-123", { onSuccess })
       );
 
       await act(async () => {
@@ -239,16 +222,14 @@ describe("useEventMutation", () => {
         code: "CREATE_FAILED",
         message: "イベントの作成に失敗しました。",
       };
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockResolvedValue({
-          success: false,
-          error: mockError,
-        }),
+      mockCreateEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
       });
       const onError = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, "guild-123", { onError })
+        useEventMutation("guild-123", { onError })
       );
 
       await act(async () => {
@@ -273,11 +254,9 @@ describe("useEventMutation", () => {
         }
       );
 
-      const mockService = createMockEventService({
-        updateEvent: vi.fn().mockReturnValue(pendingPromise),
-      });
+      mockUpdateEventAction.mockReturnValue(pendingPromise);
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       act(() => {
         result.current.updateEvent("event-1", { title: "更新されたタイトル" });
@@ -292,14 +271,12 @@ describe("useEventMutation", () => {
     });
 
     it("should set isUpdating to false after successful update", async () => {
-      const mockService = createMockEventService({
-        updateEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockCalendarEvent,
-        }),
+      mockUpdateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       await act(async () => {
         await result.current.updateEvent("event-1", {
@@ -310,16 +287,13 @@ describe("useEventMutation", () => {
       expect(result.current.state.isUpdating).toBe(false);
     });
 
-    it("should call EventService.updateEvent with correct id and input", async () => {
-      const updateEventMock = vi.fn().mockResolvedValue({
+    it("should call updateEventAction with correct id and input", async () => {
+      mockUpdateEventAction.mockResolvedValue({
         success: true,
         data: mockCalendarEvent,
       });
-      const mockService = createMockEventService({
-        updateEvent: updateEventMock,
-      });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       const input: UpdateEventInput = {
         title: "更新されたタイトル",
@@ -330,7 +304,11 @@ describe("useEventMutation", () => {
         await result.current.updateEvent("event-1", input);
       });
 
-      expect(updateEventMock).toHaveBeenCalledWith("guild-123", "event-1", input);
+      expect(mockUpdateEventAction).toHaveBeenCalledWith({
+        guildId: "guild-123",
+        eventId: "event-1",
+        eventData: input,
+      });
     });
 
     it("should return success result on successful update", async () => {
@@ -338,14 +316,12 @@ describe("useEventMutation", () => {
         ...mockCalendarEvent,
         title: "更新されたタイトル",
       };
-      const mockService = createMockEventService({
-        updateEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: updatedEvent,
-        }),
+      mockUpdateEventAction.mockResolvedValue({
+        success: true,
+        data: updatedEvent,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       let updateResult: MutationResult<CalendarEvent> | undefined;
       await act(async () => {
@@ -365,14 +341,12 @@ describe("useEventMutation", () => {
         code: "UPDATE_FAILED",
         message: "イベントの更新に失敗しました。",
       };
-      const mockService = createMockEventService({
-        updateEvent: vi.fn().mockResolvedValue({
-          success: false,
-          error: mockError,
-        }),
+      mockUpdateEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       await act(async () => {
         await result.current.updateEvent("event-1", { title: "更新テスト" });
@@ -383,16 +357,14 @@ describe("useEventMutation", () => {
     });
 
     it("should call onSuccess callback after successful update", async () => {
-      const mockService = createMockEventService({
-        updateEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockCalendarEvent,
-        }),
+      mockUpdateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
       });
       const onSuccess = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, "guild-123", { onSuccess })
+        useEventMutation("guild-123", { onSuccess })
       );
 
       await act(async () => {
@@ -407,16 +379,14 @@ describe("useEventMutation", () => {
         code: "UPDATE_FAILED",
         message: "イベントの更新に失敗しました。",
       };
-      const mockService = createMockEventService({
-        updateEvent: vi.fn().mockResolvedValue({
-          success: false,
-          error: mockError,
-        }),
+      mockUpdateEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
       });
       const onError = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, "guild-123", { onError })
+        useEventMutation("guild-123", { onError })
       );
 
       await act(async () => {
@@ -434,11 +404,9 @@ describe("useEventMutation", () => {
         resolvePromise = resolve;
       });
 
-      const mockService = createMockEventService({
-        deleteEvent: vi.fn().mockReturnValue(pendingPromise),
-      });
+      mockDeleteEventAction.mockReturnValue(pendingPromise);
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       act(() => {
         result.current.deleteEvent("event-1");
@@ -453,14 +421,12 @@ describe("useEventMutation", () => {
     });
 
     it("should set isDeleting to false after successful deletion", async () => {
-      const mockService = createMockEventService({
-        deleteEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: undefined,
-        }),
+      mockDeleteEventAction.mockResolvedValue({
+        success: true,
+        data: undefined,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       await act(async () => {
         await result.current.deleteEvent("event-1");
@@ -469,33 +435,31 @@ describe("useEventMutation", () => {
       expect(result.current.state.isDeleting).toBe(false);
     });
 
-    it("should call EventService.deleteEvent with correct id", async () => {
-      const deleteEventMock = vi.fn().mockResolvedValue({
+    it("should call deleteEventAction with correct id", async () => {
+      mockDeleteEventAction.mockResolvedValue({
         success: true,
         data: undefined,
       });
-      const mockService = createMockEventService({
-        deleteEvent: deleteEventMock,
-      });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       await act(async () => {
         await result.current.deleteEvent("event-1");
       });
 
-      expect(deleteEventMock).toHaveBeenCalledWith("guild-123", "event-1");
+      expect(mockDeleteEventAction).toHaveBeenCalledWith({
+        guildId: "guild-123",
+        eventId: "event-1",
+      });
     });
 
     it("should return success result on successful deletion", async () => {
-      const mockService = createMockEventService({
-        deleteEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: undefined,
-        }),
+      mockDeleteEventAction.mockResolvedValue({
+        success: true,
+        data: undefined,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       let deleteResult: MutationResult<void> | undefined;
       await act(async () => {
@@ -510,14 +474,12 @@ describe("useEventMutation", () => {
         code: "DELETE_FAILED",
         message: "イベントの削除に失敗しました。",
       };
-      const mockService = createMockEventService({
-        deleteEvent: vi.fn().mockResolvedValue({
-          success: false,
-          error: mockError,
-        }),
+      mockDeleteEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       await act(async () => {
         await result.current.deleteEvent("event-1");
@@ -528,16 +490,14 @@ describe("useEventMutation", () => {
     });
 
     it("should call onSuccess callback after successful deletion", async () => {
-      const mockService = createMockEventService({
-        deleteEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: undefined,
-        }),
+      mockDeleteEventAction.mockResolvedValue({
+        success: true,
+        data: undefined,
       });
       const onSuccess = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, "guild-123", { onSuccess })
+        useEventMutation("guild-123", { onSuccess })
       );
 
       await act(async () => {
@@ -552,16 +512,14 @@ describe("useEventMutation", () => {
         code: "DELETE_FAILED",
         message: "イベントの削除に失敗しました。",
       };
-      const mockService = createMockEventService({
-        deleteEvent: vi.fn().mockResolvedValue({
-          success: false,
-          error: mockError,
-        }),
+      mockDeleteEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
       });
       const onError = vi.fn();
 
       const { result } = renderHook(() =>
-        useEventMutation(mockService, "guild-123", { onError })
+        useEventMutation("guild-123", { onError })
       );
 
       await act(async () => {
@@ -578,14 +536,12 @@ describe("useEventMutation", () => {
         code: "CREATE_FAILED",
         message: "イベントの作成に失敗しました。",
       };
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockResolvedValue({
-          success: false,
-          error: mockError,
-        }),
+      mockCreateEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       // まずエラーを発生させる
       await act(async () => {
@@ -617,12 +573,9 @@ describe("useEventMutation", () => {
         }
       );
 
-      const createEventMock = vi.fn().mockReturnValueOnce(firstPromise);
-      const mockService = createMockEventService({
-        createEvent: createEventMock,
-      });
+      mockCreateEventAction.mockReturnValueOnce(firstPromise);
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       // 最初の作成を開始
       act(() => {
@@ -645,18 +598,16 @@ describe("useEventMutation", () => {
     });
 
     it("should allow different operations to run independently", async () => {
-      const mockService = createMockEventService({
-        createEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockCalendarEvent,
-        }),
-        deleteEvent: vi.fn().mockResolvedValue({
-          success: true,
-          data: undefined,
-        }),
+      mockCreateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
+      });
+      mockDeleteEventAction.mockResolvedValue({
+        success: true,
+        data: undefined,
       });
 
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       // 作成と削除を同時に実行
       await act(async () => {
@@ -683,16 +634,11 @@ describe("useEventMutation", () => {
         message: "イベントの作成に失敗しました。",
       };
 
-      const createEventMock = vi
-        .fn()
+      mockCreateEventAction
         .mockResolvedValueOnce({ success: false, error: mockError })
         .mockResolvedValueOnce({ success: true, data: mockCalendarEvent });
 
-      const mockService = createMockEventService({
-        createEvent: createEventMock,
-      });
-
-      const { result } = renderHook(() => useEventMutation(mockService, "guild-123"));
+      const { result } = renderHook(() => useEventMutation("guild-123"));
 
       // 失敗する操作
       await act(async () => {

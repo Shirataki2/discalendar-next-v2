@@ -1,19 +1,23 @@
 /**
  * イベントミューテーション操作を管理するカスタムフック
  *
- * タスク4.1: EventServiceを使用したミューテーション操作を管理するカスタムフックを作成する
+ * タスク4.1: Server Actionsを使用したミューテーション操作を管理するカスタムフックを作成する
  * - 作成・更新・削除の各操作のローディング状態を管理する
- * - EventServiceの各メソッドを呼び出してCRUD操作を実行する
+ * - Server Actions経由でCRUD操作を実行する（権限チェック含む）
  * - 操作成功時と失敗時のコールバックをサポートする
  * - エラー状態の保持とクリア機能を提供する
  *
  * Requirements: 1.4, 3.3, 4.2
  */
 import { useCallback, useState } from "react";
+import {
+  createEventAction,
+  deleteEventAction,
+  updateEventAction,
+} from "@/app/dashboard/actions";
 import type {
   CalendarError,
   CreateEventInput,
-  EventServiceInterface,
   MutationResult,
   UpdateEventInput,
 } from "@/lib/calendar/event-service";
@@ -62,15 +66,18 @@ export interface UseEventMutationReturn {
 /**
  * イベントミューテーション操作を管理するカスタムフック
  *
- * @param eventService - EventServiceインスタンス
+ * Server Actions経由でイベントの作成・更新・削除を実行する。
+ * Server Actions内で権限チェック（authorizeEventOperation）が行われるため、
+ * クライアントサイドでの権限バイパスを防止する。
+ *
+ * @param guildId - ギルドID
  * @param options - オプション（成功・失敗コールバック）
  * @returns ミューテーション状態と操作メソッド
  *
  * @example
  * ```tsx
- * const eventService = createEventService(supabase);
  * const { state, createEvent, updateEvent, deleteEvent, clearError } = useEventMutation(
- *   eventService,
+ *   "guild-123",
  *   {
  *     onSuccess: () => {
  *       fetchEvents(); // イベント一覧を再取得
@@ -95,7 +102,6 @@ export interface UseEventMutationReturn {
  * ```
  */
 export function useEventMutation(
-  eventService: EventServiceInterface,
   guildId: string,
   options?: UseEventMutationOptions
 ): UseEventMutationReturn {
@@ -116,7 +122,7 @@ export function useEventMutation(
       setError(null);
 
       try {
-        const result = await eventService.createEvent(data);
+        const result = await createEventAction({ guildId, eventData: data });
 
         if (result.success) {
           options?.onSuccess?.();
@@ -130,7 +136,7 @@ export function useEventMutation(
         setIsCreating(false);
       }
     },
-    [eventService, options]
+    [guildId, options]
   );
 
   /**
@@ -145,7 +151,7 @@ export function useEventMutation(
       setError(null);
 
       try {
-        const result = await eventService.updateEvent(guildId, id, data);
+        const result = await updateEventAction({ guildId, eventId: id, eventData: data });
 
         if (result.success) {
           options?.onSuccess?.();
@@ -159,7 +165,7 @@ export function useEventMutation(
         setIsUpdating(false);
       }
     },
-    [eventService, guildId, options]
+    [guildId, options]
   );
 
   /**
@@ -171,7 +177,7 @@ export function useEventMutation(
       setError(null);
 
       try {
-        const result = await eventService.deleteEvent(guildId, id);
+        const result = await deleteEventAction({ guildId, eventId: id });
 
         if (result.success) {
           options?.onSuccess?.();
@@ -185,7 +191,7 @@ export function useEventMutation(
         setIsDeleting(false);
       }
     },
-    [eventService, guildId, options]
+    [guildId, options]
   );
 
   /**

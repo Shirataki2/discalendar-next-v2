@@ -22,10 +22,19 @@ import type { SlotSelectInfo } from "./calendar-grid";
 let capturedOnAddClick: (() => void) | undefined;
 let capturedOnSlotSelect: ((slotInfo: SlotSelectInfo) => void) | undefined;
 
-// EventServiceのモック
-const mockCreateEvent = vi.fn();
-const mockUpdateEvent = vi.fn();
-const mockDeleteEvent = vi.fn();
+// Server Actions のモック（useEventMutation が Server Actions 経由で操作する）
+const mockCreateEventAction = vi.fn();
+const mockUpdateEventAction = vi.fn();
+const mockDeleteEventAction = vi.fn();
+
+vi.mock("@/app/dashboard/actions", () => ({
+  createEventAction: (...args: unknown[]) => mockCreateEventAction(...args),
+  updateEventAction: (...args: unknown[]) => mockUpdateEventAction(...args),
+  deleteEventAction: (...args: unknown[]) => mockDeleteEventAction(...args),
+  deleteOccurrenceAction: vi.fn(),
+}));
+
+// EventServiceのモック（fetchEventsWithSeries のみ使用）
 const mockFetchEventsWithSeries = vi.fn().mockResolvedValue({
   success: true,
   data: [],
@@ -34,9 +43,6 @@ const mockFetchEventsWithSeries = vi.fn().mockResolvedValue({
 vi.mock("@/lib/calendar/event-service", () => ({
   createEventService: vi.fn(() => ({
     fetchEventsWithSeries: mockFetchEventsWithSeries,
-    createEvent: mockCreateEvent,
-    updateEvent: mockUpdateEvent,
-    deleteEvent: mockDeleteEvent,
   })),
 }));
 
@@ -289,6 +295,24 @@ const createMatchMediaMock = (matches: boolean) =>
     dispatchEvent: vi.fn(),
   }));
 
+// innerWidthに基づいてmatchMediaの結果を動的に返すモック
+const MIN_WIDTH_REGEX = /\(min-width:\s*(\d+)px\)/;
+const createDynamicMatchMediaMock = () =>
+  vi.fn().mockImplementation((query: string) => {
+    const match = query.match(MIN_WIDTH_REGEX);
+    const minWidth = match ? Number.parseInt(match[1], 10) : 0;
+    return {
+      matches: window.innerWidth >= minWidth,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+  });
+
 describe("CalendarContainer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -340,9 +364,6 @@ describe("CalendarContainer", () => {
 
       vi.mocked(createEventService).mockReturnValue({
         fetchEventsWithSeries: localMockFetchEvents,
-        createEvent: mockCreateEvent,
-        updateEvent: mockUpdateEvent,
-        deleteEvent: mockDeleteEvent,
       });
 
       render(<CalendarContainer guildId="test-guild-123" />);
@@ -377,9 +398,6 @@ describe("CalendarContainer", () => {
 
       vi.mocked(createEventService).mockReturnValue({
         fetchEventsWithSeries: localMockFetchEvents,
-        createEvent: mockCreateEvent,
-        updateEvent: mockUpdateEvent,
-        deleteEvent: mockDeleteEvent,
       });
 
       render(<CalendarContainer guildId="test-guild" />);
@@ -430,6 +448,10 @@ describe("CalendarContainer", () => {
           writable: true,
           value: 600,
         });
+        Object.defineProperty(window, "matchMedia", {
+          writable: true,
+          value: createDynamicMatchMediaMock(),
+        });
 
         render(<CalendarContainer guildId={null} />);
 
@@ -460,9 +482,6 @@ describe("CalendarContainer", () => {
       // createEventServiceのモックをリセット
       vi.mocked(createEventService).mockReturnValue({
         fetchEventsWithSeries: mockFetchEventsWithSeries,
-        createEvent: mockCreateEvent,
-        updateEvent: mockUpdateEvent,
-        deleteEvent: mockDeleteEvent,
       });
     });
 
@@ -641,9 +660,6 @@ describe("CalendarContainer", () => {
       // createEventServiceのモックをリセット
       vi.mocked(createEventService).mockReturnValue({
         fetchEventsWithSeries: mockFetchEventsWithSeries,
-        createEvent: mockCreateEvent,
-        updateEvent: mockUpdateEvent,
-        deleteEvent: mockDeleteEvent,
       });
     });
 
@@ -825,7 +841,7 @@ describe("CalendarContainer", () => {
 
       it("削除確認後にfetchEventsが再呼び出しされてカレンダー表示が更新される", async () => {
         // 削除成功のモックを設定
-        mockDeleteEvent.mockResolvedValue({
+        mockDeleteEventAction.mockResolvedValue({
           success: true,
           data: undefined,
         });
