@@ -40,3 +40,11 @@ export const RestrictedOn: Story = {
     restricted: true,
   },
 };
+
+export const HideTitle: Story = {
+  args: {
+    guildId: "123456789",
+    restricted: false,
+    hideTitle: true,
+  },
+};

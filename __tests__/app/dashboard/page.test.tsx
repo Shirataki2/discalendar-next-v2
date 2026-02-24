@@ -247,7 +247,7 @@ describe("DashboardPage", () => {
   });
 
   describe("Task 7: ダッシュボードレイアウト", () => {
-    it("should render welcome message with user name", async () => {
+    it("should not render welcome message (DIS-47: removed for calendar viewport maximization)", async () => {
       const { DashboardPageClient } = await import("@/app/dashboard/page");
       render(
         <DashboardPageClient
@@ -261,9 +261,10 @@ describe("DashboardPage", () => {
         />
       );
 
-      // Check for welcome message in h2 heading
-      const welcomeHeading = screen.getByRole("heading", { level: 2 });
-      expect(welcomeHeading).toHaveTextContent(WELCOME_HEADING_PATTERN);
+      // DIS-47: ウェルカムセクション削除済み
+      expect(
+        screen.queryByText(WELCOME_HEADING_PATTERN)
+      ).not.toBeInTheDocument();
     });
 
     it("should have proper structure with header section", async () => {

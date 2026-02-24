@@ -128,17 +128,8 @@ export function DashboardPageClient({
           </div>
         </div>
       </header>
-      <main className="container mx-auto flex flex-1 flex-col px-4 py-8">
-        <div className="flex flex-1 flex-col gap-6">
-          <div className="space-y-2">
-            <h2 className="font-bold text-2xl">
-              ようこそ、{user.fullName ?? "ユーザー"}さん
-            </h2>
-            <p className="text-muted-foreground">
-              Discalendarへようこそ。ここからカレンダーを管理できます。
-            </p>
-          </div>
-
+      <main className="container mx-auto flex flex-1 flex-col px-4 py-3">
+        <div className="flex flex-1 flex-col">
           {/* ギルド一覧とカレンダー統合 (Task 10.1, guild-permissions 7.2) */}
           <DashboardWithCalendar
             guildError={guildError}

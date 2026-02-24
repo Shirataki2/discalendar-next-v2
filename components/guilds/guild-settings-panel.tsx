@@ -20,6 +20,8 @@ export type GuildSettingsPanelProps = {
   guildId: string;
   /** 現在の restricted フラグ */
   restricted: boolean;
+  /** タイトル・border・paddingを非表示にする（Dialog内で使用時） */
+  hideTitle?: boolean;
 };
 
 /**
@@ -32,6 +34,7 @@ export type GuildSettingsPanelProps = {
 export function GuildSettingsPanel({
   guildId,
   restricted,
+  hideTitle,
 }: GuildSettingsPanelProps) {
   const [isRestricted, setIsRestricted] = useState(restricted);
   const [isPending, startTransition] = useTransition();
@@ -66,8 +69,10 @@ export function GuildSettingsPanel({
   );
 
   return (
-    <div className="space-y-3 rounded-lg border p-4">
-      <h4 className="font-semibold text-sm">ギルド設定</h4>
+    <div
+      className={hideTitle ? "space-y-3" : "space-y-3 rounded-lg border p-4"}
+    >
+      {hideTitle ? null : <h4 className="font-semibold text-sm">ギルド設定</h4>}
       <div className="flex items-center justify-between gap-4">
         <Label className="cursor-pointer text-sm" htmlFor="restricted-toggle">
           イベント編集を管理者のみに制限

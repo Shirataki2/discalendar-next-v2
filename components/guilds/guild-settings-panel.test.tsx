@@ -143,6 +143,22 @@ describe("GuildSettingsPanel", () => {
     expect(screen.getByRole("switch")).toHaveAttribute("data-state", "checked");
   });
 
+  it("hideTitle=true の場合、タイトルとborderを非表示にする", () => {
+    render(<GuildSettingsPanel {...defaultProps} hideTitle />);
+
+    expect(screen.queryByText("ギルド設定")).not.toBeInTheDocument();
+    expect(screen.getByRole("switch")).toBeInTheDocument();
+    expect(
+      screen.getByText("イベント編集を管理者のみに制限")
+    ).toBeInTheDocument();
+  });
+
+  it("hideTitle=false（デフォルト）の場合、タイトルを表示する", () => {
+    render(<GuildSettingsPanel {...defaultProps} />);
+
+    expect(screen.getByText("ギルド設定")).toBeInTheDocument();
+  });
+
   it("guildId が変更された場合にエラーがクリアされる", async () => {
     const user = userEvent.setup();
     mockedUpdateGuildConfig.mockResolvedValue({

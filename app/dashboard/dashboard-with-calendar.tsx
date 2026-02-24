@@ -18,7 +18,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
-import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
+import { GuildSettingsDialog } from "@/components/guilds/guild-settings-dialog";
 import { InvitableGuildCard } from "@/components/guilds/invitable-guild-card";
 import { SelectableGuildCard } from "@/components/guilds/selectable-guild-card";
 import { Button } from "@/components/ui/button";
@@ -369,9 +369,11 @@ function DesktopGuildSidebar({
 function CalendarArea({
   selectedGuildId,
   canEditEvents,
+  onSettingsClick,
 }: {
   selectedGuildId: string | null;
   canEditEvents: boolean;
+  onSettingsClick?: () => void;
 }) {
   return (
     <section
@@ -383,6 +385,7 @@ function CalendarArea({
           <CalendarContainer
             canEditEvents={canEditEvents}
             guildId={selectedGuildId}
+            onSettingsClick={onSettingsClick}
           />
         </div>
       ) : (
@@ -423,6 +426,7 @@ export function DashboardWithCalendar({
   guildPermissions: initialGuildPermissions,
 }: DashboardWithCalendarProps) {
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
     "discalendar:sidebar-collapsed",
     false
@@ -494,8 +498,14 @@ export function DashboardWithCalendar({
   // Req 5.5: ローディング中は操作を無効化
   const effectiveCanEdit = permissionsLoading ? false : canEditEvents;
 
+  // DIS-47: 管理権限がある場合のみ設定ボタンを表示
+  const handleSettingsClick =
+    selectedGuildId !== null && canManageGuild && selectedPermInfo !== undefined
+      ? () => setIsSettingsDialogOpen(true)
+      : undefined;
+
   return (
-    <div className="flex flex-1 flex-col gap-8 lg:flex-row lg:gap-6">
+    <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:gap-4">
       <MobileGuildSelector
         guildError={guildError}
         guilds={sortedGuilds}
@@ -513,19 +523,20 @@ export function DashboardWithCalendar({
         onToggleCollapse={handleToggleCollapse}
         selectedGuildId={selectedGuildId}
       />
-      <div className="flex flex-1 flex-col gap-4">
-        {/* Req 5.3: 管理権限のあるユーザーにのみ設定パネルを表示 */}
-        {selectedGuildId !== null && canManageGuild && selectedPermInfo ? (
-          <GuildSettingsPanel
-            guildId={selectedGuildId}
-            restricted={selectedPermInfo.restricted}
-          />
-        ) : null}
-        <CalendarArea
-          canEditEvents={effectiveCanEdit}
-          selectedGuildId={selectedGuildId}
+      <CalendarArea
+        canEditEvents={effectiveCanEdit}
+        onSettingsClick={handleSettingsClick}
+        selectedGuildId={selectedGuildId}
+      />
+      {/* DIS-47: ギルド設定ダイアログ（ツールバーの歯車ボタンから開く） */}
+      {selectedGuildId !== null && selectedPermInfo !== undefined ? (
+        <GuildSettingsDialog
+          guildId={selectedGuildId}
+          onOpenChange={setIsSettingsDialogOpen}
+          open={isSettingsDialogOpen}
+          restricted={selectedPermInfo.restricted}
         />
-      </div>
+      ) : null}
     </div>
   );
 }
