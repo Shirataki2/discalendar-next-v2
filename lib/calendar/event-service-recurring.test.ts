@@ -305,7 +305,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const occurrenceDateToDelete = new Date("2026-01-13T10:00:00.000Z"); // 2番目の火曜日
 
-      const deleteResult = await service.deleteOccurrence("series-1", occurrenceDateToDelete);
+      const deleteResult = await service.deleteOccurrence("guild-123", "series-1", occurrenceDateToDelete);
       expect(deleteResult.success).toBe(true);
 
       // Step 2: fetchEventsWithSeries で EXDATE 反映を確認
@@ -351,6 +351,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const result = await service.deleteOccurrence(
+        "guild-123",
         "non-existent-series",
         new Date("2026-01-13T10:00:00Z"),
       );
@@ -389,6 +390,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const updateResult = await service.updateOccurrence(
+        "guild-123",
         "series-2",
         new Date("2026-02-02T09:00:00.000Z"),
         { title: "変更済み Meeting", startAt: new Date("2026-02-02T11:00:00Z"), endAt: new Date("2026-02-02T12:00:00Z") },
@@ -431,6 +433,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
     it("updateOccurrence のバリデーションエラー: 空シリーズID", async () => {
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const result = await service.updateOccurrence(
+        "guild-123",
         "",
         new Date("2026-01-01T10:00:00Z"),
         { title: "test" },
@@ -457,7 +460,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
         .mockReturnValueOnce(createFlexibleBuilder({ data: updatedSeries }));
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
-      const result = await service.updateSeries("series-3", {
+      const result = await service.updateSeries("guild-123", "series-3", {
         title: "Updated Weekly",
         color: "#22C55E",
       });
@@ -483,7 +486,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
         .mockReturnValueOnce(createFlexibleBuilder({ data: updatedSeries })); // update series
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
-      const result = await service.updateSeries("series-4", {
+      const result = await service.updateSeries("guild-123", "series-4", {
         title: "Reset Series",
         resetExceptions: true,
       });
@@ -497,7 +500,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
       );
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
-      const result = await service.updateSeries("non-existent", { title: "test" });
+      const result = await service.updateSeries("guild-123", "non-existent", { title: "test" });
 
       expect(result.success).toBe(false);
       if (result.success) return;
@@ -511,7 +514,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
         .mockReturnValueOnce(createFlexibleBuilder({ data: null })); // delete series
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
-      const result = await service.deleteSeries("series-5");
+      const result = await service.deleteSeries("guild-123", "series-5");
 
       expect(result.success).toBe(true);
 
@@ -548,6 +551,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const splitResult = await service.splitSeries(
+        "guild-123",
         "series-split-1",
         new Date("2026-01-20T10:00:00.000Z"),
         { rrule: "FREQ=WEEKLY;BYDAY=WE" },
@@ -620,6 +624,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const result = await service.splitSeries(
+        "guild-123",
         "series-compensate",
         new Date("2026-01-15T10:00:00Z"),
         { title: "New Part" },
@@ -642,6 +647,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const result = await service.splitSeries(
+        "guild-123",
         "non-existent",
         new Date("2026-01-15T10:00:00Z"),
         { title: "test" },
@@ -675,6 +681,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
       const result = await service.truncateSeries(
+        "guild-123",
         "series-truncate",
         new Date("2026-03-10T09:00:00.000Z"),
       );
@@ -846,7 +853,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
       mockSupabaseClient.from.mockReturnValue(updateBuilder);
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
-      const result = await service.updateEvent("existing-single", {
+      const result = await service.updateEvent("guild-123", "existing-single", {
         title: "更新された単発",
       });
 
@@ -862,7 +869,7 @@ describe("EventService 繰り返しイベント統合テスト", () => {
       mockSupabaseClient.from.mockReturnValue(deleteBuilder);
 
       const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
-      const result = await service.deleteEvent("single-to-delete");
+      const result = await service.deleteEvent("guild-123", "single-to-delete");
 
       expect(result.success).toBe(true);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
