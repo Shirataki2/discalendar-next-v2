@@ -18,7 +18,16 @@
 
 import { format, isSameDay } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Calendar, Clock, Hash, MapPin, Pencil, Trash2, X } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Hash,
+  MapPin,
+  Pencil,
+  Repeat,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -212,6 +221,17 @@ export function EventPopover({
               {formatEventDateTime(event)}
             </div>
           </div>
+
+          {/* 繰り返し情報 (recurring-events Req 4.3) */}
+          {event.isRecurring === true && event.rruleSummary ? (
+            <div
+              className="flex items-center gap-2 text-muted-foreground text-sm"
+              data-testid="recurrence-info"
+            >
+              <Repeat className="h-4 w-4 shrink-0" />
+              <span>{event.rruleSummary}</span>
+            </div>
+          ) : null}
 
           {/* 場所 (Req 4.3) */}
           {event.location ? (

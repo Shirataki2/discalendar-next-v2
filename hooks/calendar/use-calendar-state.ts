@@ -10,7 +10,8 @@
  * Requirements: 1.4, 5.3
  */
 import { useCallback, useMemo, useState } from "react";
-import type { CalendarError, CalendarEvent } from "@/lib/calendar";
+import type { CalendarError } from "@/lib/calendar/event-service";
+import type { CalendarEvent } from "@/lib/calendar/types";
 
 /**
  * ビューモードの型定義

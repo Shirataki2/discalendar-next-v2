@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { Repeat } from "lucide-react";
 import { useCallback } from "react";
 import {
   Tooltip,
@@ -21,8 +22,19 @@ function formatTime(date: Date): string {
   return format(date, "HH:mm");
 }
 
-function getAccessibleLabel(title: string, isAllDay: boolean): string {
-  return isAllDay ? `${title} (終日)` : title;
+function getAccessibleLabel(
+  title: string,
+  isAllDay: boolean,
+  isRecurring?: boolean
+): string {
+  const parts: string[] = [];
+  if (isAllDay) {
+    parts.push("終日");
+  }
+  if (isRecurring) {
+    parts.push("繰り返し");
+  }
+  return parts.length > 0 ? `${title} (${parts.join(", ")})` : title;
 }
 
 export function EventBlock({
@@ -55,7 +67,11 @@ export function EventBlock({
 
   const shouldShowTime = showTime === true && !isAllDay;
 
-  const accessibleLabel = getAccessibleLabel(title, isAllDay);
+  const accessibleLabel = getAccessibleLabel(
+    title,
+    isAllDay,
+    event.isRecurring
+  );
 
   return (
     <Tooltip>
@@ -75,6 +91,12 @@ export function EventBlock({
           tabIndex={0}
           type="button"
         >
+          {event.isRecurring ? (
+            <Repeat
+              className="mr-0.5 inline-block h-3 w-3 shrink-0"
+              data-testid="recurring-indicator"
+            />
+          ) : null}
           {shouldShowTime ? (
             <span className="mr-1 opacity-80">{formatTime(event.start)}</span>
           ) : null}

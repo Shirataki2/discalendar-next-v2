@@ -75,19 +75,26 @@ export interface UseEventFormReturn {
 
 const MAX_NOTIFICATIONS = 10;
 
-/**
- * デフォルトのフォーム値
- */
-const DEFAULT_FORM_VALUES: EventFormData = {
+/** デフォルトのフォーム値（Date以外の静的フィールド） */
+const DEFAULT_FORM_STATIC = {
   title: "",
-  startAt: new Date(),
-  endAt: new Date(),
   description: "",
   isAllDay: false,
   color: "#3B82F6",
   location: "",
-  notifications: [],
+  notifications: [] as EventFormData["notifications"],
 };
+
+/** デフォルトのフォーム値を生成（endAt は startAt + 1時間） */
+function createDefaultFormValues(): EventFormData {
+  const now = new Date();
+  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+  return {
+    ...DEFAULT_FORM_STATIC,
+    startAt: now,
+    endAt: oneHourLater,
+  };
+}
 
 /**
  * タイトルのバリデーション
@@ -216,10 +223,11 @@ function validateForm(values: EventFormData): ValidationErrors {
 export function useEventForm(
   initialValues?: Partial<EventFormData>
 ): UseEventFormReturn {
-  // 初期値のマージ
+  // 初期値のマージ（毎回新鮮なデフォルトDateを生成）
   const mergedInitialValues = useMemo<EventFormData>(() => {
+    const defaults = createDefaultFormValues();
     return {
-      ...DEFAULT_FORM_VALUES,
+      ...defaults,
       ...initialValues,
       // Date型のフィールドは明示的に処理
       startAt:
@@ -227,13 +235,13 @@ export function useEventForm(
           ? initialValues.startAt
           : initialValues?.startAt
             ? new Date(initialValues.startAt)
-            : DEFAULT_FORM_VALUES.startAt,
+            : defaults.startAt,
       endAt:
         initialValues?.endAt instanceof Date
           ? initialValues.endAt
           : initialValues?.endAt
             ? new Date(initialValues.endAt)
-            : DEFAULT_FORM_VALUES.endAt,
+            : defaults.endAt,
     };
   }, [initialValues]);
 
@@ -360,8 +368,9 @@ export function useEventForm(
    * フォームの状態をリセットする
    */
   const reset = useCallback((newValues?: Partial<EventFormData>) => {
+    const defaults = createDefaultFormValues();
     const resetValues: EventFormData = {
-      ...DEFAULT_FORM_VALUES,
+      ...defaults,
       ...newValues,
       // Date型のフィールドは明示的に処理
       startAt:
@@ -369,13 +378,13 @@ export function useEventForm(
           ? newValues.startAt
           : newValues?.startAt
             ? new Date(newValues.startAt)
-            : DEFAULT_FORM_VALUES.startAt,
+            : defaults.startAt,
       endAt:
         newValues?.endAt instanceof Date
           ? newValues.endAt
           : newValues?.endAt
             ? new Date(newValues.endAt)
-            : DEFAULT_FORM_VALUES.endAt,
+            : defaults.endAt,
     };
 
     setValues(resetValues);

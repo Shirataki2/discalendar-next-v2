@@ -37,6 +37,7 @@ const END_TIME_ERROR_PATTERN = /終了日時は開始日時以降である必要
 const NOTIFICATION_SECTION_PATTERN = /通知設定/;
 const NOTIFICATION_NUM_PATTERN = /通知の数値/;
 const ADD_BUTTON_PATTERN = /追加/;
+const RECURRENCE_TOGGLE_PATTERN = /繰り返し/;
 
 describe("EventForm", () => {
   const defaultProps: EventFormProps = {
@@ -317,7 +318,8 @@ describe("EventForm", () => {
             title: "テスト予定",
             description: "説明文",
             location: "会議室",
-          })
+          }),
+          expect.any(Object)
         );
       });
     });
@@ -806,7 +808,8 @@ describe("EventForm", () => {
             notifications: expect.arrayContaining([
               expect.objectContaining({ num: 10, unit: "minutes" }),
             ]),
-          })
+          }),
+          expect.any(Object)
         );
       });
     });
@@ -836,9 +839,103 @@ describe("EventForm", () => {
         expect(onSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
             notifications: [],
-          })
+          }),
+          expect.any(Object)
         );
       });
+    });
+  });
+
+  // Task 7.3: 繰り返し設定の統合
+  describe("Task 7.3: 繰り返し設定の統合", () => {
+    it("繰り返し設定トグルが表示される (Req 1.1)", () => {
+      render(<EventForm {...defaultProps} />);
+
+      expect(
+        screen.getByRole("switch", { name: RECURRENCE_TOGGLE_PATTERN })
+      ).toBeInTheDocument();
+    });
+
+    it("デフォルトでは繰り返しトグルがOFFである (Req 1.1)", () => {
+      render(<EventForm {...defaultProps} />);
+
+      expect(
+        screen.getByRole("switch", { name: RECURRENCE_TOGGLE_PATTERN })
+      ).not.toBeChecked();
+    });
+
+    it("recurrenceDefaultValuesで繰り返し設定の初期値を受け取れる (Req 1.1)", () => {
+      render(
+        <EventForm
+          {...defaultProps}
+          recurrenceDefaultValues={{
+            isRecurring: true,
+            frequency: "daily",
+          }}
+        />
+      );
+
+      expect(
+        screen.getByRole("switch", { name: RECURRENCE_TOGGLE_PATTERN })
+      ).toBeChecked();
+    });
+
+    it("フォーム送信時にonSubmitの第2引数に繰り返しデータが渡される (Req 1.3)", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00"),
+        endAt: new Date("2025-12-10T11:00"),
+      };
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+        />
+      );
+
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+        const recurrence = onSubmit.mock.calls[0][1];
+        expect(recurrence).toBeDefined();
+        expect(recurrence.isRecurring).toBe(false);
+      });
+    });
+
+    it("isSubmitting時に繰り返し設定コントロールが無効になる (Req 1.3)", () => {
+      render(<EventForm {...defaultProps} isSubmitting />);
+
+      expect(
+        screen.getByRole("switch", { name: RECURRENCE_TOGGLE_PATTERN })
+      ).toBeDisabled();
+    });
+
+    it("繰り返し設定は日時フィールドと説明フィールドの間に配置される (Req 1.1)", () => {
+      const { container } = render(<EventForm {...defaultProps} />);
+
+      // フォーム内のfieldset(日時)とRecurrenceSettingsControlの順序を確認
+      const form = container.querySelector("form");
+      const allChildren = form ? Array.from(form.children) : [];
+      const endDateFieldsetIndex = allChildren.findIndex(
+        (el) =>
+          el.tagName === "FIELDSET" && el.textContent?.includes("終了日時")
+      );
+      const descriptionIndex = allChildren.findIndex(
+        (el) => el.querySelector("#description") !== null
+      );
+      const recurrenceIndex = allChildren.findIndex(
+        (el) => el.querySelector("#isRecurring") !== null
+      );
+
+      expect(recurrenceIndex).toBeGreaterThan(endDateFieldsetIndex);
+      expect(recurrenceIndex).toBeLessThan(descriptionIndex);
     });
   });
 });

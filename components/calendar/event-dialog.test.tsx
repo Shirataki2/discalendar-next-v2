@@ -8,12 +8,42 @@
  * - 保存成功時にダイアログを閉じて親に通知する
  * - キャンセル時やダイアログ外クリック時に入力内容を破棄して閉じる
  *
- * Requirements: 1.3, 1.5, 1.7, 3.1, 3.2, 3.4, 3.6
+ * タスク7.4: 編集・削除スコープ操作のフック統合
+ * - スコープ付き編集時にupdateOccurrenceActionが適切なスコープで呼ばれる
+ * - SERIES_NOT_FOUND / RRULE_PARSE_ERRORエラーが表示される
+ *
+ * Requirements: 1.3, 1.5, 1.7, 3.1, 3.2, 3.4, 3.6, 5.2, 5.4, 6.1, 6.2, 6.3, 7.1, 7.2
  */
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Server Actionsのモック
+vi.mock("@/app/dashboard/actions", () => ({
+  createEventAction: vi.fn(),
+  updateEventAction: vi.fn(),
+  deleteEventAction: vi.fn(),
+  createRecurringEventAction: vi.fn(),
+  updateOccurrenceAction: vi.fn(),
+}));
+
+import {
+  createEventAction,
+  createRecurringEventAction,
+  updateEventAction,
+  updateOccurrenceAction,
+} from "@/app/dashboard/actions";
 import { EventDialog, type EventDialogProps } from "./event-dialog";
+
+const mockCreateEventAction = vi.mocked(createEventAction);
+const mockUpdateEventAction = vi.mocked(updateEventAction);
+const mockCreateRecurringEventAction = vi.mocked(createRecurringEventAction);
+const mockUpdateOccurrenceAction = vi.mocked(updateOccurrenceAction);
+
+// Task 7.4: テスト用正規表現（トップレベルに定義）
+const SERIES_NOT_FOUND_PATTERN = /イベントシリーズが見つかりません/;
+const RRULE_PARSE_ERROR_PATTERN = /繰り返しルールの解析に失敗しました/;
+const RECURRENCE_PATTERN = /繰り返し/;
 
 // 正規表現パターン
 const CREATE_TITLE_PATTERN = /新規予定作成/i;
@@ -23,14 +53,7 @@ const SAVE_PATTERN = /保存/i;
 const CANCEL_PATTERN = /キャンセル/i;
 const CLOSE_BUTTON_PATTERN = /close/i;
 const CREATE_FAILED_ERROR_PATTERN = /イベントの作成に失敗しました/i;
-
-// モックのEventService
-const mockEventService = {
-  fetchEvents: vi.fn(),
-  createEvent: vi.fn(),
-  updateEvent: vi.fn(),
-  deleteEvent: vi.fn(),
-};
+const SERIES_CREATE_FAILED_PATTERN = /シリーズの作成に失敗しました/;
 
 // 成功時のモックレスポンス
 const mockSuccessResponse = {
@@ -57,7 +80,6 @@ describe("EventDialog", () => {
     open: true,
     mode: "create",
     guildId: "guild-123",
-    eventService: mockEventService,
     onClose: vi.fn(),
     onSuccess: vi.fn(),
   };
@@ -135,9 +157,9 @@ describe("EventDialog", () => {
 
   // Task 5.2: 新規作成フロー
   describe("Task 5.2: 新規作成フロー", () => {
-    it("有効なデータで保存時にcreateEventが呼ばれる (Req 1.3)", async () => {
+    it("有効なデータで保存時にcreateEventActionが呼ばれる (Req 1.3)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(<EventDialog {...defaultProps} mode="create" />);
 
@@ -152,10 +174,13 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+        expect(mockCreateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
             guildId: "guild-123",
-            title: "新しい予定",
+            eventData: expect.objectContaining({
+              guildId: "guild-123",
+              title: "新しい予定",
+            }),
           })
         );
       });
@@ -164,7 +189,7 @@ describe("EventDialog", () => {
     it("保存成功時にonSuccessが呼ばれる (Req 1.5)", async () => {
       const user = userEvent.setup();
       const onSuccess = vi.fn();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
@@ -187,7 +212,7 @@ describe("EventDialog", () => {
     it("保存成功時にonCloseが呼ばれる (Req 1.5)", async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       render(
         <EventDialog
@@ -210,9 +235,9 @@ describe("EventDialog", () => {
 
   // Task 5.2: 編集フロー
   describe("Task 5.2: 編集フロー", () => {
-    it("編集モードで保存時にupdateEventが呼ばれる (Req 3.3)", async () => {
+    it("編集モードで保存時にupdateEventActionが呼ばれる (Req 3.3)", async () => {
       const user = userEvent.setup();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "既存の予定",
@@ -241,10 +266,13 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.updateEvent).toHaveBeenCalledWith(
-          "event-123",
+        expect(mockUpdateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: "更新された予定",
+            guildId: "guild-123",
+            eventId: "event-123",
+            eventData: expect.objectContaining({
+              title: "更新された予定",
+            }),
           })
         );
       });
@@ -254,7 +282,7 @@ describe("EventDialog", () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
       const onSuccess = vi.fn();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "既存の予定",
@@ -298,7 +326,7 @@ describe("EventDialog", () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it("キャンセル時にcreateEvent/updateEventが呼ばれない (Req 1.7)", async () => {
+    it("キャンセル時にServer Actionsが呼ばれない (Req 1.7)", async () => {
       const user = userEvent.setup();
 
       render(<EventDialog {...defaultProps} />);
@@ -312,8 +340,8 @@ describe("EventDialog", () => {
       const cancelButton = screen.getByRole("button", { name: CANCEL_PATTERN });
       await user.click(cancelButton);
 
-      expect(mockEventService.createEvent).not.toHaveBeenCalled();
-      expect(mockEventService.updateEvent).not.toHaveBeenCalled();
+      expect(mockCreateEventAction).not.toHaveBeenCalled();
+      expect(mockUpdateEventAction).not.toHaveBeenCalled();
     });
 
     it("閉じるボタンクリック時にonCloseが呼ばれる (Req 1.7)", async () => {
@@ -338,7 +366,7 @@ describe("EventDialog", () => {
     it("保存中はフォームが無効になる", async () => {
       const user = userEvent.setup();
       // 遅延するPromiseを作成
-      mockEventService.createEvent.mockImplementation(
+      mockCreateEventAction.mockImplementation(
         () =>
           new Promise((resolve) =>
             setTimeout(() => resolve(mockSuccessResponse), 100)
@@ -368,7 +396,7 @@ describe("EventDialog", () => {
   describe("Task 5.2: エラーハンドリング", () => {
     it("保存失敗時にエラーメッセージが表示される", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue({
+      mockCreateEventAction.mockResolvedValue({
         success: false,
         error: {
           code: "CREATE_FAILED",
@@ -398,7 +426,7 @@ describe("EventDialog", () => {
     it("保存失敗時にダイアログは開いたままになる", async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
-      mockEventService.createEvent.mockResolvedValue({
+      mockCreateEventAction.mockResolvedValue({
         success: false,
         error: {
           code: "CREATE_FAILED",
@@ -432,9 +460,9 @@ describe("EventDialog", () => {
 
   // Task 5: 通知データの受け渡し
   describe("Task 5: 通知データの受け渡し", () => {
-    it("新規作成時にnotificationsがcreateEventに渡される (Req 2.1)", async () => {
+    it("新規作成時にnotificationsがcreateEventActionに渡される (Req 2.1)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "テスト予定",
@@ -458,20 +486,22 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+        expect(mockCreateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            notifications: expect.arrayContaining([
-              expect.objectContaining({ num: 10, unit: "minutes" }),
-              expect.objectContaining({ num: 1, unit: "hours" }),
-            ]),
+            eventData: expect.objectContaining({
+              notifications: expect.arrayContaining([
+                expect.objectContaining({ num: 10, unit: "minutes" }),
+                expect.objectContaining({ num: 1, unit: "hours" }),
+              ]),
+            }),
           })
         );
       });
     });
 
-    it("編集時にnotificationsがupdateEventに渡される (Req 2.3)", async () => {
+    it("編集時にnotificationsがupdateEventActionに渡される (Req 2.3)", async () => {
       const user = userEvent.setup();
-      mockEventService.updateEvent.mockResolvedValue(mockSuccessResponse);
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "既存の予定",
@@ -493,12 +523,14 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.updateEvent).toHaveBeenCalledWith(
-          "event-123",
+        expect(mockUpdateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            notifications: expect.arrayContaining([
-              expect.objectContaining({ num: 3, unit: "days" }),
-            ]),
+            eventId: "event-123",
+            eventData: expect.objectContaining({
+              notifications: expect.arrayContaining([
+                expect.objectContaining({ num: 3, unit: "days" }),
+              ]),
+            }),
           })
         );
       });
@@ -506,7 +538,7 @@ describe("EventDialog", () => {
 
     it("通知なしで保存時にnotificationsが空配列として渡される (Req 2.4)", async () => {
       const user = userEvent.setup();
-      mockEventService.createEvent.mockResolvedValue(mockSuccessResponse);
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
       const initialData = {
         title: "通知なし予定",
@@ -526,9 +558,11 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockEventService.createEvent).toHaveBeenCalledWith(
+        expect(mockCreateEventAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            notifications: [],
+            eventData: expect.objectContaining({
+              notifications: [],
+            }),
           })
         );
       });
@@ -572,6 +606,408 @@ describe("EventDialog", () => {
 
       const dialog = screen.getByRole("dialog");
       expect(dialog).toHaveAttribute("aria-labelledby");
+    });
+  });
+
+  // Task 7.3: 繰り返しイベント作成の統合
+  describe("Task 7.3: 繰り返しイベント作成の統合", () => {
+    const mockSeriesSuccessResponse = {
+      success: true as const,
+      data: {
+        id: "series-123",
+        guildId: "guild-123",
+        title: "繰り返し予定",
+        rrule: "FREQ=DAILY;INTERVAL=1",
+        dtstart: new Date("2025-12-10T10:00:00"),
+        duration: 3_600_000,
+        description: null,
+        isAllDay: false,
+        color: "#3B82F6",
+        location: null,
+        channelId: null,
+        channelName: null,
+        exdates: [],
+        notifications: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    };
+
+    it("繰り返し設定有効で保存するとcreateRecurringEventActionが呼ばれる (Req 1.3)", async () => {
+      const user = userEvent.setup();
+      mockCreateRecurringEventAction.mockResolvedValue(
+        mockSeriesSuccessResponse
+      );
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "繰り返し予定" }}
+          mode="create"
+          recurrenceDefaultValues={{
+            isRecurring: true,
+            frequency: "daily",
+          }}
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockCreateRecurringEventAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            eventData: expect.objectContaining({
+              guildId: "guild-123",
+              title: "繰り返し予定",
+              rrule: expect.any(String),
+            }),
+          })
+        );
+      });
+    });
+
+    it("繰り返し設定無効で保存すると既存のcreateEventActionが呼ばれる (Req 1.5)", async () => {
+      const user = userEvent.setup();
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "通常予定" }}
+          mode="create"
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockCreateEventAction).toHaveBeenCalled();
+        expect(mockCreateRecurringEventAction).not.toHaveBeenCalled();
+      });
+    });
+
+    it("繰り返しイベント作成成功時にonSuccessとonCloseが呼ばれる (Req 1.5)", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      const onClose = vi.fn();
+      mockCreateRecurringEventAction.mockResolvedValue(
+        mockSeriesSuccessResponse
+      );
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "繰り返し予定" }}
+          mode="create"
+          onClose={onClose}
+          onSuccess={onSuccess}
+          recurrenceDefaultValues={{
+            isRecurring: true,
+            frequency: "daily",
+          }}
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalledTimes(1);
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("繰り返しイベント作成失敗時にエラーメッセージが表示される", async () => {
+      const user = userEvent.setup();
+      mockCreateRecurringEventAction.mockResolvedValue({
+        success: false,
+        error: {
+          code: "CREATE_FAILED",
+          message: "シリーズの作成に失敗しました。",
+        },
+      });
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{ title: "繰り返し予定" }}
+          mode="create"
+          recurrenceDefaultValues={{
+            isRecurring: true,
+            frequency: "daily",
+          }}
+        />
+      );
+
+      // 保存ボタンをクリック
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(SERIES_CREATE_FAILED_PATTERN)
+        ).toBeInTheDocument();
+      });
+    });
+  });
+
+  // Task 7.4: スコープ付き繰り返しイベント編集
+  describe("Task 7.4: スコープ付き繰り返しイベント編集", () => {
+    const recurringInitialData = {
+      title: "繰り返し予定",
+      startAt: new Date("2025-12-10T10:00:00"),
+      endAt: new Date("2025-12-10T11:00:00"),
+    };
+
+    const mockScopedSuccessResponse = {
+      success: true as const,
+      data: {
+        id: "event-exc-1",
+        title: "繰り返し予定",
+        start: new Date("2025-12-10T10:00:00"),
+        end: new Date("2025-12-10T11:00:00"),
+        allDay: false,
+        color: "#3B82F6",
+      },
+    };
+
+    it("editScope='this'の場合、updateOccurrenceActionがscope 'this'で呼ばれる (Req 5.2)", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            seriesId: "series-123",
+            scope: "this",
+            occurrenceDate: new Date("2025-12-10T10:00:00"),
+            eventData: expect.objectContaining({
+              title: "繰り返し予定",
+            }),
+          })
+        );
+      });
+    });
+
+    it("editScope='all'の場合、updateOccurrenceActionがscope 'all'で呼ばれる (Req 6.1, 6.2)", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="all"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          resetExceptions
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            seriesId: "series-123",
+            scope: "all",
+            eventData: expect.objectContaining({
+              title: "繰り返し予定",
+              resetExceptions: true,
+            }),
+          })
+        );
+      });
+    });
+
+    it("editScope='following'の場合、updateOccurrenceActionがscope 'following'で呼ばれる (Req 7.1)", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="following"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            guildId: "guild-123",
+            seriesId: "series-123",
+            scope: "following",
+            occurrenceDate: new Date("2025-12-10T10:00:00"),
+          })
+        );
+      });
+    });
+
+    it("スコープ付き編集成功時にonSuccessとonCloseが呼ばれる", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      const onClose = vi.fn();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          onClose={onClose}
+          onSuccess={onSuccess}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalledTimes(1);
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("SERIES_NOT_FOUNDエラーが表示される", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue({
+        success: false,
+        error: {
+          code: "SERIES_NOT_FOUND",
+          message: "指定されたイベントシリーズが見つかりません。",
+        },
+      });
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(SERIES_NOT_FOUND_PATTERN)).toBeInTheDocument();
+      });
+    });
+
+    it("RRULE_PARSE_ERRORエラーが表示される", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue({
+        success: false,
+        error: {
+          code: "RRULE_PARSE_ERROR",
+          message: "繰り返しルールの解析に失敗しました。",
+        },
+      });
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="all"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(RRULE_PARSE_ERROR_PATTERN)).toBeInTheDocument();
+      });
+    });
+
+    it("editScopeが未指定の場合、通常のupdateEventActionが呼ばれる（後方互換）", async () => {
+      const user = userEvent.setup();
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
+
+      render(
+        <EventDialog
+          {...defaultProps}
+          eventId="event-123"
+          initialData={recurringInitialData}
+          mode="edit"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateEventAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventId: "event-123",
+            eventData: expect.objectContaining({ title: "繰り返し予定" }),
+          })
+        );
+        expect(mockUpdateOccurrenceAction).not.toHaveBeenCalled();
+      });
+    });
+
+    it("editScope='this'の場合、繰り返し設定UIが非表示になる", () => {
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T10:00:00.000Z"
+          initialData={recurringInitialData}
+          mode="edit"
+          occurrenceDate={new Date("2025-12-10T10:00:00")}
+          seriesId="series-123"
+        />
+      );
+
+      // 繰り返し設定のトグルが表示されないことを確認
+      expect(screen.queryByText(RECURRENCE_PATTERN)).not.toBeInTheDocument();
     });
   });
 });

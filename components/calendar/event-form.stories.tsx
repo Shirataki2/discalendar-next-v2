@@ -202,3 +202,30 @@ export const WithNotifications: Story = {
     isSubmitting: false,
   },
 };
+
+/**
+ * 繰り返し設定付き（Task 7.3）
+ * 繰り返し設定が有効な状態のフォーム
+ */
+export const WithRecurrence: Story = {
+  args: {
+    defaultValues: {
+      title: "定例ミーティング",
+      startAt: new Date(2025, 11, 10, 10, 0),
+      endAt: new Date(2025, 11, 10, 11, 0),
+      description: "週次の進捗確認",
+      isAllDay: false,
+      color: "#3B82F6",
+      location: "会議室A",
+    },
+    recurrenceDefaultValues: {
+      isRecurring: true,
+      frequency: "weekly",
+      interval: 1,
+      byDay: ["TU"],
+    },
+    onSubmit: fn(),
+    onCancel: fn(),
+    isSubmitting: false,
+  },
+};

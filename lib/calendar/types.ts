@@ -47,6 +47,45 @@ export function generateNotificationKey(): string {
 }
 
 /**
+ * Supabaseから取得するイベントシリーズレコード型
+ * event_seriesテーブルのカラム構造に対応
+ */
+export interface EventSeriesRecord {
+  /** シリーズID (UUID) */
+  id: string;
+  /** ギルドID (Discord サーバーID) */
+  guild_id: string;
+  /** イベント名 */
+  name: string;
+  /** イベントの説明 */
+  description: string | null;
+  /** イベントカラー (HEXコード) */
+  color: string;
+  /** 終日イベントフラグ */
+  is_all_day: boolean;
+  /** RFC 5545 RRULE 文字列 */
+  rrule: string;
+  /** シリーズ開始日時 (ISO 8601形式) */
+  dtstart: string;
+  /** オカレンスの持続時間（分） */
+  duration_minutes: number;
+  /** 場所情報 */
+  location: string | null;
+  /** Discordチャンネル ID */
+  channel_id: string | null;
+  /** Discordチャンネル名 */
+  channel_name: string | null;
+  /** 通知設定 (JSONB) */
+  notifications: NotificationSetting[];
+  /** 除外日リスト (ISO 8601 文字列配列: "2026-01-15T10:00:00Z" 形式) */
+  exdates: string[];
+  /** 作成日時 (ISO 8601形式) */
+  created_at: string;
+  /** 更新日時 (ISO 8601形式) */
+  updated_at: string;
+}
+
+/**
  * Supabaseから取得するイベントレコード型
  * eventsテーブルのカラム構造に対応
  */
@@ -75,6 +114,10 @@ export interface EventRecord {
   channel_name: string | null;
   /** 通知設定 (JSONB) */
   notifications: NotificationSetting[];
+  /** イベントシリーズID（例外オカレンスの場合のみ） */
+  series_id: string | null;
+  /** 元のオカレンス日付（例外オカレンスの場合のみ、ISO 8601形式） */
+  original_date: string | null;
   /** 作成日時 (ISO 8601形式) */
   created_at: string;
   /** 更新日時 (ISO 8601形式) */
@@ -92,10 +135,16 @@ export interface ChannelInfo {
 }
 
 /**
- * カレンダー表示用のイベント型
+ * 編集スコープ
+ * 繰り返しイベントの編集・削除時に対象範囲を指定する
+ */
+export type EditScope = "this" | "all" | "following";
+
+/**
+ * カレンダー表示用のイベント型（ベース）
  * react-big-calendarが期待するEvent型に準拠
  */
-export interface CalendarEvent {
+type BaseCalendarEvent = {
   /** イベントID */
   id: string;
   /** イベント名 (react-big-calendarではtitleを使用) */
@@ -116,6 +165,40 @@ export interface CalendarEvent {
   channel?: ChannelInfo;
   /** 通知設定 */
   notifications?: NotificationSetting[];
+  /** オカレンスの元の日付（例外レコードの場合） */
+  originalDate?: Date;
+};
+
+/**
+ * カレンダー表示用のイベント型
+ *
+ * discriminated union により、`isRecurring: true` の場合に
+ * `seriesId` と `rruleSummary` が必須であることをコンパイル時に保証する。
+ */
+export type CalendarEvent =
+  | ({ isRecurring?: false } & BaseCalendarEvent)
+  | ({
+      isRecurring: true;
+      /** イベントシリーズID（繰り返しイベントの場合は必須） */
+      seriesId: string;
+      /** 繰り返しルールの人間可読テキスト（例: 「毎週火曜日」） */
+      rruleSummary?: string;
+    } & BaseCalendarEvent);
+
+/**
+ * JSONB から取得した値が有効な NotificationSetting か判定する型ガード
+ */
+function isValidNotificationSetting(
+  n: unknown,
+): n is NotificationSetting & { key?: string } {
+  return (
+    typeof n === "object" &&
+    n !== null &&
+    "num" in n &&
+    "unit" in n &&
+    typeof (n as Record<string, unknown>).num === "number" &&
+    typeof (n as Record<string, unknown>).unit === "string"
+  );
 }
 
 /**
@@ -143,15 +226,7 @@ export function toCalendarEvent(record: EventRecord): CalendarEvent {
     channel,
     notifications: Array.isArray(record.notifications)
       ? record.notifications
-          .filter(
-            (n): n is NotificationSetting & { key?: string } =>
-              typeof n === "object" &&
-              n !== null &&
-              "num" in n &&
-              "unit" in n &&
-              typeof n.num === "number" &&
-              typeof n.unit === "string",
-          )
+          .filter(isValidNotificationSetting)
           .map((n) => ({
             ...n,
             key:

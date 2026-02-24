@@ -24,8 +24,13 @@ import {
   type UseEventFormReturn,
   useEventForm,
 } from "@/hooks/calendar/use-event-form";
+import {
+  type RecurrenceFormData,
+  useRecurrenceForm,
+} from "@/hooks/calendar/use-recurrence-form";
 import { cn } from "@/lib/utils";
 import { NotificationField } from "./notification-field";
+import { RecurrenceSettingsControl } from "./recurrence-settings-control";
 
 /**
  * EventFormコンポーネントのProps
@@ -33,12 +38,16 @@ import { NotificationField } from "./notification-field";
 export type EventFormProps = {
   /** フォームの初期値 */
   defaultValues?: Partial<EventFormData>;
+  /** 繰り返し設定の初期値 */
+  recurrenceDefaultValues?: Partial<RecurrenceFormData>;
   /** フォーム送信時のコールバック */
-  onSubmit: (data: EventFormData) => void;
+  onSubmit: (data: EventFormData, recurrence: RecurrenceFormData) => void;
   /** 送信中かどうか */
   isSubmitting: boolean;
   /** キャンセル時のコールバック */
   onCancel: () => void;
+  /** 繰り返し設定を非表示にするか（単一オカレンス編集時） */
+  hideRecurrence?: boolean;
 };
 
 // エラーメッセージのID（aria-describedby用）
@@ -279,16 +288,19 @@ function LocationField({ form, isSubmitting }: FormFieldProps) {
  */
 export function EventForm({
   defaultValues,
+  recurrenceDefaultValues,
   onSubmit,
   isSubmitting,
   onCancel,
+  hideRecurrence = false,
 }: EventFormProps) {
   const form = useEventForm(defaultValues);
+  const recurrenceForm = useRecurrenceForm(recurrenceDefaultValues);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (form.validate()) {
-      onSubmit(form.values);
+      onSubmit(form.values, recurrenceForm.values);
     }
   }
 
@@ -335,6 +347,12 @@ export function EventForm({
         isSubmitting={isSubmitting}
         label="終了日時"
       />
+      {hideRecurrence ? null : (
+        <RecurrenceSettingsControl
+          disabled={isSubmitting}
+          form={recurrenceForm}
+        />
+      )}
       <DescriptionField form={form} isSubmitting={isSubmitting} />
       <ColorField form={form} isSubmitting={isSubmitting} />
       <LocationField form={form} isSubmitting={isSubmitting} />

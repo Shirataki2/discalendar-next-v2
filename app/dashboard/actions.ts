@@ -17,12 +17,18 @@ import { revalidatePath } from "next/cache";
 import {
   type CalendarError,
   type CreateEventInput,
+  type CreateSeriesInput,
   createEventService,
   type MutationResult,
   type UpdateEventInput,
+  type UpdateSeriesInput,
 } from "@/lib/calendar/event-service";
 import { checkEventPermission } from "@/lib/calendar/permission-check";
-import type { CalendarEvent } from "@/lib/calendar/types";
+import type {
+  CalendarEvent,
+  EditScope,
+  EventSeriesRecord,
+} from "@/lib/calendar/types";
 import { getUserGuilds } from "@/lib/discord/client";
 import {
   canManageGuild,
@@ -42,6 +48,23 @@ const UNAUTHORIZED_ERROR: CalendarError = {
   code: "UNAUTHORIZED",
   message: "認証が必要です。再度ログインしてください。",
 };
+
+/** guild_id のフォーマット検証（英数字・ハイフンのみ、1〜30文字） */
+const GUILD_ID_REGEX = /^[\w-]{1,30}$/;
+
+/**
+ * MutationResult からデバッグ用の details フィールドを除去する
+ *
+ * Server Action → クライアントの境界で使用し、
+ * Supabase の内部エラーメッセージがクライアントに漏洩するのを防ぐ。
+ */
+function sanitizeResult<T>(result: MutationResult<T>): MutationResult<T> {
+  if (result.success) {
+    return result;
+  }
+  const { details: _details, ...error } = result.error;
+  return { success: false, error };
+}
 
 // ──────────────────────────────────────────────
 // サーバー側権限解決ヘルパー
@@ -118,7 +141,7 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     };
   }
 
-  // TODO: Discord API 結果をキャッシュに反映する
+  // TODO(DIS-15): Discord API 結果をキャッシュに反映する
   // setCachedGuilds は GuildWithPermissions[]（DB結合済み）を要求するため、
   // ここでは直接利用できない。user_guilds テーブル導入時にキャッシュ更新を追加する。
 
@@ -227,14 +250,27 @@ async function authorizeEventOperation(
   guildId: string,
   operation: "create" | "update" | "delete"
 ): Promise<
-  | { authorized: true; supabase: Awaited<ReturnType<typeof createClient>> }
-  | { authorized: false; error: MutationResult<never> }
+  | { success: true; supabase: Awaited<ReturnType<typeof createClient>> }
+  | { success: false; error: MutationResult<never> }
 > {
+  if (!GUILD_ID_REGEX.test(guildId)) {
+    return {
+      success: false,
+      error: {
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "ギルドIDの形式が不正です。",
+        },
+      },
+    };
+  }
+
   const result = await resolveServerAuth(guildId);
 
   if (!result.success) {
     return {
-      authorized: false,
+      success: false,
       error: {
         success: false,
         error: {
@@ -252,7 +288,7 @@ async function authorizeEventOperation(
 
   if (!configResult.success) {
     return {
-      authorized: false,
+      success: false,
       error: {
         success: false,
         error: {
@@ -271,7 +307,7 @@ async function authorizeEventOperation(
 
   if (!permCheck.allowed) {
     return {
-      authorized: false,
+      success: false,
       error: {
         success: false,
         error: {
@@ -284,8 +320,12 @@ async function authorizeEventOperation(
     };
   }
 
-  return { authorized: true, supabase: auth.supabase };
+  return { success: true, supabase: auth.supabase };
 }
+
+// NOTE: イベント操作の Server Actions では revalidatePath を呼び出さない。
+// 現在イベントデータは Client Component で fetchEvents() による手動再取得パターンを
+// 採用しているため、サーバー側のキャッシュ無効化は不要。
 
 /**
  * 権限チェック付きイベント作成 Server Action
@@ -295,12 +335,12 @@ export async function createEventAction(
 ): Promise<MutationResult<CalendarEvent>> {
   const auth = await authorizeEventOperation(input.guildId, "create");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.createEvent(input.eventData);
+  return sanitizeResult(await eventService.createEvent(input.eventData));
 }
 
 /**
@@ -311,12 +351,18 @@ export async function updateEventAction(
 ): Promise<MutationResult<CalendarEvent>> {
   const auth = await authorizeEventOperation(input.guildId, "update");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.updateEvent(input.eventId, input.eventData);
+  return sanitizeResult(
+    await eventService.updateEvent(
+      input.guildId,
+      input.eventId,
+      input.eventData
+    )
+  );
 }
 
 /**
@@ -327,12 +373,184 @@ export async function deleteEventAction(
 ): Promise<MutationResult<void>> {
   const auth = await authorizeEventOperation(input.guildId, "delete");
 
-  if (!auth.authorized) {
+  if (!auth.success) {
     return auth.error;
   }
 
   const eventService = createEventService(auth.supabase);
-  return eventService.deleteEvent(input.eventId);
+  return sanitizeResult(
+    await eventService.deleteEvent(input.guildId, input.eventId)
+  );
+}
+
+// ──────────────────────────────────────────────
+// Task 4.1 (recurring-events): 繰り返しイベント作成
+// ──────────────────────────────────────────────
+
+type CreateRecurringEventActionInput = {
+  guildId: string;
+  eventData: CreateSeriesInput;
+};
+
+/**
+ * 権限チェック付き繰り返しイベントシリーズ作成 Server Action
+ *
+ * 繰り返し設定が有効なイベントシリーズを作成する。
+ * 既存の createEventAction と並行し、UI 側で繰り返し有無に応じて呼び分ける。
+ *
+ * Requirements: 1.3, 1.5
+ */
+export async function createRecurringEventAction(
+  input: CreateRecurringEventActionInput
+): Promise<MutationResult<EventSeriesRecord>> {
+  const auth = await authorizeEventOperation(input.guildId, "create");
+
+  if (!auth.success) {
+    return auth.error;
+  }
+
+  const eventService = createEventService(auth.supabase);
+  return sanitizeResult(
+    await eventService.createRecurringSeries(input.eventData)
+  );
+}
+
+// ──────────────────────────────────────────────
+// Task 4.2 (recurring-events): オカレンス編集・削除
+// ──────────────────────────────────────────────
+
+type UpdateOccurrenceActionInput =
+  | {
+      guildId: string;
+      seriesId: string;
+      scope: "this";
+      occurrenceDate: Date;
+      eventData: UpdateEventInput;
+    }
+  | {
+      guildId: string;
+      seriesId: string;
+      scope: "all";
+      occurrenceDate: Date;
+      eventData: UpdateSeriesInput;
+    }
+  | {
+      guildId: string;
+      seriesId: string;
+      scope: "following";
+      occurrenceDate: Date;
+      eventData: UpdateSeriesInput;
+    };
+
+type DeleteOccurrenceActionInput = {
+  guildId: string;
+  seriesId: string;
+  scope: EditScope;
+  occurrenceDate: Date;
+};
+
+/**
+ * 権限チェック付きオカレンス編集 Server Action
+ *
+ * 編集スコープに応じて適切な EventService メソッドに委譲する:
+ * - "this": updateOccurrence（例外レコード作成）
+ * - "all": updateSeries（シリーズ全体更新）
+ * - "following": splitSeries（シリーズ分割）
+ *
+ * Requirements: 5.2, 6.1, 6.2, 7.1
+ */
+export async function updateOccurrenceAction(
+  input: UpdateOccurrenceActionInput
+): Promise<MutationResult<CalendarEvent | EventSeriesRecord>> {
+  const auth = await authorizeEventOperation(input.guildId, "update");
+
+  if (!auth.success) {
+    return auth.error;
+  }
+
+  const eventService = createEventService(auth.supabase);
+
+  switch (input.scope) {
+    case "this":
+      return sanitizeResult(
+        await eventService.updateOccurrence(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate,
+          input.eventData
+        )
+      );
+    case "all":
+      return sanitizeResult(
+        await eventService.updateSeries(
+          input.guildId,
+          input.seriesId,
+          input.eventData
+        )
+      );
+    case "following":
+      return sanitizeResult(
+        await eventService.splitSeries(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate,
+          input.eventData
+        )
+      );
+    default: {
+      const _exhaustive: never = input;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
+ * 権限チェック付きオカレンス削除 Server Action
+ *
+ * 削除スコープに応じて適切な EventService メソッドに委譲する:
+ * - "this": deleteOccurrence（EXDATE 追加）
+ * - "all": deleteSeries（シリーズ全体削除）
+ * - "following": truncateSeries（シリーズ切り詰め）
+ *
+ * Requirements: 5.4, 6.3, 7.2
+ */
+export async function deleteOccurrenceAction(
+  input: DeleteOccurrenceActionInput
+): Promise<MutationResult<void>> {
+  const auth = await authorizeEventOperation(input.guildId, "delete");
+
+  if (!auth.success) {
+    return auth.error;
+  }
+
+  const eventService = createEventService(auth.supabase);
+
+  switch (input.scope) {
+    case "this":
+      return sanitizeResult(
+        await eventService.deleteOccurrence(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate
+        )
+      );
+    case "all":
+      return sanitizeResult(
+        await eventService.deleteSeries(input.guildId, input.seriesId)
+      );
+    case "following":
+      return sanitizeResult(
+        await eventService.truncateSeries(
+          input.guildId,
+          input.seriesId,
+          input.occurrenceDate
+        )
+      );
+    default: {
+      const _exhaustive: never = input.scope;
+      return _exhaustive;
+    }
+  }
 }
 
 // ──────────────────────────────────────────────

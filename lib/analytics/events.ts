@@ -15,9 +15,12 @@ interface AnalyticsEventMap {
     is_all_day: boolean;
     color: string;
     has_notifications: boolean;
+    is_recurring?: boolean;
+    frequency?: string;
   };
   event_updated: {
     changed_fields: string[];
+    scope?: string;
   };
   event_deleted: Record<never, never>;
   event_moved: {
@@ -63,6 +66,9 @@ export function getChangedEventFields<T extends object>(
     "notifications",
   ];
 
+  // T extends object ではインデックスアクセスが不可のため Record にキャスト。
+  // T extends Record<string, unknown> にすると、具体的な interface 型（EventFormData 等）が
+  // インデックスシグネチャを持たないため呼び出し側で型エラーになる。
   const initialRecord = initial as Record<string, unknown>;
   const updatedRecord = updated as Record<string, unknown>;
 

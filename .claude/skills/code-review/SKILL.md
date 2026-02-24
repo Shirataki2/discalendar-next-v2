@@ -1,11 +1,11 @@
 ---
 name: code-review
-description: Git差分ベースの自動コードレビュー。4つのExploreエージェントが並列にArchitecture / Type Safety / Code Quality / Securityを分析し、重要度別の統合レポートを出力する。「コードレビューして」「レビューして」「変更をチェック」「セルフレビュー」などで使用。
+description: Git差分ベースの自動コードレビュー。Agent Teamsで4つのレビュアーが並列にArchitecture / Type Safety / Code Quality / Securityを分析し、重要度別の統合レポートを出力する。「コードレビューして」「レビューして」「変更をチェック」「セルフレビュー」などで使用。
 ---
 
-# Code Review Skill
+# Code Review Skill (Agent Teams)
 
-mainブランチとの差分に基づき、4つの観点からプロジェクト規約準拠を自動レビューする。
+mainブランチとの差分に基づき、Agent Teams で4つの観点からプロジェクト規約準拠を自動レビューする。
 
 ## Phase 1: 変更検出
 
@@ -51,75 +51,66 @@ git status --porcelain
 - **バイナリファイル** (画像等): スキップ（レポートに記載）
 - **50ファイル超**: 「**警告**: 変更ファイルが多数（N files）です。レビューに時間がかかる場合があります。」と表示
 
-## Phase 2: 4 Explore エージェント並列起動
+**エッジケース**: .ts/.tsx ファイルがなく SQL/設定ファイルのみの場合 → security-reviewer のみ起動。どちらもない場合 → 「TypeScriptファイルの変更なし」と表示して終了。
 
-**重要**: 単一メッセージで4つの `Task` ツールを同時呼び出しする（`subagent_type="Explore"`）。
+## Phase 2: チーム起動 & 並列レビュー
 
-各エージェントのプロンプトには以下を含める:
-1. 変更ファイル一覧（Phase 1 で取得）
-2. 該当する reference ファイルのパス（Read で読むよう指示）
-3. 変更ファイルを Read ツールで読み、チェックリストに照合するよう指示
-4. 出力フォーマット指定（後述）
-
-### Agent 1: architecture-reviewer
+### Step 1: TeamCreate
 
 ```
-プロンプト要点:
-- `.claude/skills/code-review/references/architecture-review.md` を読む
-- 変更された .ts/.tsx ファイルを Read して以下を検査:
-  - Server/Client Component の使い分け
-  - Supabase client の使い分け（server.ts / client.ts / proxy.ts）
-  - Server Actions パターン準拠
-  - ルート保護の整合性
-  - コンポーネント配置規約
+TeamCreate: team_name="code-review", description="Git差分ベースのコードレビュー"
 ```
 
-### Agent 2: type-safety-reviewer
+### Step 2: TaskCreate x 4
+
+各レビュータスクを作成し、owner を各 reviewer 名に設定する。
+
+タスクの description には以下を埋め込む:
+- 変更ファイル一覧（Phase 1 で取得した動的データ）
+- reference ファイルパス
+- 出力フォーマット（後述のエージェント出力フォーマット）
 
 ```
-プロンプト要点:
-- `.claude/skills/code-review/references/type-safety-review.md` を読む
-- 変更された .ts/.tsx ファイルを Read して以下を検査:
-  - any 型の使用
-  - Result型パターンの準拠
-  - snake_case/camelCase 変換の適切さ
-  - Props の型定義
-  - マジックナンバー
-  - AbortSignal サポート
+TaskCreate: subject="Architecture Review", owner="architecture-reviewer"
+TaskCreate: subject="Type Safety Review", owner="type-safety-reviewer"
+TaskCreate: subject="Code Quality Review", owner="code-quality-reviewer"
+TaskCreate: subject="Security Review", owner="security-reviewer"
 ```
 
-### Agent 3: code-quality-reviewer
+**注意**: .ts/.tsx ファイルがない場合、security-reviewer のタスクのみ作成する。
+
+### Step 3: Task x 4 並列起動
+
+**重要**: 単一メッセージで4つの `Task` ツールを同時呼び出しする。
+
+各 Task の設定:
+- `subagent_type: "general-purpose"` (SendMessage / TaskUpdate を使うため)
+- `team_name: "code-review"`
+- `name: "{reviewer-name}"`（TaskCreate の owner と一致させる）
+
+各 teammate のプロンプトは以下のテンプレートに従って構成する:
+
+---
+
+#### Teammate プロンプトテンプレート
 
 ```
-プロンプト要点:
-- `.claude/skills/code-review/references/code-quality-review.md` を読む
-- 変更された .ts/.tsx ファイルを Read して以下を検査:
-  - Storybook/テストファイルの存在
-  - React 19 パターン（forwardRef不使用）
-  - 命名規則
-  - コードスタイル（const/let, for...of, async/await等）
-  - <img> タグの使用（Next.js <Image> を使うべき）
-```
+あなたは code-review チームの "{REVIEWER_NAME}" です。
 
-### Agent 4: security-reviewer
+## 手順
 
-```
-プロンプト要点:
-- `.claude/skills/code-review/references/security-review.md` を読む
-- 変更された .ts/.tsx ファイルと .sql ファイルを Read して以下を検査:
-  - 認証チェック漏れ
-  - 認可（権限検証）漏れ
-  - 機密データ漏洩
-  - 入力検証の不足
-  - 環境変数の適切さ
-  - dangerouslySetInnerHTML 使用
-```
+1. TaskList でタスク一覧を確認し、自分がオーナーのタスクを見つける
+2. TaskGet でタスク詳細を取得する
+3. Reference ファイル `{REFERENCE_PATH}` を Read で読み、チェックリストを把握する
+4. 以下の変更ファイルを Read してチェックリストに照合する:
+{FILE_LIST}
+5. レビュー結果を以下の出力フォーマットに従って整理する
+6. SendMessage で team lead に結果を報告する:
+   SendMessage(type: "message", recipient: "team-lead", content: "レビュー結果...", summary: "{REVIEWER_NAME} review complete")
+7. TaskUpdate で自分のタスクを completed にする
 
-### エージェント出力フォーマット
+## 出力フォーマット
 
-各エージェントに以下のフォーマットで出力するよう指示:
-
-```
 各指摘項目について以下の形式で報告してください:
 
 - **Severity**: 🔴 Critical / 🟡 Recommended / 🟢 Enhancement
@@ -137,13 +128,83 @@ git status --porcelain
 - 🟢 Enhancement: 命名改善、コードスタイル、可読性向上
 ```
 
+---
+
+#### Agent 1: architecture-reviewer
+
+```
+プロンプト変数:
+- REVIEWER_NAME: "architecture-reviewer"
+- REFERENCE_PATH: ".claude/skills/code-review/references/architecture-review.md"
+- FILE_LIST: 変更された .ts/.tsx ファイル
+```
+
+レビュー観点:
+- Server/Client Component の使い分け
+- Supabase client の使い分け（server.ts / client.ts / proxy.ts）
+- Server Actions パターン準拠
+- ルート保護の整合性
+- コンポーネント配置規約
+
+#### Agent 2: type-safety-reviewer
+
+```
+プロンプト変数:
+- REVIEWER_NAME: "type-safety-reviewer"
+- REFERENCE_PATH: ".claude/skills/code-review/references/type-safety-review.md"
+- FILE_LIST: 変更された .ts/.tsx ファイル
+```
+
+レビュー観点:
+- any 型の使用
+- Result型パターンの準拠
+- snake_case/camelCase 変換の適切さ
+- Props の型定義
+- マジックナンバー
+- AbortSignal サポート
+
+#### Agent 3: code-quality-reviewer
+
+```
+プロンプト変数:
+- REVIEWER_NAME: "code-quality-reviewer"
+- REFERENCE_PATH: ".claude/skills/code-review/references/code-quality-review.md"
+- FILE_LIST: 変更された .ts/.tsx ファイル
+```
+
+レビュー観点:
+- Storybook/テストファイルの存在
+- React 19 パターン（forwardRef不使用）
+- 命名規則
+- コードスタイル（const/let, for...of, async/await等）
+- `<img>` タグの使用（Next.js `<Image>` を使うべき）
+
+#### Agent 4: security-reviewer
+
+```
+プロンプト変数:
+- REVIEWER_NAME: "security-reviewer"
+- REFERENCE_PATH: ".claude/skills/code-review/references/security-review.md"
+- FILE_LIST: 変更された .ts/.tsx ファイル + .sql ファイル + 設定ファイル
+```
+
+レビュー観点:
+- 認証チェック漏れ
+- 認可（権限検証）漏れ
+- 機密データ漏洩
+- 入力検証の不足
+- 環境変数の適切さ
+- dangerouslySetInnerHTML 使用
+
 ## Phase 3: 結果集約
 
-4エージェントの結果を収集後:
+4 teammate から SendMessage で届いた結果を収集後:
 
 1. 全指摘を重要度別に分類: 🔴 Critical → 🟡 Recommended → 🟢 Enhancement
 2. 同一ファイル+同一行付近（5行以内）の重複指摘を統合（高い重要度を維持）
 3. 各カテゴリ内ではファイルパス順にソート
+
+**エラーハンドリング**: teammate がエラーで結果を返せなかった場合、そのレビュアーの結果を「レビュー不可」としてレポートに記載し、他のレビュアー結果は正常に表示する。
 
 ## Phase 4: レポート出力
 
@@ -198,17 +259,23 @@ git status --porcelain
 - **Branch**: <branch-name> (vs main)
 - **Changed Files**: N files (+additions -deletions)
 
-✅ **すべてのチェックをパスしました。** レビュー指摘はありません。
+All checks passed. レビュー指摘はありません。
 ```
+
+## Phase 5: チーム解散
+
+1. `SendMessage(type: "shutdown_request")` を各 teammate に送信
+2. 全員の shutdown_response を確認
+3. `TeamDelete` でチームとタスクリストを削除
 
 ## エッジケース処理
 
 | 状況 | 対応 |
 |------|------|
-| mainブランチ上で実行 | 中止メッセージを表示して終了 |
-| 変更なし | "No changes detected" と表示して終了 |
+| mainブランチ上で実行 | チーム作成せず中止メッセージを表示して終了 |
+| 変更なし | チーム作成せず "No changes detected" と表示して終了 |
 | main未取得 | `git fetch origin main` を試行 |
 | 50+ ファイル変更 | 警告表示、エージェントにはファイルリストを渡してRead依存 |
-| バイナリファイルのみ変更 | スキップしてレポートに「バイナリファイルのみの変更」と記載 |
-| .ts/.tsx 以外のみ変更 | セキュリティエージェントのみ起動（設定ファイル・SQL）、該当なければ「TypeScriptファイルの変更なし」と表示 |
-| エージェントがエラー | そのエージェントの結果を「レビュー不可」としてレポートに記載、他のエージェント結果は正常に表示 |
+| バイナリファイルのみ変更 | チーム作成せずスキップしてレポートに「バイナリファイルのみの変更」と記載 |
+| .ts/.tsx 以外のみ変更 | security-reviewer のみ起動（設定ファイル・SQL）、該当なければチーム作成せず「TypeScriptファイルの変更なし」と表示 |
+| teammate がエラー | そのレビュアーの結果を「レビュー不可」としてレポートに記載、他のレビュアー結果は正常に表示 |

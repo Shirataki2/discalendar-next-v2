@@ -18,14 +18,14 @@ let capturedOnEdit: ((event: unknown) => void) | undefined;
 let capturedOnDelete: ((event: unknown) => void) | undefined;
 
 // EventServiceのモック
-const mockFetchEvents = vi.fn().mockResolvedValue({
+const mockFetchEventsWithSeries = vi.fn().mockResolvedValue({
   success: true,
   data: [],
 });
 
 vi.mock("@/lib/calendar/event-service", () => ({
   createEventService: vi.fn(() => ({
-    fetchEvents: mockFetchEvents,
+    fetchEventsWithSeries: mockFetchEventsWithSeries,
     createEvent: vi.fn(),
     updateEvent: vi.fn(),
     deleteEvent: vi.fn(),
@@ -136,7 +136,7 @@ describe("CalendarContainer - 権限制御", () => {
       value: 1200,
     });
 
-    mockFetchEvents.mockResolvedValue({ success: true, data: [] });
+    mockFetchEventsWithSeries.mockResolvedValue({ success: true, data: [] });
   });
 
   describe("Req 5.1: canEditEvents が false の場合", () => {
