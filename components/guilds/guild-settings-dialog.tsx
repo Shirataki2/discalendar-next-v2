@@ -23,6 +23,8 @@ export type GuildSettingsDialogProps = {
   guildId: string;
   /** 現在の restricted フラグ */
   restricted: boolean;
+  /** restricted フラグの更新成功時に親へ通知するコールバック */
+  onRestrictedChange?: (restricted: boolean) => void;
 };
 
 /**
@@ -35,6 +37,7 @@ export function GuildSettingsDialog({
   onOpenChange,
   guildId,
   restricted,
+  onRestrictedChange,
 }: GuildSettingsDialogProps) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -48,6 +51,7 @@ export function GuildSettingsDialog({
         <GuildSettingsPanel
           guildId={guildId}
           hideTitle
+          onRestrictedChange={onRestrictedChange}
           restricted={restricted}
         />
       </DialogContent>

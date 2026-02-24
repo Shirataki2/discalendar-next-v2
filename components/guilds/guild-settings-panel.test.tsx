@@ -143,7 +143,7 @@ describe("GuildSettingsPanel", () => {
     expect(screen.getByRole("switch")).toHaveAttribute("data-state", "checked");
   });
 
-  it("hideTitle=true の場合、タイトルとborderを非表示にする", () => {
+  it("hideTitle=true の場合、タイトルを非表示にする", () => {
     render(<GuildSettingsPanel {...defaultProps} hideTitle />);
 
     expect(screen.queryByText("ギルド設定")).not.toBeInTheDocument();

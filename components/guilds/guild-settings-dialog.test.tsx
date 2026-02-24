@@ -14,6 +14,8 @@ vi.mock("@/app/dashboard/actions", () => ({
 
 import { GuildSettingsDialog } from "./guild-settings-dialog";
 
+const CLOSE_BUTTON_NAME = /close/i;
+
 describe("GuildSettingsDialog", () => {
   const defaultProps = {
     open: true,
@@ -60,7 +62,7 @@ describe("GuildSettingsDialog", () => {
       <GuildSettingsDialog {...defaultProps} onOpenChange={onOpenChange} />
     );
 
-    const closeButton = screen.getByRole("button", { name: "Close" });
+    const closeButton = screen.getByRole("button", { name: CLOSE_BUTTON_NAME });
     await user.click(closeButton);
 
     expect(onOpenChange).toHaveBeenCalledWith(false);

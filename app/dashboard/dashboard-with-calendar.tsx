@@ -15,7 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
 import { GuildSettingsDialog } from "@/components/guilds/guild-settings-dialog";
@@ -498,11 +498,44 @@ export function DashboardWithCalendar({
   // Req 5.5: ローディング中は操作を無効化
   const effectiveCanEdit = permissionsLoading ? false : canEditEvents;
 
-  // DIS-47: 管理権限がある場合のみ設定ボタンを表示
+  // DIS-47: ギルド切り替え時・権限喪失時にダイアログを閉じる
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedGuildId はeffect内で直接使用されないが、ギルド切替時にダイアログを閉じるために依存配列に含める
+  useEffect(() => {
+    setIsSettingsDialogOpen(false);
+  }, [selectedGuildId]);
+
+  // DIS-47: 管理権限がある場合のみ設定ボタンを表示（useCallbackでメモ化）
+  const openSettingsDialog = useCallback(
+    () => setIsSettingsDialogOpen(true),
+    []
+  );
   const handleSettingsClick =
     selectedGuildId !== null && canManageGuild && selectedPermInfo !== undefined
-      ? () => setIsSettingsDialogOpen(true)
+      ? openSettingsDialog
       : undefined;
+
+  // DIS-47: restricted 更新成功時に親の権限情報を同期
+  const handleRestrictedChange = useCallback(
+    (newRestricted: boolean) => {
+      if (selectedGuildId === null) {
+        return;
+      }
+      setCurrentGuildPermissions((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const current = prev[selectedGuildId];
+        if (!current) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [selectedGuildId]: { ...current, restricted: newRestricted },
+        };
+      });
+    },
+    [selectedGuildId]
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:gap-4">
@@ -529,10 +562,13 @@ export function DashboardWithCalendar({
         selectedGuildId={selectedGuildId}
       />
       {/* DIS-47: ギルド設定ダイアログ（ツールバーの歯車ボタンから開く） */}
-      {selectedGuildId !== null && selectedPermInfo !== undefined ? (
+      {selectedGuildId !== null &&
+      canManageGuild &&
+      selectedPermInfo !== undefined ? (
         <GuildSettingsDialog
           guildId={selectedGuildId}
           onOpenChange={setIsSettingsDialogOpen}
+          onRestrictedChange={handleRestrictedChange}
           open={isSettingsDialogOpen}
           restricted={selectedPermInfo.restricted}
         />

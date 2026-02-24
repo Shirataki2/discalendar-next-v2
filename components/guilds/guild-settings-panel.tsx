@@ -22,6 +22,8 @@ export type GuildSettingsPanelProps = {
   restricted: boolean;
   /** タイトル・border・paddingを非表示にする（Dialog内で使用時） */
   hideTitle?: boolean;
+  /** restricted フラグの更新成功時に親へ通知するコールバック */
+  onRestrictedChange?: (restricted: boolean) => void;
 };
 
 /**
@@ -35,6 +37,7 @@ export function GuildSettingsPanel({
   guildId,
   restricted,
   hideTitle,
+  onRestrictedChange,
 }: GuildSettingsPanelProps) {
   const [isRestricted, setIsRestricted] = useState(restricted);
   const [isPending, startTransition] = useTransition();
@@ -59,13 +62,15 @@ export function GuildSettingsPanel({
           restricted: checked,
         });
 
-        if (!result.success) {
+        if (result.success) {
+          onRestrictedChange?.(checked);
+        } else {
           setIsRestricted(previousValue);
           setError(result.error.message);
         }
       });
     },
-    [guildId, isRestricted]
+    [guildId, isRestricted, onRestrictedChange]
   );
 
   return (

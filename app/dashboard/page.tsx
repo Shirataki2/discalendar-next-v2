@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import { captureException } from "@sentry/nextjs";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -252,7 +252,7 @@ export async function fetchGuilds(
         setCachedGuilds(userId, data, requestId);
         return data;
       } catch (dbError) {
-        Sentry.captureException(dbError);
+        captureException(dbError);
         // DBエラー情報を保持
         errorInfo = {
           type: "api_error",
