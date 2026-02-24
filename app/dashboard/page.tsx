@@ -1,3 +1,4 @@
+import { captureException } from "@sentry/nextjs";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -43,13 +44,13 @@ export type DashboardUser = {
 };
 
 /**
- * DashboardPageClientのProps
+ * DashboardPageLayoutのProps
  *
  * Requirements:
  * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
  * - guild-permissions 7.2: 権限情報をクライアントに渡す
  */
-export type DashboardPageClientProps = {
+export type DashboardPageLayoutProps = {
   /** 認証済みユーザー情報 */
   user: DashboardUser;
   /** ユーザーが所属するDiscalendar登録済みギルド一覧 */
@@ -76,7 +77,7 @@ function getUserInitials(dashboardUser: DashboardUser): string {
 }
 
 /**
- * ダッシュボードページのClient Component
+ * ダッシュボードページのレイアウトコンポーネント
  *
  * 認証後のランディングページとして基本構造を提供。
  * ログアウトボタン、ユーザー情報、ギルド一覧、カレンダーを表示する。
@@ -86,13 +87,13 @@ function getUserInitials(dashboardUser: DashboardUser): string {
  * - 5.1, 5.2: ギルド選択とカレンダー連携
  * - 5.3: 取得したギルド情報をクライアントコンポーネントに渡す
  */
-export function DashboardPageClient({
+export function DashboardPageLayout({
   user,
   guilds,
   invitableGuilds,
   guildError,
   guildPermissions,
-}: DashboardPageClientProps) {
+}: DashboardPageLayoutProps) {
   const displayName = user.fullName ?? user.email;
   const initials = getUserInitials(user);
 
@@ -128,17 +129,8 @@ export function DashboardPageClient({
           </div>
         </div>
       </header>
-      <main className="container mx-auto flex flex-1 flex-col px-4 py-8">
-        <div className="flex flex-1 flex-col gap-6">
-          <div className="space-y-2">
-            <h2 className="font-bold text-2xl">
-              ようこそ、{user.fullName ?? "ユーザー"}さん
-            </h2>
-            <p className="text-muted-foreground">
-              Discalendarへようこそ。ここからカレンダーを管理できます。
-            </p>
-          </div>
-
+      <main className="container mx-auto flex flex-1 flex-col px-4 py-3">
+        <div className="flex flex-1 flex-col">
           {/* ギルド一覧とカレンダー統合 (Task 10.1, guild-permissions 7.2) */}
           <DashboardWithCalendar
             guildError={guildError}
@@ -260,7 +252,7 @@ export async function fetchGuilds(
         setCachedGuilds(userId, data, requestId);
         return data;
       } catch (dbError) {
-        console.error("[Dashboard] Failed to fetch joined guilds:", dbError);
+        captureException(dbError);
         // DBエラー情報を保持
         errorInfo = {
           type: "api_error",
@@ -438,8 +430,14 @@ export default async function DashboardPage() {
   const dashboardUser: DashboardUser = {
     id: user.id,
     email: user.email ?? "",
-    fullName: (user.user_metadata?.full_name as string) ?? null,
-    avatarUrl: (user.user_metadata?.avatar_url as string) ?? null,
+    fullName:
+      typeof user.user_metadata?.full_name === "string"
+        ? user.user_metadata.full_name
+        : null,
+    avatarUrl:
+      typeof user.user_metadata?.avatar_url === "string"
+        ? user.user_metadata.avatar_url
+        : null,
   };
 
   // ギルド一覧を取得（ユーザーIDをキーとしてキャッシュを使用）
@@ -453,7 +451,7 @@ export default async function DashboardPage() {
   const guildPermissions = await buildGuildPermissions(guilds, supabase);
 
   return (
-    <DashboardPageClient
+    <DashboardPageLayout
       guildError={guildError}
       guildPermissions={guildPermissions}
       guilds={guilds}

@@ -71,6 +71,8 @@ export type CalendarContainerProps = {
   guildId: string | null;
   /** イベント編集可否（権限制御）。undefined の場合は true（後方互換性） */
   canEditEvents?: boolean;
+  /** サーバー設定ボタンクリックハンドラー */
+  onSettingsClick?: () => void;
 };
 
 /**
@@ -89,6 +91,7 @@ export type CalendarContainerProps = {
 export function CalendarContainer({
   guildId,
   canEditEvents = true,
+  onSettingsClick,
 }: CalendarContainerProps) {
   // URL同期されたビューモードと日付
   const { viewMode, selectedDate, setViewMode, setSelectedDate } =
@@ -471,6 +474,7 @@ export function CalendarContainer({
         isMobile={isMobile}
         onAddClick={toolbarAddClickHandler}
         onNavigate={handleNavigate}
+        onSettingsClick={onSettingsClick}
         onViewChange={handleViewChange}
         selectedDate={selectedDate}
         viewMode={viewMode}

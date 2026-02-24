@@ -318,6 +318,38 @@ describe("CalendarToolbar", () => {
     });
   });
 
+  describe("DIS-47: サーバー設定ボタン", () => {
+    it("onSettingsClickが提供されている場合、設定ボタンを表示する", () => {
+      const onSettingsClick = vi.fn();
+      render(
+        <CalendarToolbar {...defaultProps} onSettingsClick={onSettingsClick} />
+      );
+
+      const settingsButton = screen.getByTestId("settings-button");
+      expect(settingsButton).toBeInTheDocument();
+      expect(settingsButton).toHaveAccessibleName("サーバー設定");
+    });
+
+    it("onSettingsClickが提供されていない場合、設定ボタンを表示しない", () => {
+      render(<CalendarToolbar {...defaultProps} />);
+
+      expect(screen.queryByTestId("settings-button")).not.toBeInTheDocument();
+    });
+
+    it("設定ボタンをクリックすると onSettingsClick が呼ばれる", async () => {
+      const user = userEvent.setup();
+      const onSettingsClick = vi.fn();
+      render(
+        <CalendarToolbar {...defaultProps} onSettingsClick={onSettingsClick} />
+      );
+
+      const settingsButton = screen.getByTestId("settings-button");
+      await user.click(settingsButton);
+
+      expect(onSettingsClick).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("アクセシビリティ (Req 8.2)", () => {
     it("すべてのボタンに適切なARIAラベルを設定する", () => {
       render(<CalendarToolbar {...defaultProps} />);

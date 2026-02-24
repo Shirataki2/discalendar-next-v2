@@ -12,7 +12,7 @@
 
 import { endOfWeek, format, startOfWeek } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
 
@@ -31,6 +31,8 @@ export type CalendarToolbarProps = {
   onAddClick?: () => void;
   /** 追加ボタンの無効化状態（権限不足時） */
   isAddDisabled?: boolean;
+  /** サーバー設定ボタンクリックハンドラー */
+  onSettingsClick?: () => void;
 };
 
 /**
@@ -91,6 +93,7 @@ export function CalendarToolbar({
   isMobile,
   onAddClick,
   isAddDisabled,
+  onSettingsClick,
 }: CalendarToolbarProps) {
   const dateRangeLabel = getDateRangeLabel(viewMode, selectedDate);
 
@@ -124,6 +127,20 @@ export function CalendarToolbar({
             >
               <Plus className="mr-1 size-4" />
               追加
+            </Button>
+          ) : null}
+
+          {/* サーバー設定ボタン (DIS-47) */}
+          {onSettingsClick ? (
+            <Button
+              aria-label="サーバー設定"
+              data-testid="settings-button"
+              onClick={onSettingsClick}
+              size={isMobile ? "sm" : "default"}
+              type="button"
+              variant="outline"
+            >
+              <Settings className="size-4" />
             </Button>
           ) : null}
 

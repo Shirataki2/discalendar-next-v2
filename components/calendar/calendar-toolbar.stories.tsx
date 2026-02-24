@@ -238,3 +238,32 @@ export const WithoutAddButton: Story = {
     isMobile: false,
   },
 };
+
+/**
+ * DIS-47: サーバー設定ボタン付き
+ */
+export const WithSettingsButton: Story = {
+  args: {
+    viewMode: "month",
+    selectedDate: new Date(2025, 0, 15),
+    onViewChange: fn(),
+    onNavigate: fn(),
+    onSettingsClick: fn(),
+    isMobile: false,
+  },
+};
+
+/**
+ * DIS-47: 追加ボタン＋設定ボタン
+ */
+export const WithAddAndSettingsButtons: Story = {
+  args: {
+    viewMode: "month",
+    selectedDate: new Date(2025, 0, 15),
+    onViewChange: fn(),
+    onNavigate: fn(),
+    onAddClick: fn(),
+    onSettingsClick: fn(),
+    isMobile: false,
+  },
+};
