@@ -116,10 +116,11 @@ describe("DashboardPage", () => {
         error: null,
       });
 
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -135,10 +136,11 @@ describe("DashboardPage", () => {
     });
 
     it("should render logout button (Requirement 6.1)", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -152,10 +154,11 @@ describe("DashboardPage", () => {
     });
 
     it("should have main landmark for accessibility", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -171,10 +174,11 @@ describe("DashboardPage", () => {
 
   describe("Task 7: ユーザー情報表示 (Requirement 4.2)", () => {
     it("should display user name when available", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -188,10 +192,11 @@ describe("DashboardPage", () => {
     });
 
     it("should display user email when name is not available", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -205,10 +210,11 @@ describe("DashboardPage", () => {
     });
 
     it("should display user avatar when available", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -227,10 +233,11 @@ describe("DashboardPage", () => {
     });
 
     it("should display fallback avatar when avatar URL is not available", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -248,10 +255,11 @@ describe("DashboardPage", () => {
 
   describe("Task 7: ダッシュボードレイアウト", () => {
     it("should not render welcome message (DIS-47: removed for calendar viewport maximization)", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -268,10 +276,11 @@ describe("DashboardPage", () => {
     });
 
     it("should have proper structure with header section", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       const { container } = render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -289,10 +298,11 @@ describe("DashboardPage", () => {
 
   describe("Task 7: アクセシビリティ", () => {
     it("should have accessible navigation region", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -308,10 +318,11 @@ describe("DashboardPage", () => {
     });
 
     it("should have alt text for user avatar image", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -328,10 +339,11 @@ describe("DashboardPage", () => {
 
   describe("Task 6.3: ギルド一覧統合", () => {
     it("should render guild list section (Requirement 5.3)", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -367,10 +379,11 @@ describe("DashboardPage", () => {
         },
       ];
 
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={mockGuilds}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -385,10 +398,11 @@ describe("DashboardPage", () => {
     });
 
     it("should display empty state when no guilds are available (Requirement 4.4)", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -404,11 +418,12 @@ describe("DashboardPage", () => {
     });
 
     it("should display error message when token is expired (Requirement 2.4)", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guildError={{ type: "token_expired" }}
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -424,11 +439,12 @@ describe("DashboardPage", () => {
     });
 
     it("should display error message when no token is available (Requirement 2.4)", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guildError={{ type: "no_token" }}
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -444,11 +460,12 @@ describe("DashboardPage", () => {
     });
 
     it("should display API error message (Requirement 2.3)", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guildError={{ type: "api_error", message: "APIエラーが発生しました" }}
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -466,10 +483,11 @@ describe("DashboardPage", () => {
 
   describe("サイドバー折りたたみ/展開", () => {
     it("should render collapse toggle button with aria-expanded", async () => {
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
@@ -488,9 +506,9 @@ describe("DashboardPage", () => {
 
     it("should toggle sidebar collapse state on button click", async () => {
       const user = userEvent.setup();
-      const { DashboardPageClient } = await import("@/app/dashboard/page");
+      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
-        <DashboardPageClient
+        <DashboardPageLayout
           guilds={[
             {
               id: 1,
@@ -500,6 +518,7 @@ describe("DashboardPage", () => {
               locale: "ja",
             },
           ]}
+          invitableGuilds={[]}
           user={{
             id: "user-123",
             email: "test@example.com",
