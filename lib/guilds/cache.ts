@@ -21,8 +21,6 @@
  * - pending requestの平均期間
  */
 
-import { randomUUID } from "node:crypto";
-
 import type { GuildWithPermissions, InvitableGuild } from "./types";
 
 /** fetchGuilds の結果データ（キャッシュ・pending request で共有） */
@@ -207,7 +205,7 @@ export function setPendingRequest(
   requestId?: string
 ): string {
   const finalRequestId =
-    requestId ?? `${userId}-${Date.now()}-${randomUUID()}`;
+    requestId ?? `${userId}-${Date.now()}-${crypto.randomUUID()}`;
   pendingRequests.set(userId, {
     promise,
     startedAt: Date.now(),
@@ -247,7 +245,7 @@ export function getOrSetPendingRequest(
   }
 
   // リクエストIDを事前に生成
-  const requestId = `${userId}-${Date.now()}-${randomUUID()}`;
+  const requestId = `${userId}-${Date.now()}-${crypto.randomUUID()}`;
 
   // 新しいリクエストを作成して設定
   const promise = factory(requestId);
