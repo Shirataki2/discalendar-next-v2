@@ -293,6 +293,79 @@ describe("EventBlock", () => {
     });
   });
 
+  describe("DIS-52: 週ビューのテキスト見切れ対策", () => {
+    it("ボタンがflexレイアウトで幅制約を持つ", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} />);
+
+      const eventElement = screen.getByTestId("event-block");
+      expect(eventElement).toHaveClass("flex");
+      expect(eventElement).toHaveClass("w-full");
+      expect(eventElement).toHaveClass("overflow-hidden");
+    });
+
+    it("タイトルspanがflex子要素として適切なクラスを持つ", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} />);
+
+      const titleElement = screen.getByText("テストイベント");
+      expect(titleElement).toHaveClass("min-w-0");
+      expect(titleElement).toHaveClass("flex-1");
+      expect(titleElement).toHaveClass("truncate");
+      expect(titleElement).toHaveClass("event-block-title");
+    });
+
+    it("長いイベント名のタイトルspanにもmin-w-0が適用される", () => {
+      const longTitleEvent: CalendarEvent = {
+        ...mockEvent,
+        title: "これはとても長いイベント名で、表示領域を超える可能性があります",
+      };
+
+      renderWithTooltip(
+        <EventBlock
+          {...defaultProps}
+          event={longTitleEvent}
+          title={longTitleEvent.title}
+        />
+      );
+
+      const titleElement = screen.getByText(longTitleEvent.title);
+      expect(titleElement).toHaveClass("min-w-0");
+      expect(titleElement).toHaveClass("event-block-title");
+    });
+
+    it("showTime時に時刻spanがshrink-0で圧縮されない", () => {
+      renderWithTooltip(<EventBlock {...defaultProps} showTime />);
+
+      const timeElement = screen.getByText("10:00");
+      expect(timeElement).toHaveClass("shrink-0");
+    });
+
+    it("ツールチップにフルのイベント名が表示される", async () => {
+      const user = userEvent.setup();
+      const longTitleEvent: CalendarEvent = {
+        ...mockEvent,
+        title: "非常に長いイベントタイトルで省略表示されるかもしれないイベント",
+      };
+
+      renderWithTooltip(
+        <EventBlock
+          {...defaultProps}
+          event={longTitleEvent}
+          title={longTitleEvent.title}
+        />
+      );
+
+      const eventElement = screen.getByTestId("event-block");
+      await user.hover(eventElement);
+
+      const tooltipTitle = await screen.findByText(
+        longTitleEvent.title,
+        {},
+        { timeout: 3000 }
+      );
+      expect(tooltipTitle).toBeInTheDocument();
+    });
+  });
+
   describe("エッジケース", () => {
     it("説明文が設定されている場合もイベント名のみ表示する", () => {
       const eventWithDescription: CalendarEvent = {

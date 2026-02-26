@@ -61,6 +61,7 @@ export function EventBlock({
 
   const combinedClasses = cn(
     "event-block cursor-pointer rounded px-1.5 py-0.5 text-xs",
+    "flex w-full items-center overflow-hidden text-left",
     "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
     isAllDay ? "event-block-all-day event-block-bar" : "event-block-timed"
   );
@@ -98,9 +99,13 @@ export function EventBlock({
             />
           ) : null}
           {shouldShowTime ? (
-            <span className="mr-1 opacity-80">{formatTime(event.start)}</span>
+            <span className="mr-1 shrink-0 opacity-80">
+              {formatTime(event.start)}
+            </span>
           ) : null}
-          <span className="truncate">{title}</span>
+          <span className="event-block-title min-w-0 flex-1 truncate">
+            {title}
+          </span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={4}>
