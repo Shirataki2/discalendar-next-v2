@@ -719,7 +719,7 @@ describe("createEventService - createEvent", () => {
     }
   });
 
-  it("should return VALIDATION_ERROR when endAt equals startAt", async () => {
+  it("should return VALIDATION_ERROR when endAt equals startAt for non-all-day event", async () => {
     const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
     const sameDate = new Date("2025-12-15T10:00:00Z");
     const input: CreateEventInput = {
@@ -727,6 +727,7 @@ describe("createEventService - createEvent", () => {
       title: "テストイベント",
       startAt: sameDate,
       endAt: sameDate,
+      isAllDay: false,
     };
 
     const result = await service.createEvent(input);
@@ -735,6 +736,44 @@ describe("createEventService - createEvent", () => {
     if (!result.success) {
       expect(result.error.code).toBe("VALIDATION_ERROR");
     }
+  });
+
+  it("should allow endAt equals startAt for all-day event (DIS-50)", async () => {
+    const insertBuilder = createMockInsertBuilder({
+      data: {
+        id: "new-event-id",
+        guild_id: "guild-123",
+        name: "終日予定",
+        start_at: "2025-12-15T00:00:00Z",
+        end_at: "2025-12-15T00:00:00Z",
+        is_all_day: true,
+        color: "#3B82F6",
+        description: null,
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        series_id: null,
+        original_date: null,
+        created_at: "2025-12-01T00:00:00Z",
+        updated_at: "2025-12-01T00:00:00Z",
+      },
+    });
+    mockSupabaseClient.from.mockReturnValue(insertBuilder);
+
+    const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+    const sameDate = new Date("2025-12-15T00:00:00Z");
+    const input: CreateEventInput = {
+      guildId: "guild-123",
+      title: "終日予定",
+      startAt: sameDate,
+      endAt: sameDate,
+      isAllDay: true,
+    };
+
+    const result = await service.createEvent(input);
+
+    expect(result.success).toBe(true);
   });
 
   it("should return CREATE_FAILED error on database error", async () => {

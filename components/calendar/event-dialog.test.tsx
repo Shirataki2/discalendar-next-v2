@@ -993,6 +993,42 @@ describe("EventDialog", () => {
       });
     });
 
+    it("editScope='this'で終日イベントの場合、endAtがそのまま渡される (DIS-50)", async () => {
+      const user = userEvent.setup();
+      mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
+
+      const sameDay = new Date("2025-12-10T00:00:00");
+      render(
+        <EventDialog
+          {...defaultProps}
+          editScope="this"
+          eventId="series-123:2025-12-10T00:00:00.000Z"
+          initialData={{
+            title: "終日繰り返し",
+            startAt: sameDay,
+            endAt: sameDay,
+            isAllDay: true,
+          }}
+          mode="edit"
+          occurrenceDate={sameDay}
+          seriesId="series-123"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventData: expect.objectContaining({
+              endAt: sameDay,
+            }),
+          })
+        );
+      });
+    });
+
     it("editScope='this'の場合、繰り返し設定UIが非表示になる", () => {
       render(
         <EventDialog
@@ -1008,6 +1044,78 @@ describe("EventDialog", () => {
 
       // 繰り返し設定のトグルが表示されないことを確認
       expect(screen.queryByText(RECURRENCE_PATTERN)).not.toBeInTheDocument();
+    });
+  });
+
+  // DIS-50: 1日限りの終日イベントが保存できない
+  describe("DIS-50: 終日イベントの endAt パススルー", () => {
+    it("1日終日イベント作成時に endAt がそのまま渡される", async () => {
+      const user = userEvent.setup();
+      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
+
+      const sameDay = new Date("2025-12-10T00:00:00");
+      render(
+        <EventDialog
+          {...defaultProps}
+          initialData={{
+            title: "終日予定",
+            startAt: sameDay,
+            endAt: sameDay,
+            isAllDay: true,
+          }}
+          mode="create"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockCreateEventAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventData: expect.objectContaining({
+              startAt: sameDay,
+              endAt: sameDay,
+              isAllDay: true,
+            }),
+          })
+        );
+      });
+    });
+
+    it("1日終日イベント編集時にも endAt がそのまま渡される", async () => {
+      const user = userEvent.setup();
+      mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
+
+      const sameDay = new Date("2025-12-10T00:00:00");
+      render(
+        <EventDialog
+          {...defaultProps}
+          eventId="event-123"
+          initialData={{
+            title: "終日予定",
+            startAt: sameDay,
+            endAt: sameDay,
+            isAllDay: true,
+          }}
+          mode="edit"
+        />
+      );
+
+      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockUpdateEventAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventData: expect.objectContaining({
+              startAt: sameDay,
+              endAt: sameDay,
+              isAllDay: true,
+            }),
+          })
+        );
+      });
     });
   });
 });
