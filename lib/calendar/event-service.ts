@@ -544,8 +544,8 @@ export function createEventService(
           };
         }
 
-        // バリデーション: 日時のチェック
-        if (startAt >= endAt) {
+        // バリデーション: 日時のチェック (終日イベントは startAt === endAt を許容)
+        if (isAllDay ? startAt > endAt : startAt >= endAt) {
           return {
             success: false,
             error: {
@@ -780,8 +780,8 @@ export function createEventService(
           };
         }
 
-        // バリデーション: 日時
-        if (startAt >= endAt) {
+        // バリデーション: 日時 (終日イベントは startAt === endAt を許容)
+        if (isAllDay ? startAt > endAt : startAt >= endAt) {
           return {
             success: false,
             error: {
@@ -1114,9 +1114,9 @@ export function createEventService(
           }
         }
 
-        // バリデーション: 両方の日時が指定されている場合のチェック
+        // バリデーション: 両方の日時が指定されている場合のチェック (終日イベントは startAt === endAt を許容)
         if (startAt !== undefined && endAt !== undefined) {
-          if (startAt >= endAt) {
+          if (isAllDay ? startAt > endAt : startAt >= endAt) {
             return {
               success: false,
               error: {
@@ -1371,9 +1371,9 @@ export function createEventService(
           }
         }
 
-        // バリデーション: 両方の日時が指定されている場合のチェック
+        // バリデーション: 両方の日時が指定されている場合のチェック (終日イベントは startAt === endAt を許容)
         if (startAt !== undefined && endAt !== undefined) {
-          if (startAt >= endAt) {
+          if (isAllDay ? startAt > endAt : startAt >= endAt) {
             return {
               success: false,
               error: {

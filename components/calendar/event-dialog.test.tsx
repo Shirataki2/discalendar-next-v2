@@ -993,7 +993,7 @@ describe("EventDialog", () => {
       });
     });
 
-    it("editScope='this'で終日イベントの場合、endAtが翌日に正規化される (DIS-50)", async () => {
+    it("editScope='this'で終日イベントの場合、endAtがそのまま渡される (DIS-50)", async () => {
       const user = userEvent.setup();
       mockUpdateOccurrenceAction.mockResolvedValue(mockScopedSuccessResponse);
 
@@ -1022,7 +1022,7 @@ describe("EventDialog", () => {
         expect(mockUpdateOccurrenceAction).toHaveBeenCalledWith(
           expect.objectContaining({
             eventData: expect.objectContaining({
-              endAt: new Date("2025-12-11T00:00:00"),
+              endAt: sameDay,
             }),
           })
         );
@@ -1048,8 +1048,8 @@ describe("EventDialog", () => {
   });
 
   // DIS-50: 1日限りの終日イベントが保存できない
-  describe("DIS-50: 終日イベントの endAt 正規化", () => {
-    it("1日終日イベント作成時に endAt が翌日に正規化される", async () => {
+  describe("DIS-50: 終日イベントの endAt パススルー", () => {
+    it("1日終日イベント作成時に endAt がそのまま渡される", async () => {
       const user = userEvent.setup();
       mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
 
@@ -1075,7 +1075,7 @@ describe("EventDialog", () => {
           expect.objectContaining({
             eventData: expect.objectContaining({
               startAt: sameDay,
-              endAt: new Date("2025-12-11T00:00:00"),
+              endAt: sameDay,
               isAllDay: true,
             }),
           })
@@ -1083,77 +1083,7 @@ describe("EventDialog", () => {
       });
     });
 
-    it("通常イベント（非終日）は正規化されない", async () => {
-      const user = userEvent.setup();
-      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
-
-      const start = new Date("2025-12-10T10:00:00");
-      const end = new Date("2025-12-10T10:00:00");
-      render(
-        <EventDialog
-          {...defaultProps}
-          initialData={{
-            title: "通常予定",
-            startAt: start,
-            endAt: end,
-            isAllDay: false,
-          }}
-          mode="create"
-        />
-      );
-
-      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
-      await user.click(saveButton);
-
-      await waitFor(() => {
-        expect(mockCreateEventAction).toHaveBeenCalledWith(
-          expect.objectContaining({
-            eventData: expect.objectContaining({
-              startAt: start,
-              endAt: end,
-              isAllDay: false,
-            }),
-          })
-        );
-      });
-    });
-
-    it("複数日終日イベントは正規化されない（startAt !== endAt）", async () => {
-      const user = userEvent.setup();
-      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
-
-      const start = new Date("2025-12-10T00:00:00");
-      const end = new Date("2025-12-12T00:00:00");
-      render(
-        <EventDialog
-          {...defaultProps}
-          initialData={{
-            title: "複数日予定",
-            startAt: start,
-            endAt: end,
-            isAllDay: true,
-          }}
-          mode="create"
-        />
-      );
-
-      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
-      await user.click(saveButton);
-
-      await waitFor(() => {
-        expect(mockCreateEventAction).toHaveBeenCalledWith(
-          expect.objectContaining({
-            eventData: expect.objectContaining({
-              startAt: start,
-              endAt: end,
-              isAllDay: true,
-            }),
-          })
-        );
-      });
-    });
-
-    it("1日終日イベント編集時にも endAt が翌日に正規化される", async () => {
+    it("1日終日イベント編集時にも endAt がそのまま渡される", async () => {
       const user = userEvent.setup();
       mockUpdateEventAction.mockResolvedValue(mockSuccessResponse);
 
@@ -1180,41 +1110,8 @@ describe("EventDialog", () => {
           expect.objectContaining({
             eventData: expect.objectContaining({
               startAt: sameDay,
-              endAt: new Date("2025-12-11T00:00:00"),
+              endAt: sameDay,
               isAllDay: true,
-            }),
-          })
-        );
-      });
-    });
-
-    it("月末境界: 3/31の終日イベントで endAt が 4/1 に正規化される", async () => {
-      const user = userEvent.setup();
-      mockCreateEventAction.mockResolvedValue(mockSuccessResponse);
-
-      const marchEnd = new Date("2025-03-31T00:00:00");
-      render(
-        <EventDialog
-          {...defaultProps}
-          initialData={{
-            title: "月末予定",
-            startAt: marchEnd,
-            endAt: marchEnd,
-            isAllDay: true,
-          }}
-          mode="create"
-        />
-      );
-
-      const saveButton = screen.getByRole("button", { name: SAVE_PATTERN });
-      await user.click(saveButton);
-
-      await waitFor(() => {
-        expect(mockCreateEventAction).toHaveBeenCalledWith(
-          expect.objectContaining({
-            eventData: expect.objectContaining({
-              startAt: marchEnd,
-              endAt: new Date("2025-04-01T00:00:00"),
             }),
           })
         );
