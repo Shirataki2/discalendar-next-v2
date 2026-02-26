@@ -45,6 +45,30 @@ import type { EditScope } from "@/lib/calendar/types";
 import { EventForm } from "./event-form";
 
 /**
+ * 終日イベントの endAt を正規化する (DIS-50)
+ *
+ * react-big-calendar が1日クリック時に start === end を返すため、
+ * iCalendar (RFC 5545) の慣例に従い、終日イベントで startAt === endAt の場合
+ * endAt を翌日 00:00:00 に正規化する。
+ */
+function normalizeAllDayEndDate(
+  startAt: Date,
+  endAt: Date,
+  isAllDay: boolean
+): Date {
+  if (!isAllDay) {
+    return endAt;
+  }
+  if (startAt.getTime() === endAt.getTime()) {
+    const normalized = new Date(endAt);
+    normalized.setDate(normalized.getDate() + 1);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized;
+  }
+  return endAt;
+}
+
+/**
  * EventFormDataをCreateEventInputに変換する
  */
 function toCreateEventInput(
@@ -55,7 +79,7 @@ function toCreateEventInput(
     guildId,
     title: data.title,
     startAt: data.startAt,
-    endAt: data.endAt,
+    endAt: normalizeAllDayEndDate(data.startAt, data.endAt, data.isAllDay),
     description: data.description || undefined,
     isAllDay: data.isAllDay,
     color: data.color,
@@ -71,7 +95,7 @@ function toUpdateEventInput(data: EventFormData): UpdateEventInput {
   return {
     title: data.title,
     startAt: data.startAt,
-    endAt: data.endAt,
+    endAt: normalizeAllDayEndDate(data.startAt, data.endAt, data.isAllDay),
     description: data.description || undefined,
     isAllDay: data.isAllDay,
     color: data.color,
@@ -91,7 +115,7 @@ function toUpdateSeriesInput(
   const input: UpdateSeriesInput = {
     title: data.title,
     startAt: data.startAt,
-    endAt: data.endAt,
+    endAt: normalizeAllDayEndDate(data.startAt, data.endAt, data.isAllDay),
     description: data.description || undefined,
     isAllDay: data.isAllDay,
     color: data.color,
@@ -128,7 +152,7 @@ function toCreateSeriesInput(
     guildId,
     title: data.title,
     startAt: data.startAt,
-    endAt: data.endAt,
+    endAt: normalizeAllDayEndDate(data.startAt, data.endAt, data.isAllDay),
     description: data.description || undefined,
     isAllDay: data.isAllDay,
     color: data.color,
