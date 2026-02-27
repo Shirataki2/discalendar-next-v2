@@ -357,12 +357,8 @@ describe("EventBlock", () => {
       const eventElement = screen.getByTestId("event-block");
       await user.hover(eventElement);
 
-      const tooltipTitle = await screen.findByText(
-        longTitleEvent.title,
-        {},
-        { timeout: 3000 }
-      );
-      expect(tooltipTitle).toBeInTheDocument();
+      const tooltip = await screen.findByRole("tooltip", {}, { timeout: 3000 });
+      expect(tooltip).toHaveTextContent(longTitleEvent.title);
     });
   });
 
