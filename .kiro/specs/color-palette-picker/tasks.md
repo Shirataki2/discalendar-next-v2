@@ -23,7 +23,7 @@
   - 無効なHEXコードが入力された場合は `onChange` を呼ばず直前の有効な色を維持する
   - _Requirements: 2.5, 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 2. EventFormへのColorPicker統合
+- [x] 2. EventFormへのColorPicker統合
   - `event-form.tsx` の `ColorField` 内の `<Input type="color">` を `ColorPicker` コンポーネントに置換する
   - `ColorPicker` の `onChange` を `form.handleChange("color", value)` に接続する
   - イベント作成時のデフォルトカラー `#3B82F6` がColorPickerの初期値として表示されることを確認する

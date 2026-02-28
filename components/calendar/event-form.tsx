@@ -29,6 +29,7 @@ import {
   useRecurrenceForm,
 } from "@/hooks/calendar/use-recurrence-form";
 import { cn } from "@/lib/utils";
+import { ColorPicker } from "./color-picker";
 import { NotificationField } from "./notification-field";
 import { RecurrenceSettingsControl } from "./recurrence-settings-control";
 
@@ -244,19 +245,15 @@ function DescriptionField({ form, isSubmitting }: FormFieldProps) {
 
 /**
  * 色選択フィールド
+ * DIS-59: ColorPickerコンポーネントに置換
  */
 function ColorField({ form, isSubmitting }: FormFieldProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor="color">色</Label>
-      <Input
-        className="h-10 w-20 cursor-pointer p-1"
+      <Label>色</Label>
+      <ColorPicker
         disabled={isSubmitting}
-        id="color"
-        name="color"
-        onBlur={() => form.handleBlur("color")}
-        onChange={(e) => form.handleChange("color", e.target.value)}
-        type="color"
+        onChange={(v) => form.handleChange("color", v)}
         value={form.values.color}
       />
     </div>
