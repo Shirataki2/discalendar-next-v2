@@ -3,19 +3,9 @@ import Link from "next/link";
 import type { DashboardUser } from "@/app/dashboard/page";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { getUserInitials } from "@/lib/user/get-user-initials";
 
-/**
- * ユーザーのイニシャルを取得
- */
-function getUserInitials(user: DashboardUser): string {
-  if (user.fullName) {
-    return user.fullName.charAt(0).toUpperCase();
-  }
-  if (user.email) {
-    return user.email.charAt(0).toUpperCase();
-  }
-  return "U";
-}
+const HEADER_AVATAR_SIZE = 32;
 
 type DashboardHeaderProps = {
   user: DashboardUser;
@@ -34,12 +24,12 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   return (
     <header className="border-b">
       <div className="container mx-auto flex items-center justify-between px-4 py-4">
-        <a
+        <Link
           className="font-uni-sans-heavy text-2xl transition-colors hover:text-primary"
           href="/"
         >
           Discalendar
-        </a>
+        </Link>
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
           <Link
@@ -50,9 +40,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               <Image
                 alt={`${displayName}のアバター`}
                 className="rounded-full"
-                height={32}
+                height={HEADER_AVATAR_SIZE}
                 src={user.avatarUrl}
-                width={32}
+                width={HEADER_AVATAR_SIZE}
               />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-medium text-sm">

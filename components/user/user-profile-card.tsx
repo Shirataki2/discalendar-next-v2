@@ -1,22 +1,13 @@
 import Image from "next/image";
 import type { DashboardUser } from "@/app/dashboard/page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getUserInitials } from "@/lib/user/get-user-initials";
 
 export type UserProfileCardProps = {
   user: DashboardUser;
 };
 
 const AVATAR_SIZE = 80;
-
-function getUserInitials(user: DashboardUser): string {
-  if (user.fullName) {
-    return user.fullName.charAt(0).toUpperCase();
-  }
-  if (user.email) {
-    return user.email.charAt(0).toUpperCase();
-  }
-  return "U";
-}
 
 export function UserProfileCard({ user }: UserProfileCardProps) {
   const displayName = user.fullName ?? user.email;
