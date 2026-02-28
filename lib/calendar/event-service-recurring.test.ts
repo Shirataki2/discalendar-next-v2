@@ -971,4 +971,62 @@ describe("EventService 繰り返しイベント統合テスト", () => {
       expect(result.error.code).toBe("FETCH_FAILED");
     });
   });
+
+  describe("fetchEventsWithSeries クエリ条件の検証 (DIS-53)", () => {
+    it("単発イベントクエリが期間重複判定を使用する", async () => {
+      const singleBuilder = createFlexibleBuilder({ data: [] });
+      const seriesBuilder = createFlexibleBuilder({ data: [] });
+      const exceptionBuilder = createFlexibleBuilder({ data: [] });
+
+      let eventsCallCount = 0;
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === "event_series") return seriesBuilder;
+        eventsCallCount++;
+        return eventsCallCount === 1 ? singleBuilder : exceptionBuilder;
+      });
+
+      const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
+      const params: FetchEventsParams = {
+        guildId: "guild-123",
+        startDate: new Date("2026-03-01T00:00:00Z"),
+        endDate: new Date("2026-03-31T23:59:59Z"),
+      };
+
+      await service.fetchEventsWithSeries(params);
+
+      // 単発イベントクエリ: start_at <= endDate AND end_at >= startDate
+      expect(singleBuilder.lte).toHaveBeenCalledWith("start_at", params.endDate.toISOString());
+      expect(singleBuilder.gte).toHaveBeenCalledWith("end_at", params.startDate.toISOString());
+      expect(singleBuilder.is).toHaveBeenCalledWith("series_id", null);
+    });
+
+    it("例外レコードクエリの .or() が期間重複判定を含む", async () => {
+      const singleBuilder = createFlexibleBuilder({ data: [] });
+      const seriesBuilder = createFlexibleBuilder({ data: [] });
+      const exceptionBuilder = createFlexibleBuilder({ data: [] });
+
+      let eventsCallCount = 0;
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === "event_series") return seriesBuilder;
+        eventsCallCount++;
+        return eventsCallCount === 1 ? singleBuilder : exceptionBuilder;
+      });
+
+      const service = createEventService(mockSupabaseClient as unknown as SupabaseParam);
+      const params: FetchEventsParams = {
+        guildId: "guild-123",
+        startDate: new Date("2026-03-01T00:00:00Z"),
+        endDate: new Date("2026-03-31T23:59:59Z"),
+      };
+
+      await service.fetchEventsWithSeries(params);
+
+      // 例外レコードクエリ: original_date範囲 OR (start_at <= endDate AND end_at >= startDate)
+      const start = params.startDate.toISOString();
+      const end = params.endDate.toISOString();
+      expect(exceptionBuilder.or).toHaveBeenCalledWith(
+        `and(original_date.gte.${start},original_date.lte.${end}),and(start_at.lte.${end},end_at.gte.${start})`,
+      );
+    });
+  });
 });

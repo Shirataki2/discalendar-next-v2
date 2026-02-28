@@ -459,8 +459,8 @@ export function createEventService(
           .from("events")
           .select("*")
           .eq("guild_id", guildId)
-          .gte("start_at", startDate.toISOString())
-          .lte("start_at", endDate.toISOString());
+          .lte("start_at", endDate.toISOString())
+          .gte("end_at", startDate.toISOString());
 
         // AbortSignalが提供されている場合は設定
         if (signal) {
@@ -870,8 +870,8 @@ export function createEventService(
           .from("events")
           .select("*")
           .eq("guild_id", guildId)
-          .gte("start_at", startDate.toISOString())
           .lte("start_at", endDate.toISOString())
+          .gte("end_at", startDate.toISOString())
           .is("series_id", null);
 
         if (signal) {
@@ -925,7 +925,7 @@ export function createEventService(
           .eq("guild_id", guildId)
           .not("series_id", "is", null)
           .or(
-            `and(original_date.gte.${startDate.toISOString()},original_date.lte.${endDate.toISOString()}),and(start_at.gte.${startDate.toISOString()},start_at.lte.${endDate.toISOString()})`
+            `and(original_date.gte.${startDate.toISOString()},original_date.lte.${endDate.toISOString()}),and(start_at.lte.${endDate.toISOString()},end_at.gte.${startDate.toISOString()})`
           );
 
         if (signal) {
