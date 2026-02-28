@@ -2,19 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Guild } from "@/lib/guilds/types";
+import { getInitial } from "@/lib/user/get-user-initials";
 
 export type UserGuildListProps = {
   guilds: Guild[];
 };
 
 const ICON_SIZE = 32;
-
-function getGuildInitial(name: string): string {
-  if (!name || name.length === 0) {
-    return "?";
-  }
-  return name.charAt(0).toUpperCase();
-}
 
 export function UserGuildList({ guilds }: UserGuildListProps) {
   return (
@@ -46,7 +40,7 @@ export function UserGuildList({ guilds }: UserGuildListProps) {
                       />
                     ) : (
                       <span className="font-medium text-muted-foreground text-xs">
-                        {getGuildInitial(guild.name)}
+                        {getInitial(guild.name)}
                       </span>
                     )}
                   </div>

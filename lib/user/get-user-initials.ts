@@ -1,4 +1,16 @@
 /**
+ * 文字列の先頭文字を大文字で返す共通ヘルパー
+ *
+ * 空文字列の場合はフォールバック文字を返す。
+ */
+export function getInitial(name: string, fallback = "?"): string {
+  if (name.length === 0) {
+    return fallback;
+  }
+  return name.charAt(0).toUpperCase();
+}
+
+/**
  * ユーザーのイニシャルを取得
  *
  * fullName の先頭文字、なければ email の先頭文字、それもなければ "U" を返す。
@@ -8,10 +20,10 @@ export function getUserInitials(user: {
   email: string;
 }): string {
   if (user.fullName) {
-    return user.fullName.charAt(0).toUpperCase();
+    return getInitial(user.fullName);
   }
   if (user.email) {
-    return user.email.charAt(0).toUpperCase();
+    return getInitial(user.email);
   }
   return "U";
 }

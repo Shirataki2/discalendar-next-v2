@@ -1,7 +1,7 @@
 import Image from "next/image";
-import type { DashboardUser } from "@/app/dashboard/page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getUserInitials } from "@/lib/user/get-user-initials";
+import type { DashboardUser } from "@/types/user";
 
 export type UserProfileCardProps = {
   user: DashboardUser;

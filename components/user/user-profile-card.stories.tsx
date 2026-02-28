@@ -4,7 +4,7 @@
  * ユーザーのDiscordプロフィール情報をカード形式で表示するコンポーネントのストーリー。
  */
 import type { Meta, StoryObj } from "@storybook/react";
-import type { DashboardUser } from "@/app/dashboard/page";
+import type { DashboardUser } from "@/types/user";
 import { UserProfileCard } from "./user-profile-card";
 
 const meta = {

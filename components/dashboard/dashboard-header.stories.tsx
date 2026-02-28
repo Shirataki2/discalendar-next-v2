@@ -5,7 +5,7 @@
  * ロゴ、ThemeSwitcher、アバターリンク、LogoutButton を表示する。
  */
 import type { Meta, StoryObj } from "@storybook/react";
-import type { DashboardUser } from "@/app/dashboard/page";
+import type { DashboardUser } from "@/types/user";
 import { DashboardHeader } from "./dashboard-header";
 
 const meta = {

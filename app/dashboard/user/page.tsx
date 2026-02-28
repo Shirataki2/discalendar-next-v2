@@ -1,13 +1,15 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { DashboardUser } from "@/app/dashboard/page";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { UserGuildList } from "@/components/user/user-guild-list";
 import { UserProfileCard } from "@/components/user/user-profile-card";
+import { getGuildListErrorMessage } from "@/lib/guilds/error-messages";
 import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
+import { buildDashboardUser } from "@/lib/user/build-dashboard-user";
+import type { DashboardUser } from "@/types/user";
 
 // 認証状態を取得するため動的レンダリングを強制
 export const dynamic = "force-dynamic";
@@ -20,22 +22,6 @@ export type UserProfilePageLayoutProps = {
   guilds: Guild[];
   guildError?: GuildListError;
 };
-
-/**
- * GuildListError からユーザー向けメッセージを取得する
- */
-function getGuildErrorMessage(error: GuildListError): string {
-  switch (error.type) {
-    case "api_error":
-      return error.message;
-    case "token_expired":
-      return "セッションの有効期限が切れました。再度ログインしてください。";
-    case "no_token":
-      return "Discord連携が無効です。再ログインしてください。";
-    default:
-      return "ギルド情報の取得に失敗しました。";
-  }
-}
 
 /**
  * ユーザーページのレイアウトコンポーネント（テスト可能な表示層）
@@ -69,7 +55,7 @@ export function UserProfilePageLayout({
           {guildError ? (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
               <p className="text-destructive text-sm">
-                {getGuildErrorMessage(guildError)}
+                {getGuildListErrorMessage(guildError)}
               </p>
             </div>
           ) : (
@@ -101,18 +87,7 @@ export default async function UserProfilePage() {
     redirect("/auth/login");
   }
 
-  const dashboardUser: DashboardUser = {
-    id: user.id,
-    email: user.email ?? "",
-    fullName:
-      typeof user.user_metadata?.full_name === "string"
-        ? user.user_metadata.full_name
-        : null,
-    avatarUrl:
-      typeof user.user_metadata?.avatar_url === "string"
-        ? user.user_metadata.avatar_url
-        : null,
-  };
+  const dashboardUser = buildDashboardUser(user);
 
   // セッションからprovider_tokenを取得してギルド一覧を取得
   const {
@@ -122,7 +97,9 @@ export default async function UserProfilePage() {
 
   const { guilds: guildsWithPermissions, error: guildError } =
     await fetchGuilds(user.id, providerToken);
-  const guilds: Guild[] = guildsWithPermissions;
+  const guilds: Guild[] = guildsWithPermissions.map(
+    ({ permissions: _permissions, ...guild }) => guild
+  );
 
   return (
     <UserProfilePageLayout

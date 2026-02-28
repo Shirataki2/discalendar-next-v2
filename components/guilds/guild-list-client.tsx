@@ -16,6 +16,7 @@
  */
 
 import { GuildCard } from "@/components/guilds/guild-card";
+import { getGuildListErrorMessage } from "@/lib/guilds/error-messages";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
 
 /**
@@ -29,32 +30,10 @@ export type GuildListClientProps = {
 };
 
 /**
- * エラーメッセージを取得する
- *
- * @param error エラー情報
- * @returns 表示用エラーメッセージ
- */
-function getErrorMessage(error: GuildListError): string {
-  switch (error.type) {
-    case "api_error":
-      return error.message;
-    case "token_expired":
-      return "セッションの有効期限が切れました。再度ログインしてください。";
-    case "no_token":
-      return "Discord連携が無効です。再度ログインしてください。";
-    default: {
-      // 型安全性のための exhaustive check
-      const _exhaustiveCheck: never = error;
-      return _exhaustiveCheck;
-    }
-  }
-}
-
-/**
  * エラーコンポーネント
  */
 function ErrorDisplay({ error }: { error: GuildListError }) {
-  const message = getErrorMessage(error);
+  const message = getGuildListErrorMessage(error);
   const showLoginLink =
     error.type === "token_expired" || error.type === "no_token";
 

@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { DashboardUser } from "@/app/dashboard/page";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { getUserInitials } from "@/lib/user/get-user-initials";
+import type { DashboardUser } from "@/types/user";
 
 const HEADER_AVATAR_SIZE = 32;
 
-type DashboardHeaderProps = {
+export type DashboardHeaderProps = {
   user: DashboardUser;
 };
 

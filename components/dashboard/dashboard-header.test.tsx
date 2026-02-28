@@ -56,7 +56,7 @@ vi.mock("@/components/theme-switcher", () => ({
   ),
 }));
 
-import type { DashboardUser } from "@/app/dashboard/page";
+import type { DashboardUser } from "@/types/user";
 import { DashboardHeader } from "./dashboard-header";
 
 const LOGO_PATTERN = /discalendar/i;

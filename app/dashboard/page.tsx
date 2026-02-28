@@ -8,6 +8,8 @@ import type {
   InvitableGuild,
 } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
+import { buildDashboardUser } from "@/lib/user/build-dashboard-user";
+import type { DashboardUser } from "@/types/user";
 import {
   DashboardWithCalendar,
   type GuildPermissionInfo,
@@ -16,19 +18,9 @@ import {
 // 認証状態を取得するため動的レンダリングを強制
 export const dynamic = "force-dynamic";
 
-/**
- * Dashboard用ユーザー情報の型
- */
-export type DashboardUser = {
-  /** ユーザーID */
-  id: string;
-  /** メールアドレス */
-  email: string;
-  /** 表示名（Discord full_name） */
-  fullName: string | null;
-  /** アバターURL（Discord avatar_url） */
-  avatarUrl: string | null;
-};
+// DashboardUser 型は types/user.ts に定義し、ここから re-export する
+// 既存のインポートパスとの後方互換性を維持
+export type { DashboardUser } from "@/types/user";
 
 /**
  * DashboardPageLayoutのProps
@@ -169,18 +161,7 @@ export default async function DashboardPage() {
   const providerToken = session?.provider_token;
 
   // ユーザー情報を整形
-  const dashboardUser: DashboardUser = {
-    id: user.id,
-    email: user.email ?? "",
-    fullName:
-      typeof user.user_metadata?.full_name === "string"
-        ? user.user_metadata.full_name
-        : null,
-    avatarUrl:
-      typeof user.user_metadata?.avatar_url === "string"
-        ? user.user_metadata.avatar_url
-        : null,
-  };
+  const dashboardUser = buildDashboardUser(user);
 
   // ギルド一覧を取得（ユーザーIDをキーとしてキャッシュを使用）
   const {

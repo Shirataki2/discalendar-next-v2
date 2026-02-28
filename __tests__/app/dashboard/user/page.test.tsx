@@ -47,9 +47,9 @@ vi.mock("@/components/auth/logout-button", () => ({
   ),
 }));
 
-import type { DashboardUser } from "@/app/dashboard/page";
 import { UserProfilePageLayout } from "@/app/dashboard/user/page";
 import type { Guild } from "@/lib/guilds/types";
+import type { DashboardUser } from "@/types/user";
 
 const mockUser: DashboardUser = {
   id: "user-123",
@@ -224,7 +224,7 @@ describe("UserProfilePageLayout", () => {
       );
 
       expect(
-        screen.getByText("Discord連携が無効です。再ログインしてください。")
+        screen.getByText("Discord連携が無効です。再度ログインしてください。")
       ).toBeInTheDocument();
     });
   });

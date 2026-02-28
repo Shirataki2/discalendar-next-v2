@@ -39,6 +39,7 @@ import { useGuildPermissions } from "@/hooks/guilds/use-guild-permissions";
 import { useGuildRefresh } from "@/hooks/guilds/use-guild-refresh";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { trackEvent } from "@/lib/analytics/events";
+import { getGuildListErrorMessage } from "@/lib/guilds/error-messages";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
 import { cn } from "@/lib/utils";
 
@@ -77,28 +78,10 @@ function sortByName<T extends { name: string }>(items: T[]): T[] {
 }
 
 /**
- * エラーメッセージを取得する
- */
-function getErrorMessage(error: GuildListError): string {
-  switch (error.type) {
-    case "api_error":
-      return error.message;
-    case "token_expired":
-      return "セッションの有効期限が切れました。再度ログインしてください。";
-    case "no_token":
-      return "Discord連携が無効です。再度ログインしてください。";
-    default: {
-      const _exhaustiveCheck: never = error;
-      return _exhaustiveCheck;
-    }
-  }
-}
-
-/**
  * エラー表示コンポーネント
  */
 function ErrorDisplay({ error }: { error: GuildListError }) {
-  const message = getErrorMessage(error);
+  const message = getGuildListErrorMessage(error);
   const showLoginLink =
     error.type === "token_expired" || error.type === "no_token";
 
@@ -505,6 +488,8 @@ export function DashboardWithCalendar({
       setSelectedGuildId((current) =>
         current !== urlGuildId ? urlGuildId : current
       );
+    } else if (!urlGuildId) {
+      setSelectedGuildId(null);
     }
   }, [searchParams, currentGuilds]);
 
