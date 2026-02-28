@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { DashboardUser } from "@/app/dashboard/page";
-import { LogoutButton } from "@/components/auth/logout-button";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { UserGuildList } from "@/components/user/user-guild-list";
 import { UserProfileCard } from "@/components/user/user-profile-card";
 import { getJoinedGuilds } from "@/lib/guilds/service";
@@ -32,35 +32,34 @@ export function UserProfilePageLayout({
   guildError,
 }: UserProfilePageLayoutProps) {
   return (
-    <main className="container mx-auto max-w-2xl px-4 py-8">
-      <div className="mb-6 flex items-center gap-2">
-        <Link
-          className="inline-flex items-center gap-1 text-muted-foreground text-sm transition-colors hover:text-foreground"
-          href="/dashboard"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          ダッシュボードに戻る
-        </Link>
-      </div>
-
-      <h1 className="mb-6 font-bold text-2xl">ユーザーページ</h1>
-
-      <div className="space-y-6">
-        <UserProfileCard user={user} />
-
-        {guildError ? (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-            <p className="text-destructive text-sm">{guildError}</p>
-          </div>
-        ) : (
-          <UserGuildList guilds={guilds} />
-        )}
-
-        <div className="flex justify-end">
-          <LogoutButton variant="outline" />
+    <div className="flex min-h-screen flex-col">
+      <DashboardHeader user={user} />
+      <main className="container mx-auto max-w-2xl px-4 py-8">
+        <div className="mb-6 flex items-center gap-2">
+          <Link
+            className="inline-flex items-center gap-1 text-muted-foreground text-sm transition-colors hover:text-foreground"
+            href="/dashboard"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            ダッシュボードに戻る
+          </Link>
         </div>
-      </div>
-    </main>
+
+        <h1 className="mb-6 font-bold text-2xl">ユーザーページ</h1>
+
+        <div className="space-y-6">
+          <UserProfileCard user={user} />
+
+          {guildError ? (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+              <p className="text-destructive text-sm">{guildError}</p>
+            </div>
+          ) : (
+            <UserGuildList guilds={guilds} />
+          )}
+        </div>
+      </main>
+    </div>
   );
 }
 

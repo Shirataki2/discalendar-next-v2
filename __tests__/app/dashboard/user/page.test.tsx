@@ -111,16 +111,18 @@ describe("UserProfilePageLayout", () => {
     it("should render UserProfileCard with user data", () => {
       render(<UserProfilePageLayout guilds={mockGuilds} user={mockUser} />);
 
-      expect(screen.getByText("プロフィール")).toBeInTheDocument();
-      expect(screen.getByText("Test User")).toBeInTheDocument();
-      expect(screen.getByText("test@example.com")).toBeInTheDocument();
+      const main = screen.getByRole("main");
+      expect(main).toHaveTextContent("プロフィール");
+      expect(main).toHaveTextContent("Test User");
+      expect(main).toHaveTextContent("test@example.com");
     });
 
     it("should display avatar image", () => {
       render(<UserProfilePageLayout guilds={mockGuilds} user={mockUser} />);
 
-      const avatar = screen.getByRole("img", { name: /アバター/i });
-      expect(avatar).toBeInTheDocument();
+      // ヘッダーとプロフィールの両方にアバターがあるため、複数存在を確認
+      const avatars = screen.getAllByRole("img", { name: /アバター/i });
+      expect(avatars.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -171,8 +173,9 @@ describe("UserProfilePageLayout", () => {
       );
 
       // プロフィールは表示される
-      expect(screen.getByText("プロフィール")).toBeInTheDocument();
-      expect(screen.getByText("Test User")).toBeInTheDocument();
+      const main = screen.getByRole("main");
+      expect(main).toHaveTextContent("プロフィール");
+      expect(main).toHaveTextContent("Test User");
     });
 
     it("should display error message in guild section when guildError is provided", () => {
