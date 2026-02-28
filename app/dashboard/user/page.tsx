@@ -5,8 +5,8 @@ import type { DashboardUser } from "@/app/dashboard/page";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { UserGuildList } from "@/components/user/user-guild-list";
 import { UserProfileCard } from "@/components/user/user-profile-card";
-import { getJoinedGuilds } from "@/lib/guilds/service";
-import type { Guild } from "@/lib/guilds/types";
+import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
+import type { Guild, GuildListError } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
 
 // 認証状態を取得するため動的レンダリングを強制
@@ -18,8 +18,24 @@ export const dynamic = "force-dynamic";
 export type UserProfilePageLayoutProps = {
   user: DashboardUser;
   guilds: Guild[];
-  guildError?: string;
+  guildError?: GuildListError;
 };
+
+/**
+ * GuildListError からユーザー向けメッセージを取得する
+ */
+function getGuildErrorMessage(error: GuildListError): string {
+  switch (error.type) {
+    case "api_error":
+      return error.message;
+    case "token_expired":
+      return "セッションの有効期限が切れました。再度ログインしてください。";
+    case "no_token":
+      return "Discord連携が無効です。再ログインしてください。";
+    default:
+      return "ギルド情報の取得に失敗しました。";
+  }
+}
 
 /**
  * ユーザーページのレイアウトコンポーネント（テスト可能な表示層）
@@ -52,7 +68,9 @@ export function UserProfilePageLayout({
 
           {guildError ? (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-              <p className="text-destructive text-sm">{guildError}</p>
+              <p className="text-destructive text-sm">
+                {getGuildErrorMessage(guildError)}
+              </p>
             </div>
           ) : (
             <UserGuildList guilds={guilds} />
@@ -66,7 +84,7 @@ export function UserProfilePageLayout({
 /**
  * ユーザーページ（Server Component）
  *
- * Supabase Authからユーザー情報を取得し、Guild Serviceからギルド一覧を取得。
+ * Supabase Authからユーザー情報を取得し、fetchGuildsでギルド一覧を取得。
  * dashboardページのデータ取得パターンを踏襲。
  *
  * Requirements: 1.1, 1.2, 2.1-2.4, 3.1-3.3, 4.1-4.3, 5.1-5.3
@@ -102,29 +120,9 @@ export default async function UserProfilePage() {
   } = await supabase.auth.getSession();
   const providerToken = session?.provider_token;
 
-  let guilds: Guild[] = [];
-  let guildError: string | undefined;
-
-  if (providerToken) {
-    try {
-      // Discord APIからユーザーの所属ギルドIDリストを取得
-      const { getUserGuilds } = await import("@/lib/discord/client");
-      const discordResult = await getUserGuilds(providerToken);
-
-      if (discordResult.success) {
-        const guildIds = discordResult.data.map((guild) => guild.id);
-        if (guildIds.length > 0) {
-          guilds = await getJoinedGuilds(guildIds);
-        }
-      } else {
-        guildError = "ギルド情報の取得に失敗しました";
-      }
-    } catch {
-      guildError = "ギルド情報の取得に失敗しました";
-    }
-  } else {
-    guildError = "Discord連携が無効です。再ログインしてください。";
-  }
+  const { guilds: guildsWithPermissions, error: guildError } =
+    await fetchGuilds(user.id, providerToken);
+  const guilds: Guild[] = guildsWithPermissions;
 
   return (
     <UserProfilePageLayout

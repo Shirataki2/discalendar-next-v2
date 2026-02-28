@@ -166,7 +166,10 @@ describe("UserProfilePageLayout", () => {
     it("should display profile even when guildError is provided", () => {
       render(
         <UserProfilePageLayout
-          guildError="ギルド情報の取得に失敗しました"
+          guildError={{
+            type: "api_error",
+            message: "ギルド情報の取得に失敗しました",
+          }}
           guilds={[]}
           user={mockUser}
         />
@@ -181,7 +184,10 @@ describe("UserProfilePageLayout", () => {
     it("should display error message in guild section when guildError is provided", () => {
       render(
         <UserProfilePageLayout
-          guildError="ギルド情報の取得に失敗しました"
+          guildError={{
+            type: "api_error",
+            message: "ギルド情報の取得に失敗しました",
+          }}
           guilds={[]}
           user={mockUser}
         />
@@ -189,6 +195,36 @@ describe("UserProfilePageLayout", () => {
 
       expect(
         screen.getByText("ギルド情報の取得に失敗しました")
+      ).toBeInTheDocument();
+    });
+
+    it("should display token expired message", () => {
+      render(
+        <UserProfilePageLayout
+          guildError={{ type: "token_expired" }}
+          guilds={[]}
+          user={mockUser}
+        />
+      );
+
+      expect(
+        screen.getByText(
+          "セッションの有効期限が切れました。再度ログインしてください。"
+        )
+      ).toBeInTheDocument();
+    });
+
+    it("should display no token message", () => {
+      render(
+        <UserProfilePageLayout
+          guildError={{ type: "no_token" }}
+          guilds={[]}
+          user={mockUser}
+        />
+      );
+
+      expect(
+        screen.getByText("Discord連携が無効です。再ログインしてください。")
       ).toBeInTheDocument();
     });
   });
