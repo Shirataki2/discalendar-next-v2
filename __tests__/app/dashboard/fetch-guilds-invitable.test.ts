@@ -12,10 +12,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchGuilds } from "@/app/dashboard/page";
 import { getUserGuilds } from "@/lib/discord/client";
 import type { DiscordGuild } from "@/lib/discord/types";
 import { clearCache } from "@/lib/guilds/cache";
+import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
 import { getJoinedGuilds } from "@/lib/guilds/service";
 import type { Guild } from "@/lib/guilds/types";
 

@@ -557,8 +557,8 @@ export async function deleteOccurrenceAction(
 // Task 4.1 (bot-invite-flow): ギルド再取得
 // ──────────────────────────────────────────────
 
-import { fetchGuilds } from "@/app/dashboard/page";
 import { clearCache } from "@/lib/guilds/cache";
+import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
 import type { GuildPermissionInfo } from "./dashboard-with-calendar";
 
