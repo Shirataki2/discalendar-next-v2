@@ -1,5 +1,6 @@
 import { captureException } from "@sentry/nextjs";
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -109,7 +110,10 @@ export function DashboardPageLayout({
           </a>
           <div className="flex items-center gap-4">
             <ThemeSwitcher />
-            <div className="flex items-center gap-3">
+            <Link
+              className="flex items-center gap-3 transition-opacity hover:opacity-80"
+              href="/dashboard/user"
+            >
               {user.avatarUrl ? (
                 <Image
                   alt={`${displayName}のアバター`}
@@ -124,7 +128,7 @@ export function DashboardPageLayout({
                 </div>
               )}
               <span className="font-medium text-sm">{displayName}</span>
-            </div>
+            </Link>
             <LogoutButton />
           </div>
         </div>
