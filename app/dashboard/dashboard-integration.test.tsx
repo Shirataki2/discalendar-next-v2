@@ -38,15 +38,21 @@ vi.mock("@/lib/supabase/client", () => ({
 
 // Next.js navigationのモック
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
+const mockNavState = { guild: null as string | null };
 vi.mock("next/navigation", () => ({
   useSearchParams: () => {
     const params = new URLSearchParams();
     params.set("view", "month");
     params.set("date", "2025-12-05");
+    if (mockNavState.guild) {
+      params.set("guild", mockNavState.guild);
+    }
     return params;
   },
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
   usePathname: () => "/dashboard",
 }));
@@ -524,5 +530,69 @@ describe("Task 5.2: useGuildRefresh の統合", () => {
 
     // ローディングインジケーターが消える
     expect(screen.queryByText("更新中...")).not.toBeInTheDocument();
+  });
+});
+
+// ──────────────────────────────────────────────
+// DIS-54: URL クエリパラメータ ?guild= による自動選択
+// ──────────────────────────────────────────────
+
+describe("DIS-54: URL ?guild= パラメータによるギルド自動選択", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockNavState.guild = null;
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: createMatchMediaMock(),
+    });
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      value: 1200,
+    });
+    mockFetchEvents.mockResolvedValue({ success: true, data: [] });
+  });
+
+  it("URL の ?guild= パラメータで初期ギルドが選択される", async () => {
+    mockNavState.guild = "guild-1";
+
+    render(<DashboardWithCalendar guilds={mockGuilds} />);
+
+    // 初期レンダリングで guild-1 が選択済み → カレンダーが表示される
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-container")).toHaveAttribute(
+        "data-guild-id",
+        "guild-1"
+      );
+    });
+
+    // 選択プロンプトは表示されない
+    expect(screen.queryByText(SELECT_PROMPT_PATTERN)).not.toBeInTheDocument();
+  });
+
+  it("URL の ?guild= が無効な guildId の場合は null のまま", () => {
+    mockNavState.guild = "non-existent-guild";
+
+    render(<DashboardWithCalendar guilds={mockGuilds} />);
+
+    // カレンダーは表示されず、選択プロンプトが表示される
+    expect(screen.queryByTestId("calendar-container")).not.toBeInTheDocument();
+    expect(screen.getByText(SELECT_PROMPT_PATTERN)).toBeInTheDocument();
+  });
+
+  it("ギルド選択時に router.replace で URL が更新される", async () => {
+    render(<DashboardWithCalendar guilds={mockGuilds} />);
+
+    // ギルドカードをクリック
+    const guildCards = screen.getAllByTestId("guild-card");
+    fireEvent.click(guildCards[0]);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining("guild=guild-1")
+      );
+    });
+
+    // push ではなく replace が使われること
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });
