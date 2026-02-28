@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
@@ -38,6 +39,7 @@ import { useGuildPermissions } from "@/hooks/guilds/use-guild-permissions";
 import { useGuildRefresh } from "@/hooks/guilds/use-guild-refresh";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { trackEvent } from "@/lib/analytics/events";
+import { getGuildListErrorMessage } from "@/lib/guilds/error-messages";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
 import { cn } from "@/lib/utils";
 
@@ -76,28 +78,10 @@ function sortByName<T extends { name: string }>(items: T[]): T[] {
 }
 
 /**
- * エラーメッセージを取得する
- */
-function getErrorMessage(error: GuildListError): string {
-  switch (error.type) {
-    case "api_error":
-      return error.message;
-    case "token_expired":
-      return "セッションの有効期限が切れました。再度ログインしてください。";
-    case "no_token":
-      return "Discord連携が無効です。再度ログインしてください。";
-    default: {
-      const _exhaustiveCheck: never = error;
-      return _exhaustiveCheck;
-    }
-  }
-}
-
-/**
  * エラー表示コンポーネント
  */
 function ErrorDisplay({ error }: { error: GuildListError }) {
-  const message = getErrorMessage(error);
+  const message = getGuildListErrorMessage(error);
   const showLoginLink =
     error.type === "token_expired" || error.type === "no_token";
 
@@ -425,7 +409,18 @@ export function DashboardWithCalendar({
   guildError,
   guildPermissions: initialGuildPermissions,
 }: DashboardWithCalendarProps) {
-  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // URL の ?guild= パラメータから初期値を取得
+  const guildParam = searchParams.get("guild");
+  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(() => {
+    if (guildParam && initialGuilds.some((g) => g.guildId === guildParam)) {
+      return guildParam;
+    }
+    return null;
+  });
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
     "discalendar:sidebar-collapsed",
@@ -486,10 +481,30 @@ export function DashboardWithCalendar({
     selectedPermInfo?.restricted ?? false
   );
 
-  const handleGuildSelect = useCallback((guildId: string) => {
-    setSelectedGuildId(guildId);
-    trackEvent("guild_switched", { guild_id: guildId });
-  }, []);
+  // URL の ?guild= パラメータが変わったら状態を同期（ブラウザの戻る/進む対応）
+  useEffect(() => {
+    const urlGuildId = searchParams.get("guild");
+    if (urlGuildId && currentGuilds.some((g) => g.guildId === urlGuildId)) {
+      setSelectedGuildId((current) =>
+        current !== urlGuildId ? urlGuildId : current
+      );
+    } else if (!urlGuildId) {
+      setSelectedGuildId(null);
+    }
+  }, [searchParams, currentGuilds]);
+
+  const handleGuildSelect = useCallback(
+    (guildId: string) => {
+      setSelectedGuildId(guildId);
+      trackEvent("guild_switched", { guild_id: guildId });
+
+      // URL の guild パラメータを更新（既存パラメータを保持）
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("guild", guildId);
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [pathname, router, searchParams]
+  );
 
   const handleToggleCollapse = useCallback(() => {
     setSidebarCollapsed((prev) => !prev);

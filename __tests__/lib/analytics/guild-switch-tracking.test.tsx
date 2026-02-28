@@ -132,6 +132,13 @@ vi.mock("@/hooks/use-local-storage", () => ({
   ],
 }));
 
+// Next.js navigationのモック
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/dashboard",
+}));
+
 import {
   DashboardWithCalendar,
   type DashboardWithCalendarProps,

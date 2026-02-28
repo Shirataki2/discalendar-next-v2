@@ -43,7 +43,7 @@ vi.mock("@/lib/guilds/cache", () => ({
 }));
 
 const mockFetchGuilds = vi.fn();
-vi.mock("@/app/dashboard/page", () => ({
+vi.mock("@/lib/guilds/fetch-guilds", () => ({
   fetchGuilds: (...args: unknown[]) => mockFetchGuilds(...args),
 }));
 
