@@ -307,30 +307,68 @@ describe("createEventService", () => {
       expect(queryBuilder._mocks.gte).toHaveBeenCalledWith("end_at", params.startDate.toISOString());
     });
 
-    it("should use overlap query to include events spanning outside the period", async () => {
-      const queryBuilder = createMockQueryBuilder({ data: [] });
+    it("should return events that span outside the display period (DIS-53)", async () => {
+      // 期間外から開始し期間内に終了するイベント + 期間を完全に包含するイベント
+      const mockRecords: EventRecord[] = [
+        {
+          id: "event-spanning",
+          guild_id: "guild-123",
+          name: "期間外から続くイベント",
+          description: null,
+          color: "#3B82F6",
+          is_all_day: false,
+          start_at: "2025-11-28T10:00:00Z",
+          end_at: "2025-12-05T10:00:00Z",
+          location: null,
+          channel_id: null,
+          channel_name: null,
+          notifications: [],
+          series_id: null,
+          original_date: null,
+          created_at: "2025-11-28T00:00:00Z",
+          updated_at: "2025-11-28T00:00:00Z",
+        },
+        {
+          id: "event-encompassing",
+          guild_id: "guild-123",
+          name: "期間を包含するイベント",
+          description: null,
+          color: "#22C55E",
+          is_all_day: true,
+          start_at: "2025-11-01T00:00:00Z",
+          end_at: "2026-01-31T23:59:59Z",
+          location: null,
+          channel_id: null,
+          channel_name: null,
+          notifications: [],
+          series_id: null,
+          original_date: null,
+          created_at: "2025-11-01T00:00:00Z",
+          updated_at: "2025-11-01T00:00:00Z",
+        },
+      ];
+
+      const queryBuilder = createMockQueryBuilder({ data: mockRecords });
       mockSupabaseClient.from.mockReturnValue(queryBuilder);
 
       const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
-      // 表示期間: 12月
       const params: FetchEventsParams = {
         guildId: "guild-123",
         startDate: new Date("2025-12-01T00:00:00Z"),
         endDate: new Date("2025-12-31T23:59:59Z"),
       };
 
-      await service.fetchEvents(params);
+      const result = await service.fetchEvents(params);
 
-      // 期間重複判定: start_at <= endDate AND end_at >= startDate
-      // これにより以下のケースが全て含まれる:
-      // - 期間外から開始→期間内に終了 (11/28開始→12/05終了)
-      // - 期間を完全に包含 (11/01開始→01/31終了)
-      // - 期間内で完結 (12/10開始→12/15終了)
-      // 以下は除外される:
-      // - 期間前に完結 (11/01開始→11/30終了): end_at < startDate
-      // - 期間後に開始 (01/01開始→01/31終了): start_at > endDate
-      expect(queryBuilder._mocks.lte).toHaveBeenCalledWith("start_at", params.endDate.toISOString());
-      expect(queryBuilder._mocks.gte).toHaveBeenCalledWith("end_at", params.startDate.toISOString());
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).toHaveLength(2);
+        expect(result.data[0].id).toBe("event-spanning");
+        expect(result.data[0].title).toBe("期間外から続くイベント");
+        expect(result.data[1].id).toBe("event-encompassing");
+        expect(result.data[1].title).toBe("期間を包含するイベント");
+        expect(result.data[1].allDay).toBe(true);
+      }
     });
 
     it("should return empty array when no events exist", async () => {
