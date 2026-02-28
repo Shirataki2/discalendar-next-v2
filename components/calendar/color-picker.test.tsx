@@ -26,6 +26,7 @@ const VIOLET_PATTERN = /Violet \(#8B5CF6\)/;
 const ORANGE_PATTERN = /Orange \(#F97316\)/;
 const GRAY_PATTERN = /Gray \(#6B7280\)/;
 const HEX_FORMAT_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+const CUSTOM_BUTTON_PATTERN = /カスタム/i;
 
 describe("ColorPicker", () => {
   const defaultProps = {
@@ -196,6 +197,118 @@ describe("ColorPicker", () => {
 
       const value = onChange.mock.calls[0][0] as string;
       expect(value).toMatch(HEX_FORMAT_PATTERN);
+    });
+  });
+
+  describe("カスタムカラー入力 (Req 3.1, 3.2, 3.3, 3.4, 3.5)", () => {
+    it("カスタムカラー入力のトグルボタンが表示される (Req 3.1)", () => {
+      render(<ColorPicker {...defaultProps} />);
+
+      expect(
+        screen.getByRole("button", { name: CUSTOM_BUTTON_PATTERN })
+      ).toBeInTheDocument();
+    });
+
+    it("トグルボタンクリックでHEX入力フィールドが展開される (Req 3.2)", async () => {
+      const user = userEvent.setup();
+      render(<ColorPicker {...defaultProps} />);
+
+      const toggleButton = screen.getByRole("button", {
+        name: CUSTOM_BUTTON_PATTERN,
+      });
+      await user.click(toggleButton);
+
+      expect(screen.getByPlaceholderText("#RRGGBB")).toBeInTheDocument();
+    });
+
+    it("トグルボタンを再度クリックするとHEX入力フィールドが折りたたまれる", async () => {
+      const user = userEvent.setup();
+      render(<ColorPicker {...defaultProps} />);
+
+      const toggleButton = screen.getByRole("button", {
+        name: CUSTOM_BUTTON_PATTERN,
+      });
+      await user.click(toggleButton);
+      expect(screen.getByPlaceholderText("#RRGGBB")).toBeInTheDocument();
+
+      await user.click(toggleButton);
+      expect(screen.queryByPlaceholderText("#RRGGBB")).not.toBeInTheDocument();
+    });
+
+    it("プリセット外のvalueではカスタム入力が自動展開される (Req 2.5)", () => {
+      render(<ColorPicker {...defaultProps} value="#FF00FF" />);
+
+      expect(screen.getByPlaceholderText("#RRGGBB")).toBeInTheDocument();
+    });
+
+    it("HEX入力フィールドの横に色のプレビューが表示される (Req 3.4)", async () => {
+      const user = userEvent.setup();
+      render(<ColorPicker {...defaultProps} />);
+
+      const toggleButton = screen.getByRole("button", {
+        name: CUSTOM_BUTTON_PATTERN,
+      });
+      await user.click(toggleButton);
+
+      const preview = screen.getByTestId("color-preview");
+      expect(preview).toBeInTheDocument();
+    });
+
+    it("有効なHEXコード入力でonChangeが呼ばれる (Req 3.3)", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<ColorPicker {...defaultProps} onChange={onChange} />);
+
+      const toggleButton = screen.getByRole("button", {
+        name: CUSTOM_BUTTON_PATTERN,
+      });
+      await user.click(toggleButton);
+
+      const hexInput = screen.getByPlaceholderText("#RRGGBB");
+      await user.clear(hexInput);
+      await user.type(hexInput, "#FF5733");
+
+      expect(onChange).toHaveBeenCalledWith("#FF5733");
+    });
+
+    it("無効なHEXコード入力でonChangeが呼ばれない (Req 3.5)", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<ColorPicker {...defaultProps} onChange={onChange} />);
+
+      const toggleButton = screen.getByRole("button", {
+        name: CUSTOM_BUTTON_PATTERN,
+      });
+      await user.click(toggleButton);
+
+      const hexInput = screen.getByPlaceholderText("#RRGGBB");
+      await user.clear(hexInput);
+      await user.type(hexInput, "#ZZZZZZ");
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("プレビュースウォッチが現在の色を反映する (Req 3.4)", () => {
+      render(<ColorPicker {...defaultProps} value="#FF00FF" />);
+
+      const preview = screen.getByTestId("color-preview");
+      expect(preview).toHaveStyle({ backgroundColor: "#FF00FF" });
+    });
+
+    it("カスタム入力展開時にHEX入力フィールドに現在の値が表示される", () => {
+      render(<ColorPicker {...defaultProps} value="#FF00FF" />);
+
+      const hexInput = screen.getByPlaceholderText("#RRGGBB");
+      expect(hexInput).toHaveValue("#FF00FF");
+    });
+
+    it("disabled時にカスタム入力トグルが無効化される", () => {
+      render(<ColorPicker {...defaultProps} disabled />);
+
+      const toggleButton = screen.getByRole("button", {
+        name: CUSTOM_BUTTON_PATTERN,
+      });
+      expect(toggleButton).toBeDisabled();
     });
   });
 });
