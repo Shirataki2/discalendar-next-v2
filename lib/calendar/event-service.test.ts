@@ -303,8 +303,34 @@ describe("createEventService", () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith("events");
       expect(queryBuilder._mocks.eq).toHaveBeenCalledWith("guild_id", "guild-123");
-      expect(queryBuilder._mocks.gte).toHaveBeenCalledWith("start_at", params.startDate.toISOString());
       expect(queryBuilder._mocks.lte).toHaveBeenCalledWith("start_at", params.endDate.toISOString());
+      expect(queryBuilder._mocks.gte).toHaveBeenCalledWith("end_at", params.startDate.toISOString());
+    });
+
+    it("should use overlap query to include events spanning outside the period", async () => {
+      const queryBuilder = createMockQueryBuilder({ data: [] });
+      mockSupabaseClient.from.mockReturnValue(queryBuilder);
+
+      const service = createEventService(mockSupabaseClient as unknown as Parameters<typeof createEventService>[0]);
+      // 表示期間: 12月
+      const params: FetchEventsParams = {
+        guildId: "guild-123",
+        startDate: new Date("2025-12-01T00:00:00Z"),
+        endDate: new Date("2025-12-31T23:59:59Z"),
+      };
+
+      await service.fetchEvents(params);
+
+      // 期間重複判定: start_at <= endDate AND end_at >= startDate
+      // これにより以下のケースが全て含まれる:
+      // - 期間外から開始→期間内に終了 (11/28開始→12/05終了)
+      // - 期間を完全に包含 (11/01開始→01/31終了)
+      // - 期間内で完結 (12/10開始→12/15終了)
+      // 以下は除外される:
+      // - 期間前に完結 (11/01開始→11/30終了): end_at < startDate
+      // - 期間後に開始 (01/01開始→01/31終了): start_at > endDate
+      expect(queryBuilder._mocks.lte).toHaveBeenCalledWith("start_at", params.endDate.toISOString());
+      expect(queryBuilder._mocks.gte).toHaveBeenCalledWith("end_at", params.startDate.toISOString());
     });
 
     it("should return empty array when no events exist", async () => {
