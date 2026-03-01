@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { GuildSettingsForm } from "@/components/guilds/guild-settings-form";
 import { canManageGuild } from "@/lib/discord/permissions";
 import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
 import { createGuildConfigService } from "@/lib/guilds/guild-config-service";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
  * 認証・権限チェック後にギルド設定フォームを表示する。
  * dashboard/page.tsx と同一の認証パターンを採用。
  *
- * Requirements: 1.1, 1.2, 1.3, 1.4
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 2.3 (データ統合)
  */
 export default async function GuildSettingsPage({
   params,
@@ -70,13 +71,14 @@ export default async function GuildSettingsPage({
     <div className="flex min-h-screen flex-col">
       <DashboardHeader user={dashboardUser} />
       <main className="container mx-auto flex flex-1 flex-col px-4 py-6">
-        <div className="mx-auto w-full max-w-2xl">
-          {/* Task 2 で GuildSettingsForm に置き換え */}
-          <h1 className="font-bold text-2xl">{targetGuild.name} の設定</h1>
-          <p className="mt-2 text-muted-foreground text-sm">
-            ギルド設定を管理します。
-          </p>
-        </div>
+        <GuildSettingsForm
+          guild={{
+            guildId: targetGuild.guildId,
+            name: targetGuild.name,
+            avatarUrl: targetGuild.avatarUrl,
+          }}
+          restricted={configResult.data.restricted}
+        />
       </main>
     </div>
   );

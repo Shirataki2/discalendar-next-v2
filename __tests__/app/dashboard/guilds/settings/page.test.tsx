@@ -1,3 +1,4 @@
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock next/navigation redirect
@@ -47,6 +48,33 @@ vi.mock("@/lib/user/build-dashboard-user", () => ({
   }),
 }));
 
+// Mock DashboardHeader for rendering tests
+vi.mock("@/components/dashboard/dashboard-header", () => ({
+  DashboardHeader: () => <div data-testid="dashboard-header" />,
+}));
+
+// Mock GuildSettingsForm to capture props
+const mockGuildSettingsForm = vi.fn(
+  (props: {
+    guild: { guildId: string; name: string; avatarUrl: string | null };
+    restricted: boolean;
+  }) => (
+    <div
+      data-guild-avatar={props.guild.avatarUrl ?? ""}
+      data-guild-id={props.guild.guildId}
+      data-guild-name={props.guild.name}
+      data-restricted={String(props.restricted)}
+      data-testid="guild-settings-form"
+    />
+  )
+);
+vi.mock("@/components/guilds/guild-settings-form", () => ({
+  GuildSettingsForm: (props: {
+    guild: { guildId: string; name: string; avatarUrl: string | null };
+    restricted: boolean;
+  }) => mockGuildSettingsForm(props),
+}));
+
 // Helper: authenticated user
 const authenticatedUser = {
   id: "user-123",
@@ -56,9 +84,6 @@ const authenticatedUser = {
     avatar_url: null,
   },
 };
-
-// Helper: guild with manage permissions (ADMINISTRATOR bit set)
-const ADMINISTRATOR_BIT = (BigInt(1) << BigInt(3)).toString();
 
 function createMockGuild(guildId: string, name: string) {
   return {
@@ -232,6 +257,106 @@ describe("GuildSettingsPage", () => {
       ).rejects.toThrow("NEXT_REDIRECT");
 
       expect(mockRedirect).toHaveBeenCalledWith("/dashboard");
+    });
+  });
+
+  describe("Requirement 2.3: Server→Client データ統合", () => {
+    it("should pass guild data and restricted flag to GuildSettingsForm", async () => {
+      const guildWithAvatar = {
+        ...createMockGuild("guild-1", "Test Server"),
+        avatarUrl: "https://cdn.discordapp.com/icons/guild-1/abc.png",
+      };
+      mockGetUser.mockResolvedValue({
+        data: { user: authenticatedUser },
+        error: null,
+      });
+      mockFetchGuilds.mockResolvedValue({
+        guilds: [guildWithAvatar],
+        invitableGuilds: [],
+      });
+      mockGetGuildConfig.mockResolvedValue({
+        success: true,
+        data: { guildId: "guild-1", restricted: true },
+      });
+
+      const { default: GuildSettingsPage } = await import(
+        "@/app/dashboard/guilds/[guildId]/settings/page"
+      );
+
+      const jsx = await GuildSettingsPage({
+        params: Promise.resolve({ guildId: "guild-1" }),
+      });
+      render(jsx);
+
+      // GuildSettingsForm が正しい props で呼ばれること
+      expect(mockGuildSettingsForm).toHaveBeenCalledWith({
+        guild: {
+          guildId: "guild-1",
+          name: "Test Server",
+          avatarUrl: "https://cdn.discordapp.com/icons/guild-1/abc.png",
+        },
+        restricted: true,
+      });
+    });
+
+    it("should pass restricted=false when guild config has restricted=false", async () => {
+      mockGetUser.mockResolvedValue({
+        data: { user: authenticatedUser },
+        error: null,
+      });
+      mockFetchGuilds.mockResolvedValue({
+        guilds: [createMockGuild("guild-1", "Test Server")],
+        invitableGuilds: [],
+      });
+      mockGetGuildConfig.mockResolvedValue({
+        success: true,
+        data: { guildId: "guild-1", restricted: false },
+      });
+
+      const { default: GuildSettingsPage } = await import(
+        "@/app/dashboard/guilds/[guildId]/settings/page"
+      );
+
+      const jsx = await GuildSettingsPage({
+        params: Promise.resolve({ guildId: "guild-1" }),
+      });
+      render(jsx);
+
+      const form = screen.getByTestId("guild-settings-form");
+      expect(form).toHaveAttribute("data-guild-id", "guild-1");
+      expect(form).toHaveAttribute("data-guild-name", "Test Server");
+      expect(form).toHaveAttribute("data-restricted", "false");
+    });
+
+    it("should not pass BigInt permissions to GuildSettingsForm", async () => {
+      mockGetUser.mockResolvedValue({
+        data: { user: authenticatedUser },
+        error: null,
+      });
+      mockFetchGuilds.mockResolvedValue({
+        guilds: [createMockGuild("guild-1", "Test Server")],
+        invitableGuilds: [],
+      });
+      mockGetGuildConfig.mockResolvedValue({
+        success: true,
+        data: { guildId: "guild-1", restricted: false },
+      });
+
+      const { default: GuildSettingsPage } = await import(
+        "@/app/dashboard/guilds/[guildId]/settings/page"
+      );
+
+      const jsx = await GuildSettingsPage({
+        params: Promise.resolve({ guildId: "guild-1" }),
+      });
+      render(jsx);
+
+      // props に permissions が含まれていないこと（JSON シリアライズ不可な BigInt を除外）
+      const passedProps = mockGuildSettingsForm.mock.calls[0][0];
+      const guild = passedProps.guild as Record<string, unknown>;
+      expect(guild).not.toHaveProperty("permissions");
+      expect(guild).not.toHaveProperty("id");
+      expect(guild).not.toHaveProperty("locale");
     });
   });
 });
