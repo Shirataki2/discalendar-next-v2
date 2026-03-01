@@ -1,52 +1,52 @@
-# AI-DLC and Spec-Driven Development
+# Repository Guidelines
 
-Kiro-style Spec Driven Development implementation on AI-DLC (AI Development Life Cycle)
+## Project Structure & Module Organization
+This repository is a Next.js 16 (App Router) TypeScript app.
+- `app/`: routes, layouts, and server/client page entrypoints
+- `components/`: UI and feature components (`components/ui` for shadcn-style primitives)
+- `hooks/`: reusable React hooks (calendar and guild logic are grouped by domain)
+- `lib/`: shared services and utilities (auth, Supabase, analytics, guild/calendar logic)
+- `__tests__/`: unit/integration test suites by concern
+- `e2e_tests/`: Playwright end-to-end tests
+- `public/`: static assets
+- `.kiro/`: steering docs and feature specs
 
-## Project Memory
-Project memory keeps persistent guidance (steering, specs notes, component docs) so Codex honors your standards each run. Treat it as the long-lived source of truth for patterns, conventions, and decisions.
+## Build, Test, and Development Commands
+- `npm run dev`: start local dev server (`http://localhost:3000`)
+- `npm run build`: production build
+- `npm run start`: run built app
+- `npm run lint`: run Ultracite/Biome checks
+- `npm run type-check`: strict TypeScript check (no emit)
+- `npm run test` or `npm run test:unit`: run Vitest tests
+- `npm run test:e2e`: run Playwright tests (uses `e2e_tests/`)
+- `npm run storybook` / `npm run build-storybook`: component development and docs
 
-- Use `.kiro/steering/` for project-wide policies: architecture principles, naming schemes, security constraints, tech stack decisions, api standards, etc.
-- Use local `AGENTS.md` files for feature or library context (e.g. `src/lib/payments/AGENTS.md`): describe domain assumptions, API contracts, or testing conventions specific to that folder. Codex auto-loads these when working in the matching path.
-- Specs notes stay with each spec (under `.kiro/specs/`) to guide specification-level workflows.
+## Coding Style & Naming Conventions
+Use TypeScript with strict typing; avoid `any` unless justified.
+- Formatting/linting is enforced by Ultracite (`biome.jsonc`)
+- Follow existing style: 2-space indentation, semicolons, double quotes
+- File names: `kebab-case` (e.g., `guild-list-client.tsx`)
+- React components/types: `PascalCase`; variables/functions: `camelCase`; constants: `UPPER_SNAKE_CASE`
+- Prefer `@/` path aliases over deep relative imports
 
-## Project Context
+## Testing Guidelines
+- Unit/integration: Vitest + Testing Library, typically `*.test.ts` / `*.test.tsx`
+- E2E: Playwright, `*.spec.ts` under `e2e_tests/`
+- Add tests for new behavior and bug fixes; update nearby tests when refactoring
+- Run at minimum: `npm run lint && npm run type-check && npm run test`
 
-### Paths
-- Steering: `.kiro/steering/`
-- Specs: `.kiro/specs/`
+## Commit & Pull Request Guidelines
+Recent history follows Conventional Commit style with optional scope and ticket ID:
+- Example: `feat(user): add profile page (DIS-54)`
+- Example: `fix(calendar): normalize all-day event endAt`
 
-### Steering vs Specification
+For PRs:
+- Keep changes focused and explain user-visible impact
+- Link issue/ticket (`DIS-xxx`) when available
+- Include screenshots/GIFs for UI changes
+- Ensure CI passes (lint, type-check, build, unit tests)
 
-**Steering** (`.kiro/steering/`) - Guide AI with project-wide rules and context
-**Specs** (`.kiro/specs/`) - Formalize development process for individual features
-
-### Active Specifications
-- Check `.kiro/specs/` for active specifications
-- Use `/prompts:kiro-spec-status [feature-name]` to check progress
-
-## Development Guidelines
-- Think in English, generate responses in Japanese. All Markdown content written to project files (e.g., requirements.md, design.md, tasks.md, research.md, validation reports) MUST be written in the target language configured for this specification (see spec.json.language).
-
-## Minimal Workflow
-- Phase 0 (optional): `/prompts:kiro-steering`, `/prompts:kiro-steering-custom`
-- Phase 1 (Specification):
-  - `/prompts:kiro-spec-init "description"`
-  - `/prompts:kiro-spec-requirements {feature}`
-  - `/prompts:kiro-validate-gap {feature}` (optional: for existing codebase)
-  - `/prompts:kiro-spec-design {feature} [-y]`
-  - `/prompts:kiro-validate-design {feature}` (optional: design review)
-  - `/prompts:kiro-spec-tasks {feature} [-y]`
-- Phase 2 (Implementation): `/prompts:kiro-spec-impl {feature} [tasks]`
-  - `/prompts:kiro-validate-impl {feature}` (optional: after implementation)
-- Progress check: `/prompts:kiro-spec-status {feature}` (use anytime)
-
-## Development Rules
-- 3-phase approval workflow: Requirements → Design → Tasks → Implementation
-- Human review required each phase; use `-y` only for intentional fast-track
-- Keep steering current and verify alignment with `/prompts:kiro-spec-status`
-- Follow the user's instructions precisely, and within that scope act autonomously: gather the necessary context and complete the requested work end-to-end in this run, asking questions only when essential information is missing or the instructions are critically ambiguous.
-
-## Steering Configuration
-- Load entire `.kiro/steering/` as project memory
-- Default files: `product.md`, `tech.md`, `structure.md`
-- Custom files are supported (managed via `/prompts:kiro-steering-custom`)
+## Security & Configuration Tips
+- Copy `.env.example` to `.env.local`; never commit secrets
+- Treat Supabase and Sentry credentials as sensitive
+- Validate auth and permission changes with both unit and E2E tests
