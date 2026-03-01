@@ -26,7 +26,7 @@ export type GuildSettingsFormProps = {
 };
 
 function getGuildInitial(name: string): string {
-  if (!name || name.length === 0) {
+  if (!name) {
     return "?";
   }
   return name.charAt(0).toUpperCase();

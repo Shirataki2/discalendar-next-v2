@@ -78,6 +78,16 @@ describe("GuildSettingsForm", () => {
     });
   });
 
+  describe("読み取り専用", () => {
+    it("ギルド名が編集可能な入力要素ではない", () => {
+      render(<GuildSettingsForm {...defaultProps} />);
+
+      const nameElement = screen.getByText("テストサーバー");
+      expect(nameElement.tagName).not.toBe("INPUT");
+      expect(nameElement.tagName).not.toBe("TEXTAREA");
+    });
+  });
+
   describe("ナビゲーション", () => {
     it("カレンダーに戻るリンクを表示する", () => {
       render(<GuildSettingsForm {...defaultProps} />);
@@ -88,6 +98,15 @@ describe("GuildSettingsForm", () => {
         "href",
         "/dashboard?guild=123456789"
       );
+    });
+  });
+
+  describe("レスポンシブレイアウト", () => {
+    it("デスクトップ向けに max-w-2xl で幅を制限する", () => {
+      const { container } = render(<GuildSettingsForm {...defaultProps} />);
+
+      const wrapper = container.firstElementChild;
+      expect(wrapper?.className).toContain("max-w-2xl");
     });
   });
 });
