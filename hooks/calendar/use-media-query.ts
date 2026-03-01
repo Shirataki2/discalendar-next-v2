@@ -33,13 +33,7 @@ export const BREAKPOINTS = {
  * ```
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => {
-    // SSR対応: windowが存在しない場合はfalseを返す
-    if (typeof window === "undefined") {
-      return false;
-    }
-    return window.matchMedia(query).matches;
-  });
+  const [matches, setMatches] = useState(false);
 
   useEffect(() => {
     // SSR対応
