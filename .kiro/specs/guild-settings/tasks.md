@@ -33,15 +33,15 @@
   - ページ表示の動作確認を行い、権限設定セクションの restricted トグルが正常に動作することを検証する
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 3. ダッシュボードからの導線変更
-- [ ] 3.1 (P) CalendarToolbar の歯車アイコンからの導線をダイアログからページ遷移に変更する
+- [x] 3. ダッシュボードからの導線変更
+- [x] 3.1 (P) CalendarToolbar の歯車アイコンからの導線をダイアログからページ遷移に変更する
   - `DashboardWithCalendar` の `handleSettingsClick` を `router.push` によるページ遷移に変更する
   - `isSettingsDialogOpen` 状態管理と `GuildSettingsDialog` のレンダリングを削除する
   - `handleRestrictedChange` コールバックを削除する（Server Action の `revalidatePath` でデータ整合性が保証される）
   - `canManageGuild` 権限を持たないユーザーには歯車アイコンを非表示にする（既存の条件分岐を維持）
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 3.2 (P) `GuildSettingsDialog` コンポーネントとその関連ファイル（テスト・ストーリー）を削除する
+- [x] 3.2 (P) `GuildSettingsDialog` コンポーネントとその関連ファイル（テスト・ストーリー）を削除する
   - ダイアログコンポーネント本体、テストファイル、Storybook ストーリーを削除する
   - 他ファイルからの import 参照がないことを確認する
   - _Requirements: 5.2_
