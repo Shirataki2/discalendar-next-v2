@@ -92,10 +92,13 @@ describe("EventForm", () => {
       ).toBeInTheDocument();
     });
 
-    it("色選択フィールドが表示される (Req 1.3)", () => {
+    it("色選択フィールドがカラーパレットで表示される (Req 1.3, DIS-59)", () => {
       render(<EventForm {...defaultProps} />);
 
-      expect(screen.getByLabelText(COLOR_PATTERN)).toBeInTheDocument();
+      expect(screen.getByText(COLOR_PATTERN)).toBeInTheDocument();
+      expect(
+        screen.getByRole("radiogroup", { name: /カラーパレット/ })
+      ).toBeInTheDocument();
     });
 
     it("場所入力フィールドが表示される (Req 1.3)", () => {
@@ -153,14 +156,15 @@ describe("EventForm", () => {
       ).toBeChecked();
     });
 
-    it("defaultValuesで色の初期値が設定される (Req 3.2)", () => {
+    it("defaultValuesで色の初期値がColorPickerに反映される (Req 3.2, DIS-59)", () => {
       const defaultValues = {
-        color: "#ef4444",
+        color: "#EF4444",
       };
 
       render(<EventForm {...defaultProps} defaultValues={defaultValues} />);
 
-      expect(screen.getByLabelText(COLOR_PATTERN)).toHaveValue("#ef4444");
+      const redSwatch = screen.getByRole("radio", { name: /Red/ });
+      expect(redSwatch).toHaveAttribute("aria-checked", "true");
     });
   });
 
@@ -591,7 +595,10 @@ describe("EventForm", () => {
       expect(screen.getByLabelText(TITLE_PATTERN)).toBeInTheDocument();
       expect(screen.getByLabelText(DESCRIPTION_PATTERN)).toBeInTheDocument();
       expect(screen.getByLabelText(ALL_DAY_PATTERN)).toBeInTheDocument();
-      expect(screen.getByLabelText(COLOR_PATTERN)).toBeInTheDocument();
+      expect(screen.getByText(COLOR_PATTERN)).toBeInTheDocument();
+      expect(
+        screen.getByRole("radiogroup", { name: /カラーパレット/ })
+      ).toBeInTheDocument();
       expect(screen.getByLabelText(LOCATION_PATTERN)).toBeInTheDocument();
 
       // DatePicker/TimePickerはaria-labelで関連付けられている
@@ -842,6 +849,100 @@ describe("EventForm", () => {
           }),
           expect.any(Object)
         );
+      });
+    });
+  });
+
+  // Task 2 (DIS-59): ColorPicker統合
+  describe("Task 2: ColorPicker統合 (DIS-59)", () => {
+    it("デフォルトカラー #3B82F6 がColorPickerの初期値として選択されている (Req 4.3)", () => {
+      render(<EventForm {...defaultProps} />);
+
+      const blueSwatch = screen.getByRole("radio", { name: /Blue/ });
+      expect(blueSwatch).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("イベント編集時に既存カラーがColorPickerに反映される (Req 4.4)", () => {
+      render(
+        <EventForm {...defaultProps} defaultValues={{ color: "#22C55E" }} />
+      );
+
+      const greenSwatch = screen.getByRole("radio", { name: /Green/ });
+      expect(greenSwatch).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("ColorPickerで色を選択するとフォーム値が更新される (Req 4.1, 4.2)", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00"),
+        endAt: new Date("2025-12-10T11:00"),
+      };
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+        />
+      );
+
+      // Amberスウォッチをクリック
+      const amberSwatch = screen.getByRole("radio", { name: /Amber/ });
+      await user.click(amberSwatch);
+
+      // フォーム送信して値を検証
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            color: "#F59E0B",
+          }),
+          expect.any(Object)
+        );
+      });
+    });
+
+    it("isSubmitting時にColorPickerが無効化される (Req 4.1)", () => {
+      render(<EventForm {...defaultProps} isSubmitting />);
+
+      const swatches = screen.getAllByRole("radio");
+      for (const swatch of swatches) {
+        expect(swatch).toBeDisabled();
+      }
+    });
+
+    it("ColorPickerの出力値が#RRGGBB形式を維持する (Req 4.5)", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+
+      const defaultValues = {
+        title: "テスト予定",
+        startAt: new Date("2025-12-10T10:00"),
+        endAt: new Date("2025-12-10T11:00"),
+      };
+
+      render(
+        <EventForm
+          {...defaultProps}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+        />
+      );
+
+      const violetSwatch = screen.getByRole("radio", { name: /Violet/ });
+      await user.click(violetSwatch);
+
+      const submitButton = screen.getByRole("button", { name: SAVE_PATTERN });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        const color = onSubmit.mock.calls[0][0].color as string;
+        expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
       });
     });
   });
