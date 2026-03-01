@@ -62,6 +62,7 @@ describe("useMediaQuery", () => {
 
       const { result } = renderHook(() => useMediaQuery("(min-width: 768px)"));
 
+      // useEffect後にmatchMedia.matchesの値に更新される
       expect(result.current).toBe(true);
     });
 
