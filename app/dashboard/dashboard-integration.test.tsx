@@ -70,9 +70,24 @@ vi.mock("next/navigation", () => ({
 
 // CalendarContainerのモック（統合テスト用）
 vi.mock("@/components/calendar/calendar-container", () => ({
-  CalendarContainer: ({ guildId }: { guildId: string | null }) => (
+  CalendarContainer: ({
+    guildId,
+    onSettingsClick,
+  }: {
+    guildId: string | null;
+    onSettingsClick?: () => void;
+  }) => (
     <div data-guild-id={guildId ?? "null"} data-testid="calendar-container">
       Calendar for guild: {guildId ?? "none"}
+      {onSettingsClick ? (
+        <button
+          data-testid="settings-trigger"
+          onClick={onSettingsClick}
+          type="button"
+        >
+          Settings
+        </button>
+      ) : null}
     </div>
   ),
 }));
@@ -608,5 +623,105 @@ describe("DIS-54: URL ?guild= パラメータによるギルド自動選択", ()
 
     // push ではなく replace が使われること
     expect(mockPush).not.toHaveBeenCalled();
+  });
+});
+
+// ──────────────────────────────────────────────
+// DIS-62: ギルド設定ページへの導線変更
+// ──────────────────────────────────────────────
+
+describe("DIS-62: 歯車アイコンからギルド設定ページへの導線", () => {
+  const guildPermissions: Record<
+    string,
+    { permissionsBitfield: string; restricted: boolean }
+  > = {
+    // ADMINISTRATOR permission (0x8)
+    "guild-1": { permissionsBitfield: "8", restricted: false },
+    "guild-2": { permissionsBitfield: "0", restricted: false },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockNavState.guild = null;
+    cachedParams = null;
+    cachedGuild = null;
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: createMatchMediaMock(),
+    });
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      value: 1200,
+    });
+    mockFetchEvents.mockResolvedValue({ success: true, data: [] });
+  });
+
+  it("管理権限のあるギルド選択時に歯車クリックで router.push が呼ばれる", async () => {
+    render(
+      <DashboardWithCalendar
+        guildPermissions={guildPermissions}
+        guilds={mockGuilds}
+      />
+    );
+
+    // ギルドを選択
+    const guildCards = screen.getAllByTestId("guild-card");
+    fireEvent.click(guildCards[0]);
+
+    // カレンダーが表示されるのを待つ
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-container")).toBeInTheDocument();
+    });
+
+    // 設定ボタンが表示されていること
+    const settingsTrigger = screen.getByTestId("settings-trigger");
+    expect(settingsTrigger).toBeInTheDocument();
+
+    // 設定ボタンをクリック
+    fireEvent.click(settingsTrigger);
+
+    // router.push が設定ページURLで呼ばれること
+    expect(mockPush).toHaveBeenCalledWith("/dashboard/guilds/guild-1/settings");
+  });
+
+  it("管理権限のないギルド選択時は設定ボタンが非表示", async () => {
+    render(
+      <DashboardWithCalendar
+        guildPermissions={guildPermissions}
+        guilds={mockGuilds}
+      />
+    );
+
+    // 権限のないギルドを選択（guild-2: permissionsBitfield=0）
+    const guildCards = screen.getAllByTestId("guild-card");
+    fireEvent.click(guildCards[1]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-container")).toBeInTheDocument();
+    });
+
+    // 設定ボタンが表示されないこと
+    expect(screen.queryByTestId("settings-trigger")).not.toBeInTheDocument();
+  });
+
+  it("GuildSettingsDialog がレンダリングされないこと", async () => {
+    render(
+      <DashboardWithCalendar
+        guildPermissions={guildPermissions}
+        guilds={mockGuilds}
+      />
+    );
+
+    // ギルドを選択
+    const guildCards = screen.getAllByTestId("guild-card");
+    fireEvent.click(guildCards[0]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-container")).toBeInTheDocument();
+    });
+
+    // ダイアログ関連の要素が存在しないこと
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("サーバー設定")).not.toBeInTheDocument();
   });
 });
