@@ -42,6 +42,7 @@ import { useEventDialog } from "@/hooks/calendar/use-event-dialog";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
 import { useEventPopover } from "@/hooks/calendar/use-event-popover";
 import { useBreakpoint } from "@/hooks/calendar/use-media-query";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { mapNavigationDirection, trackEvent } from "@/lib/analytics/events";
 import {
   calculateNavigationDate,
@@ -93,9 +94,12 @@ export function CalendarContainer({
   canEditEvents = true,
   onSettingsClick,
 }: CalendarContainerProps) {
-  // URL同期されたビューモードと日付
+  // ユーザー設定のデフォルトカレンダービューを取得
+  const { defaultCalendarView } = useUserPreferences();
+
+  // URL同期されたビューモードと日付（デフォルトビューをフォールバック値として注入）
   const { viewMode, selectedDate, setViewMode, setSelectedDate } =
-    useCalendarUrlSync();
+    useCalendarUrlSync({ defaultViewMode: defaultCalendarView });
 
   // カレンダー状態管理
   const { state, actions } = useCalendarState({
