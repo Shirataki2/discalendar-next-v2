@@ -1,5 +1,3 @@
-"use client";
-
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { SettingsSection } from "@/components/guilds/settings-section";
@@ -7,10 +5,12 @@ import { CalendarViewSettingPanel } from "@/components/settings/calendar-view-se
 import { ThemeSettingPanel } from "@/components/settings/theme-setting-panel";
 
 /**
- * ユーザー設定ページのコンテンツ（Client Component）
+ * ユーザー設定ページのコンテンツ
  *
  * テーマ設定パネルとカレンダーデフォルトビュー設定パネルを
  * セクション分けしてレイアウトする。
+ * 子コンポーネント（ThemeSettingPanel, CalendarViewSettingPanel）が
+ * それぞれ "use client" を宣言しているため、本コンポーネントは Server Component で動作する。
  *
  * Requirements: 1.4, 1.5, 2.1-2.5, 3.1-3.3
  */

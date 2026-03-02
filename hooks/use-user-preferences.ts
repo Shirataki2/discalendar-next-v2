@@ -87,6 +87,16 @@ export function useUserPreferences(): UseUserPreferencesReturn {
 	const setDefaultCalendarView = useCallback(
 		(view: CalendarViewMode) => {
 			setStoredView(view);
+			// useLocalStorage はエラーを飲み込みローカル state のみ更新するため、
+			// 実際に永続化されたかを検証し、失敗時は呼び出し元にエラーを伝播する
+			try {
+				const stored = window.localStorage.getItem(STORAGE_KEY);
+				if (stored !== JSON.stringify(view)) {
+					throw new Error("Failed to persist calendar view preference");
+				}
+			} catch {
+				throw new Error("Failed to persist calendar view preference");
+			}
 		},
 		[setStoredView],
 	);

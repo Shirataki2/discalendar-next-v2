@@ -3,7 +3,7 @@
 import { LogOut, Settings, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useTransition } from "react";
 import { signOut } from "@/app/auth/actions";
 import {
   DropdownMenu,
@@ -33,18 +33,15 @@ export function UserMenu({ user }: UserMenuProps) {
   const displayName = user.fullName ?? user.email;
   const initials = getUserInitials(user);
   const [isPending, startTransition] = useTransition();
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogout = useCallback(() => {
-    if (isLoading || isPending) {
+    if (isPending) {
       return;
     }
-
-    setIsLoading(true);
     startTransition(async () => {
       await signOut();
     });
-  }, [isLoading, isPending]);
+  }, [isPending]);
 
   return (
     <DropdownMenu>
@@ -84,10 +81,7 @@ export function UserMenu({ user }: UserMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={isLoading || isPending}
-          onClick={handleLogout}
-        >
+        <DropdownMenuItem disabled={isPending} onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           ログアウト
         </DropdownMenuItem>

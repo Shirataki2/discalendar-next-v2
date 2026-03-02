@@ -25,11 +25,11 @@ import {
 
 type SaveStatus = "idle" | "success" | "error";
 
-interface ViewOptionConfig {
+type ViewOptionConfig = {
   value: CalendarViewMode;
   label: string;
   icon: ComponentType<{ className?: string }>;
-}
+};
 
 const VIEW_OPTIONS: readonly ViewOptionConfig[] = [
   { value: "month", label: "月", icon: Calendar },

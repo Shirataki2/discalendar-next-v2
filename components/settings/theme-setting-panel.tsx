@@ -23,11 +23,11 @@ import { useEffect, useState } from "react";
 type ThemeOption = "light" | "dark" | "system";
 
 /** テーマオプション定義 */
-interface ThemeOptionConfig {
+type ThemeOptionConfig = {
   value: ThemeOption;
   label: string;
   icon: ComponentType<{ className?: string }>;
-}
+};
 
 /** テーマオプション一覧 */
 const THEME_OPTIONS: readonly ThemeOptionConfig[] = [
