@@ -156,7 +156,7 @@ export function useCalendarUrlSync(
       const newDateStr = formatDateForUrl(newDate);
       return currentDateStr !== newDateStr ? newDate : current;
     });
-  }, [searchParams]);
+  }, [searchParams, defaultViewMode]);
 
   /**
    * URLパラメータを更新する
