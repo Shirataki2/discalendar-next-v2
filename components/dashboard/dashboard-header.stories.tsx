@@ -2,7 +2,7 @@
  * DashboardHeader Storybook
  *
  * ダッシュボード共通ヘッダーのストーリー。
- * ロゴ、ThemeSwitcher、アバターリンク、LogoutButton を表示する。
+ * ロゴ、ThemeSwitcher、UserMenu（ドロップダウン）を表示する。
  */
 import type { Meta, StoryObj } from "@storybook/react";
 import type { DashboardUser } from "@/types/user";

@@ -1,4 +1,6 @@
+import { Settings } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getUserInitials } from "@/lib/user/get-user-initials";
 import type { DashboardUser } from "@/types/user";
@@ -15,8 +17,15 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>プロフィール</CardTitle>
+        <Link
+          className="text-muted-foreground transition-colors hover:text-foreground"
+          href="/dashboard/user/settings"
+        >
+          <Settings className="h-4 w-4" />
+          <span className="sr-only">設定</span>
+        </Link>
       </CardHeader>
       <CardContent className="flex items-center gap-4">
         <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">

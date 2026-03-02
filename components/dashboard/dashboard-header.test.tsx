@@ -38,12 +38,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-// Mock LogoutButton component
-vi.mock("@/components/auth/logout-button", () => ({
-  LogoutButton: () => (
-    <button data-testid="logout-button" type="button">
-      ログアウト
-    </button>
+// Mock UserMenu component
+vi.mock("@/components/dashboard/user-menu", () => ({
+  UserMenu: ({ user }: { user: { fullName: string | null } }) => (
+    <div data-testid="user-menu">UserMenu: {user.fullName}</div>
   ),
 }));
 
@@ -60,28 +58,12 @@ import type { DashboardUser } from "@/types/user";
 import { DashboardHeader } from "./dashboard-header";
 
 const LOGO_PATTERN = /discalendar/i;
-const USER_NAME_PATTERN = /test user/i;
-const AVATAR_PATTERN = /アバター/i;
 
 const mockUserWithAvatar: DashboardUser = {
   id: "user-1",
   email: "test@example.com",
   fullName: "Test User",
   avatarUrl: "https://cdn.discordapp.com/avatars/123/abc.png",
-};
-
-const mockUserWithoutAvatar: DashboardUser = {
-  id: "user-2",
-  email: "noavatar@example.com",
-  fullName: "No Avatar",
-  avatarUrl: null,
-};
-
-const mockUserWithoutFullName: DashboardUser = {
-  id: "user-3",
-  email: "nofullname@example.com",
-  fullName: null,
-  avatarUrl: null,
 };
 
 describe("DashboardHeader", () => {
@@ -100,46 +82,38 @@ describe("DashboardHeader", () => {
     expect(logoLink).toHaveAttribute("href", "/");
   });
 
-  it("should render user link to profile page", () => {
-    render(<DashboardHeader user={mockUserWithAvatar} />);
-
-    const userLink = screen.getByRole("link", { name: USER_NAME_PATTERN });
-    expect(userLink).toHaveAttribute("href", "/dashboard/user");
-  });
-
-  it("should display avatar image when avatarUrl is provided", () => {
-    render(<DashboardHeader user={mockUserWithAvatar} />);
-
-    const avatar = screen.getByRole("img", { name: AVATAR_PATTERN });
-    expect(avatar).toBeInTheDocument();
-    expect(avatar).toHaveAttribute(
-      "src",
-      "https://cdn.discordapp.com/avatars/123/abc.png"
-    );
-  });
-
-  it("should display initials when avatarUrl is null", () => {
-    render(<DashboardHeader user={mockUserWithoutAvatar} />);
-
-    expect(screen.queryByRole("img", { name: AVATAR_PATTERN })).toBeNull();
-    expect(screen.getByText("N")).toBeInTheDocument();
-  });
-
-  it("should display email when fullName is null", () => {
-    render(<DashboardHeader user={mockUserWithoutFullName} />);
-
-    expect(screen.getByText("nofullname@example.com")).toBeInTheDocument();
-  });
-
   it("should render ThemeSwitcher", () => {
     render(<DashboardHeader user={mockUserWithAvatar} />);
 
     expect(screen.getByTestId("theme-switcher")).toBeInTheDocument();
   });
 
-  it("should render LogoutButton", () => {
+  it("should render UserMenu component", () => {
     render(<DashboardHeader user={mockUserWithAvatar} />);
 
-    expect(screen.getByTestId("logout-button")).toBeInTheDocument();
+    expect(screen.getByTestId("user-menu")).toBeInTheDocument();
+  });
+
+  it("should pass user prop to UserMenu", () => {
+    render(<DashboardHeader user={mockUserWithAvatar} />);
+
+    expect(screen.getByTestId("user-menu")).toHaveTextContent("Test User");
+  });
+
+  it("should not render standalone LogoutButton", () => {
+    render(<DashboardHeader user={mockUserWithAvatar} />);
+
+    expect(screen.queryByTestId("logout-button")).not.toBeInTheDocument();
+  });
+
+  it("should not render direct avatar link to profile", () => {
+    render(<DashboardHeader user={mockUserWithAvatar} />);
+
+    // ロゴリンクのみが存在し、プロフィールへの直接リンクは存在しない
+    const links = screen.getAllByRole("link");
+    const profileLinks = links.filter(
+      (link) => link.getAttribute("href") === "/dashboard/user"
+    );
+    expect(profileLinks).toHaveLength(0);
   });
 });
