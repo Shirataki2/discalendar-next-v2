@@ -9,7 +9,6 @@
  * - 3つのビューオプション（月/週/日）をカードグリッドで表示
  * - 現在選択中のビューを視覚的にハイライト
  * - 選択変更時に永続化を実行し保存完了フィードバックを表示
- * - 保存失敗時にエラーメッセージを表示
  * - フィードバックは3秒後に自動消去
  *
  * Requirements: 3.1, 3.2, 3.3, 5.4, 6.1, 6.2, 6.3
@@ -23,7 +22,7 @@ import {
   useUserPreferences,
 } from "@/hooks/use-user-preferences";
 
-type SaveStatus = "idle" | "success" | "error";
+type SaveStatus = "idle" | "success";
 
 type ViewOptionConfig = {
   value: CalendarViewMode;
@@ -62,12 +61,8 @@ export function CalendarViewSettingPanel() {
 
   const handleSelect = useCallback(
     (view: CalendarViewMode) => {
-      try {
-        setDefaultCalendarView(view);
-        setSaveStatus("success");
-      } catch {
-        setSaveStatus("error");
-      }
+      setDefaultCalendarView(view);
+      setSaveStatus("success");
 
       // 前のタイマーをクリア
       if (timerRef.current) {
@@ -112,12 +107,6 @@ export function CalendarViewSettingPanel() {
         <div className="mt-3 flex items-center gap-1.5 text-green-600 text-sm">
           <Check className="h-4 w-4" />
           <span>保存しました</span>
-        </div>
-      )}
-
-      {saveStatus === "error" && (
-        <div className="mt-3 text-destructive text-sm">
-          <span>保存に失敗しました</span>
         </div>
       )}
     </div>

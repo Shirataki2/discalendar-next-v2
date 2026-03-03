@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useLocalStorage } from "./use-local-storage";
 
 /**
@@ -71,33 +71,18 @@ function isValidCalendarViewMode(value: unknown): value is CalendarViewMode {
  * ```
  */
 export function useUserPreferences(): UseUserPreferencesReturn {
-	const [storedView, setStoredView] = useLocalStorage<string>(
+	const [storedView, setStoredView] = useLocalStorage<CalendarViewMode>(
 		STORAGE_KEY,
 		DEFAULT_VIEW,
 	);
 
 	// 保存された値が有効なビューモードかを検証し、不正な場合はフォールバック
-	const defaultCalendarView: CalendarViewMode = useMemo(() => {
-		if (isValidCalendarViewMode(storedView)) {
-			return storedView;
-		}
-		return DEFAULT_VIEW;
-	}, [storedView]);
+	const defaultCalendarView: CalendarViewMode =
+		isValidCalendarViewMode(storedView) ? storedView : DEFAULT_VIEW;
 
 	const setDefaultCalendarView = useCallback(
 		(view: CalendarViewMode) => {
 			setStoredView(view);
-			// useLocalStorage はエラーを飲み込みローカル state のみ更新するため、
-			// 実際に永続化されたかを検証し、失敗時は呼び出し元にエラーを伝播する
-			let stored: string | null;
-			try {
-				stored = window.localStorage.getItem(STORAGE_KEY);
-			} catch {
-				throw new Error("Failed to persist calendar view preference");
-			}
-			if (stored !== JSON.stringify(view)) {
-				throw new Error("Failed to persist calendar view preference");
-			}
 		},
 		[setStoredView],
 	);

@@ -3,7 +3,7 @@
 import { LogOut, Settings, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { signOut } from "@/app/auth/actions";
 import {
   DropdownMenu,
@@ -33,22 +33,24 @@ export function UserMenu({ user }: UserMenuProps) {
   const displayName = user.fullName ?? user.email;
   const initials = getUserInitials(user);
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogout = useCallback(() => {
-    if (isPending) {
+    if (isLoading || isPending) {
       return;
     }
+    setIsLoading(true);
     startTransition(async () => {
       await signOut();
     });
-  }, [isPending]);
+  }, [isLoading, isPending]);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           aria-label="ユーザーメニュー"
-          className="flex items-center gap-3 transition-opacity hover:opacity-80"
+          className="flex items-center gap-3 rounded-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           type="button"
         >
           {user.avatarUrl ? (
@@ -81,7 +83,10 @@ export function UserMenu({ user }: UserMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={isPending} onClick={handleLogout}>
+        <DropdownMenuItem
+          disabled={isLoading || isPending}
+          onClick={handleLogout}
+        >
           <LogOut className="mr-2 h-4 w-4" />
           ログアウト
         </DropdownMenuItem>

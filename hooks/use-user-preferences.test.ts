@@ -164,39 +164,20 @@ describe("useUserPreferences", () => {
 	});
 
 	describe("localStorage 書き込み失敗時の動作 (Req 5.4, 5.5)", () => {
-		it("should throw when localStorage.setItem fails so callers can show error feedback", () => {
+		it("should still update React state when localStorage.setItem fails", () => {
 			localStorageMock.setItem.mockImplementationOnce(() => {
 				throw new Error("QuotaExceededError");
 			});
 
 			const { result } = renderHook(() => useUserPreferences());
 
-			// エラーが伝播し、呼び出し元（CalendarViewSettingPanel）でエラーフィードバックを表示できる
-			expect(() => {
-				act(() => {
-					result.current.setDefaultCalendarView("week");
-				});
-			}).toThrow("Failed to persist calendar view preference");
-		});
-
-		it("should maintain default value when persistence fails", () => {
-			localStorageMock.setItem.mockImplementationOnce(() => {
-				throw new Error("QuotaExceededError");
+			// useLocalStorage がエラーを飲み込み、React state のみ更新する
+			// セッション中は新しい値が使用でき、リロード時にデフォルトにフォールバックする
+			act(() => {
+				result.current.setDefaultCalendarView("week");
 			});
 
-			const { result } = renderHook(() => useUserPreferences());
-
-			try {
-				act(() => {
-					result.current.setDefaultCalendarView("week");
-				});
-			} catch {
-				// エラーは期待通り
-			}
-
-			// エラーが伝播した場合、React バッチ更新が中断されるためデフォルト値が維持される
-			// 呼び出し元（CalendarViewSettingPanel）は catch でエラーフィードバックを表示する
-			expect(result.current.defaultCalendarView).toBe("month");
+			expect(result.current.defaultCalendarView).toBe("week");
 		});
 	});
 
