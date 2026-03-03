@@ -8,5 +8,12 @@ export default defineConfig({
     environment: "jsdom",
     exclude: ["refs/**/*", "node_modules/**/*", "e2e_tests/**/*"],
     setupFiles: ["./vitest-setup.ts"],
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        maxForks: "75%",
+      },
+    },
+    testTimeout: 10_000,
   },
 });

@@ -5,9 +5,9 @@
  * - 2.2: global-error.tsx にSentryエラーレポートを統合し、アプリケーション全体のエラー境界として機能させる
  * - 2.3: Error Boundaryがエラーを捕捉した場合、エラーコンテキストを含めてSentryに送信する
  */
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockCaptureException = vi.fn();
 
@@ -25,10 +25,6 @@ describe("GlobalError", () => {
   beforeEach(() => {
     mockCaptureException.mockClear();
     mockReset.mockClear();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   it("エラー発生時にSentry.captureExceptionが呼ばれる", async () => {

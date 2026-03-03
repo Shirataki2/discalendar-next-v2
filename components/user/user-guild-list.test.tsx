@@ -1,15 +1,11 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { Guild } from "@/lib/guilds/types";
 import { UserGuildList } from "./user-guild-list";
 
 const TEST_GUILD_NAME_REGEX = /テストサーバー1/i;
 
 describe("UserGuildList", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   const guilds: Guild[] = [
     {
       id: 1,

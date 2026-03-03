@@ -66,6 +66,8 @@ const TITLE_PATTERN = /タイトル/i;
 const SAVE_PATTERN = /保存/i;
 const FAILURE_PATTERN = /失敗/;
 
+const WAIT_FOR_TIMEOUT = { timeout: 3000 };
+
 describe("EventDialog アナリティクストラッキング統合テスト", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -103,7 +105,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
             has_notifications: expect.any(Boolean),
           })
         );
-      });
+      }, WAIT_FOR_TIMEOUT);
     });
 
     it("終日イベント作成時にis_all_dayがtrueでキャプチャされる", async () => {
@@ -136,7 +138,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
             is_all_day: true,
           })
         );
-      });
+      }, WAIT_FOR_TIMEOUT);
     });
 
     it("通知ありイベント作成時にhas_notificationsがtrueでキャプチャされる", async () => {
@@ -167,7 +169,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
             has_notifications: true,
           })
         );
-      });
+      }, WAIT_FOR_TIMEOUT);
     });
 
     it("PIIがトラッキングプロパティに含まれない (Req 3.6)", async () => {
@@ -193,7 +195,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
           "event_created",
           expect.any(Object)
         );
-      });
+      }, WAIT_FOR_TIMEOUT);
 
       // event_createdのcaptureコールを取得
       const captureCall = mockCapture.mock.calls.find(
@@ -253,7 +255,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
             changed_fields: expect.arrayContaining(["title"]),
           })
         );
-      });
+      }, WAIT_FOR_TIMEOUT);
     });
   });
 
@@ -284,7 +286,7 @@ describe("EventDialog アナリティクストラッキング統合テスト", (
 
       await waitFor(() => {
         expect(screen.getByText(FAILURE_PATTERN)).toBeInTheDocument();
-      });
+      }, WAIT_FOR_TIMEOUT);
 
       expect(mockCapture).not.toHaveBeenCalledWith(
         "event_created",

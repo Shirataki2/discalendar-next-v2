@@ -7,8 +7,8 @@
  * - タスク2.2: セクションコンポーネントの統合とレイアウト構築
  */
 
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 // Mock the async Header component with a synchronous version for testing
 vi.mock("@/components/header", () => ({
@@ -36,10 +36,6 @@ import Home from "@/app/page";
 const SPACING_CLASS_REGEX = /space-y-|gap-/;
 
 describe("app/page.tsx - ランディングページメインコンポーネント", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   describe("タスク2.1: セマンティックHTML構造とServer Component実装", () => {
     it("main要素でページ構造を定義している", async () => {
       const page = await Home();

@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { DashboardUser } from "@/types/user";
 import { UserProfileCard } from "./user-profile-card";
 
@@ -7,10 +7,6 @@ const TEST_USER_NAME_REGEX = /Test User/i;
 const SETTINGS_PATTERN = /設定/i;
 
 describe("UserProfileCard", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   const userWithAvatar: DashboardUser = {
     id: "user-1",
     email: "test@example.com",

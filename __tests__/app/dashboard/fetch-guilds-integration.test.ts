@@ -104,6 +104,10 @@ describe("fetchGuilds統合テスト", () => {
   });
 
   it("should deduplicate concurrent requests", async () => {
+    // deduplicationテストはPromise.allで並行リクエストを実行するため、
+    // fake timersとの干渉を避けるためreal timersに切り替え
+    vi.useRealTimers();
+
     // Arrange
     vi.mocked(getUserGuilds).mockResolvedValue({
       success: true,

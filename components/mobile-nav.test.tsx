@@ -1,6 +1,6 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Regex constants for top-level performance
 const OPEN_MENU_REGEX = /メニューを開く/i;
@@ -37,10 +37,6 @@ describe("MobileNav", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   describe("未認証状態", () => {

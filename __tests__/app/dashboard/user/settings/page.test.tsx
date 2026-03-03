@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
@@ -67,10 +67,6 @@ const mockUser: DashboardUser = {
 describe("UserSettingsPageLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   describe("ページ構造とレイアウト (Req 1.3, 1.4, 1.5)", () => {

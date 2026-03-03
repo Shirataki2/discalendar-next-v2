@@ -1,7 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Top-level regex patterns for test matching
 const AVATAR_PATTERN = /アバター/i;
@@ -13,6 +13,7 @@ const DISCORD_DISABLED_PATTERN = /Discord連携が無効です/;
 const API_ERROR_PATTERN = /APIエラーが発生しました/;
 const SIDEBAR_COLLAPSE_PATTERN = /サイドバーを折りたたむ/;
 const SIDEBAR_EXPAND_PATTERN = /サイドバーを展開/;
+const USER_MENU_PATTERN = /ユーザーメニュー/;
 
 // Mock useLocalStorage with useState to avoid useSyncExternalStore issues in tests
 vi.mock("@/hooks/use-local-storage", () => ({
@@ -42,15 +43,6 @@ vi.mock("next/image", () => ({
   }) => (
     // biome-ignore lint/performance/noImgElement: Mock component for testing
     <img alt={alt} height={height} src={src} width={width} {...props} />
-  ),
-}));
-
-// Mock LogoutButton component
-vi.mock("@/components/auth/logout-button", () => ({
-  LogoutButton: () => (
-    <button data-testid="logout-button" type="button">
-      Logout
-    </button>
   ),
 }));
 
@@ -90,33 +82,20 @@ vi.mock("@/lib/supabase/server", () => ({
   ),
 }));
 
+// Mock signOut server action (used by UserMenu)
+vi.mock("@/app/auth/actions", () => ({
+  signOut: vi.fn(),
+}));
+
+import { DashboardPageLayout } from "@/app/dashboard/page";
+
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
-
   describe("Task 7: ダッシュボードページ基本表示", () => {
-    it("should render dashboard heading (Requirement 4.2)", async () => {
-      // Mock authenticated user
-      mockGetUser.mockResolvedValueOnce({
-        data: {
-          user: {
-            id: "user-123",
-            email: "test@example.com",
-            user_metadata: {
-              full_name: "Test User",
-              avatar_url: "https://cdn.discordapp.com/avatars/123/abc.png",
-            },
-          },
-        },
-        error: null,
-      });
-
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should render dashboard heading (Requirement 4.2)", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -135,8 +114,7 @@ describe("DashboardPage", () => {
       expect(appTitle).toHaveAttribute("href", "/");
     });
 
-    it("should render logout button (Requirement 6.1)", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should render user menu button (Requirement 6.1)", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -150,11 +128,12 @@ describe("DashboardPage", () => {
         />
       );
 
-      expect(screen.getByTestId("logout-button")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: USER_MENU_PATTERN })
+      ).toBeInTheDocument();
     });
 
-    it("should have main landmark for accessibility", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should have main landmark for accessibility", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -173,8 +152,7 @@ describe("DashboardPage", () => {
   });
 
   describe("Task 7: ユーザー情報表示 (Requirement 4.2)", () => {
-    it("should display user name when available", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display user name when available", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -191,8 +169,7 @@ describe("DashboardPage", () => {
       expect(screen.getByText("Test User")).toBeInTheDocument();
     });
 
-    it("should display user email when name is not available", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display user email when name is not available", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -209,8 +186,7 @@ describe("DashboardPage", () => {
       expect(screen.getByText("test@example.com")).toBeInTheDocument();
     });
 
-    it("should display user avatar when available", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display user avatar when available", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -232,8 +208,7 @@ describe("DashboardPage", () => {
       );
     });
 
-    it("should display fallback avatar when avatar URL is not available", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display fallback avatar when avatar URL is not available", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -254,8 +229,7 @@ describe("DashboardPage", () => {
   });
 
   describe("Task 7: ダッシュボードレイアウト", () => {
-    it("should not render welcome message (DIS-47: removed for calendar viewport maximization)", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should not render welcome message (DIS-47: removed for calendar viewport maximization)", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -275,8 +249,7 @@ describe("DashboardPage", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("should have proper structure with header section", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should have proper structure with header section", () => {
       const { container } = render(
         <DashboardPageLayout
           guilds={[]}
@@ -297,8 +270,7 @@ describe("DashboardPage", () => {
   });
 
   describe("Task 7: アクセシビリティ", () => {
-    it("should have accessible navigation region", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should have accessible navigation region", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -317,8 +289,7 @@ describe("DashboardPage", () => {
       expect(header).toBeInTheDocument();
     });
 
-    it("should have alt text for user avatar image", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should have alt text for user avatar image", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -338,8 +309,7 @@ describe("DashboardPage", () => {
   });
 
   describe("Task 6.3: ギルド一覧統合", () => {
-    it("should render guild list section (Requirement 5.3)", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should render guild list section (Requirement 5.3)", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -361,7 +331,7 @@ describe("DashboardPage", () => {
       expect(serverHeading).toBeInTheDocument();
     });
 
-    it("should display guild cards when guilds are provided (Requirement 5.3)", async () => {
+    it("should display guild cards when guilds are provided (Requirement 5.3)", () => {
       const mockGuilds = [
         {
           id: 1,
@@ -379,7 +349,6 @@ describe("DashboardPage", () => {
         },
       ];
 
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
         <DashboardPageLayout
           guilds={mockGuilds}
@@ -397,8 +366,7 @@ describe("DashboardPage", () => {
       expect(screen.getByText("Test Server 2")).toBeInTheDocument();
     });
 
-    it("should display empty state when no guilds are available (Requirement 4.4)", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display empty state when no guilds are available (Requirement 4.4)", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -417,8 +385,7 @@ describe("DashboardPage", () => {
       expect(emptyMessages.length).toBeGreaterThan(0);
     });
 
-    it("should display error message when token is expired (Requirement 2.4)", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display error message when token is expired (Requirement 2.4)", () => {
       render(
         <DashboardPageLayout
           guildError={{ type: "token_expired" }}
@@ -438,8 +405,7 @@ describe("DashboardPage", () => {
       expect(errorMessages.length).toBeGreaterThan(0);
     });
 
-    it("should display error message when no token is available (Requirement 2.4)", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display error message when no token is available (Requirement 2.4)", () => {
       render(
         <DashboardPageLayout
           guildError={{ type: "no_token" }}
@@ -459,8 +425,7 @@ describe("DashboardPage", () => {
       expect(errorMessages.length).toBeGreaterThan(0);
     });
 
-    it("should display API error message (Requirement 2.3)", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should display API error message (Requirement 2.3)", () => {
       render(
         <DashboardPageLayout
           guildError={{ type: "api_error", message: "APIエラーが発生しました" }}
@@ -482,8 +447,7 @@ describe("DashboardPage", () => {
   });
 
   describe("サイドバー折りたたみ/展開", () => {
-    it("should render collapse toggle button with aria-expanded", async () => {
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
+    it("should render collapse toggle button with aria-expanded", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -506,7 +470,6 @@ describe("DashboardPage", () => {
 
     it("should toggle sidebar collapse state on button click", async () => {
       const user = userEvent.setup();
-      const { DashboardPageLayout } = await import("@/app/dashboard/page");
       render(
         <DashboardPageLayout
           guilds={[

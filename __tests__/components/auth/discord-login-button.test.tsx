@@ -5,7 +5,7 @@
  * - 7.4: 全ての認証エラーをコンソールに記録する
  * - 8.3: PKCEフローを使用する（signInWithOAuth）
  */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock console.error
@@ -31,7 +31,6 @@ describe("Task 9: DiscordLoginButton Security & Logging", () => {
   });
 
   afterEach(() => {
-    cleanup();
     console.error = originalConsoleError;
   });
 

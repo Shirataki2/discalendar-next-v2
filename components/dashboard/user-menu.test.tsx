@@ -1,6 +1,6 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
@@ -78,10 +78,6 @@ const mockUserWithoutFullName: DashboardUser = {
 describe("UserMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   it("should render avatar trigger button", () => {
