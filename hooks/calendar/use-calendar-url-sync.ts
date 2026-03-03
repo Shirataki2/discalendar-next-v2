@@ -69,16 +69,29 @@ function parseDateFromUrl(dateString: string): Date {
 }
 
 /**
+ * URL同期フックのオプション
+ */
+export interface UseCalendarUrlSyncOptions {
+  /** URL ?view= パラメータ未指定時のフォールバック値（デフォルト: "month"） */
+  defaultViewMode?: ViewMode;
+}
+
+/**
  * URLパラメータからビューモードと日付を解析
  */
-function parseUrlParams(searchParams: URLSearchParams): {
+function parseUrlParams(
+  searchParams: URLSearchParams,
+  defaultViewMode: ViewMode = "month",
+): {
   viewMode: ViewMode;
   date: Date;
 } {
   const viewParam = searchParams.get("view");
   const dateParam = searchParams.get("date");
 
-  const viewMode: ViewMode = isValidViewMode(viewParam) ? viewParam : "month";
+  const viewMode: ViewMode = isValidViewMode(viewParam)
+    ? viewParam
+    : defaultViewMode;
 
   const date: Date =
     dateParam && isValidDateString(dateParam)
@@ -110,14 +123,18 @@ function parseUrlParams(searchParams: URLSearchParams): {
  * }
  * ```
  */
-export function useCalendarUrlSync(): UseCalendarUrlSyncReturn {
+export function useCalendarUrlSync(
+  options?: UseCalendarUrlSyncOptions,
+): UseCalendarUrlSyncReturn {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const defaultViewMode = options?.defaultViewMode ?? "month";
+
   // URLパラメータから初期値を読み取る
   const { viewMode: initialViewMode, date: initialDate } =
-    parseUrlParams(searchParams);
+    parseUrlParams(searchParams, defaultViewMode);
 
   // ローカル状態（URLパラメータの変更を反映するため）
   const [viewMode, setViewModeState] = useState<ViewMode>(initialViewMode);
@@ -126,7 +143,7 @@ export function useCalendarUrlSync(): UseCalendarUrlSyncReturn {
   // URLパラメータが変わったら状態を更新（ブラウザの戻る/進む対応）
   useEffect(() => {
     const { viewMode: newViewMode, date: newDate } =
-      parseUrlParams(searchParams);
+      parseUrlParams(searchParams, defaultViewMode);
 
     // 状態が実際に変わった場合のみ更新（無限ループ防止）
     setViewModeState((current) => {
@@ -139,7 +156,11 @@ export function useCalendarUrlSync(): UseCalendarUrlSyncReturn {
       const newDateStr = formatDateForUrl(newDate);
       return currentDateStr !== newDateStr ? newDate : current;
     });
-  }, [searchParams]);
+    // NOTE: defaultViewMode は useUserPreferences() → useLocalStorage() 経由で取得される。
+    // 別タブで設定変更時に storage event で値が変化すると、URLに ?view= がない場合は
+    // 新しいデフォルト値でビューが上書きされる。これは意図した動作：
+    // ユーザーが設定したデフォルトビューを常に反映するため。
+  }, [searchParams, defaultViewMode]);
 
   /**
    * URLパラメータを更新する

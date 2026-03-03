@@ -14,7 +14,7 @@ import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
-import { SettingsSection } from "@/components/guilds/settings-section";
+import { SettingsSection } from "@/components/settings/settings-section";
 
 export type GuildSettingsFormProps = {
   guild: {

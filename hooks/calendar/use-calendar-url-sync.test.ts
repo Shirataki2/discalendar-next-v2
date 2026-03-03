@@ -302,4 +302,51 @@ describe("useCalendarUrlSync", () => {
       }
     });
   });
+
+  describe("defaultViewMode オプション (Req 3.4, 3.5)", () => {
+    it("should use defaultViewMode as fallback when no view param exists", () => {
+      const mockSearchParams = new URLSearchParams("");
+      vi.mocked(useSearchParams).mockReturnValue(mockSearchParams as unknown as ReturnType<typeof useSearchParams>);
+
+      const { result } = renderHook(() => useCalendarUrlSync({ defaultViewMode: "week" }));
+
+      expect(result.current.viewMode).toBe("week");
+    });
+
+    it("should use defaultViewMode as fallback when view param is invalid", () => {
+      const mockSearchParams = new URLSearchParams("view=invalid");
+      vi.mocked(useSearchParams).mockReturnValue(mockSearchParams as unknown as ReturnType<typeof useSearchParams>);
+
+      const { result } = renderHook(() => useCalendarUrlSync({ defaultViewMode: "day" }));
+
+      expect(result.current.viewMode).toBe("day");
+    });
+
+    it("should prioritize URL view param over defaultViewMode", () => {
+      const mockSearchParams = new URLSearchParams("view=day");
+      vi.mocked(useSearchParams).mockReturnValue(mockSearchParams as unknown as ReturnType<typeof useSearchParams>);
+
+      const { result } = renderHook(() => useCalendarUrlSync({ defaultViewMode: "week" }));
+
+      expect(result.current.viewMode).toBe("day");
+    });
+
+    it("should fallback to month when no options and no view param", () => {
+      const mockSearchParams = new URLSearchParams("");
+      vi.mocked(useSearchParams).mockReturnValue(mockSearchParams as unknown as ReturnType<typeof useSearchParams>);
+
+      const { result } = renderHook(() => useCalendarUrlSync());
+
+      expect(result.current.viewMode).toBe("month");
+    });
+
+    it("should fallback to month when options provided without defaultViewMode", () => {
+      const mockSearchParams = new URLSearchParams("");
+      vi.mocked(useSearchParams).mockReturnValue(mockSearchParams as unknown as ReturnType<typeof useSearchParams>);
+
+      const { result } = renderHook(() => useCalendarUrlSync({}));
+
+      expect(result.current.viewMode).toBe("month");
+    });
+  });
 });

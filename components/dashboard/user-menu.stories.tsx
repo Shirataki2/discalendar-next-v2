@@ -1,21 +1,21 @@
 /**
- * DashboardHeader Storybook
+ * UserMenu Storybook
  *
- * ダッシュボード共通ヘッダーのストーリー。
- * ロゴ、ThemeSwitcher、UserMenu（ドロップダウン）を表示する。
+ * ユーザーアバタードロップダウンメニューのストーリー。
+ * プロフィール・設定・ログアウトの3つのメニューアイテムを提供する。
  */
 import type { Meta, StoryObj } from "@storybook/react";
 import type { DashboardUser } from "@/types/user";
-import { DashboardHeader } from "./dashboard-header";
+import { UserMenu } from "./user-menu";
 
 const meta = {
-  title: "Components/Dashboard/DashboardHeader",
-  component: DashboardHeader,
+  title: "Components/Dashboard/UserMenu",
+  component: UserMenu,
   tags: ["autodocs"],
   parameters: {
-    layout: "fullscreen",
+    layout: "centered",
   },
-} satisfies Meta<typeof DashboardHeader>;
+} satisfies Meta<typeof UserMenu>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

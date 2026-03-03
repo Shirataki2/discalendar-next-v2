@@ -4,6 +4,7 @@ import type { DashboardUser } from "@/types/user";
 import { UserProfileCard } from "./user-profile-card";
 
 const TEST_USER_NAME_REGEX = /Test User/i;
+const SETTINGS_PATTERN = /設定/i;
 
 describe("UserProfileCard", () => {
   afterEach(() => {
@@ -86,6 +87,16 @@ describe("UserProfileCard", () => {
       };
       render(<UserProfileCard user={userNoNameNoAvatar} />);
       expect(screen.getByText("F")).toBeInTheDocument();
+    });
+  });
+
+  // Requirement 4.1: 設定ページへのリンク
+  describe("設定ページ導線 (Req 4.1)", () => {
+    it("設定ページへのリンクを表示する", () => {
+      render(<UserProfileCard user={userWithAvatar} />);
+      const settingsLink = screen.getByRole("link", { name: SETTINGS_PATTERN });
+      expect(settingsLink).toBeInTheDocument();
+      expect(settingsLink).toHaveAttribute("href", "/dashboard/user/settings");
     });
   });
 });
