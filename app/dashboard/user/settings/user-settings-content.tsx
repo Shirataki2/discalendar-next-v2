@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { SettingsSection } from "@/components/guilds/settings-section";
 import { CalendarViewSettingPanel } from "@/components/settings/calendar-view-setting-panel";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { ThemeSettingPanel } from "@/components/settings/theme-setting-panel";
 
 /**

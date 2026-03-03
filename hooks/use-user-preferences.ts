@@ -37,7 +37,7 @@ const VALID_VIEW_MODES: readonly CalendarViewMode[] = [
 function isValidCalendarViewMode(value: unknown): value is CalendarViewMode {
 	return (
 		typeof value === "string" &&
-		VALID_VIEW_MODES.includes(value as CalendarViewMode)
+		(VALID_VIEW_MODES as readonly string[]).includes(value)
 	);
 }
 
@@ -89,12 +89,13 @@ export function useUserPreferences(): UseUserPreferencesReturn {
 			setStoredView(view);
 			// useLocalStorage はエラーを飲み込みローカル state のみ更新するため、
 			// 実際に永続化されたかを検証し、失敗時は呼び出し元にエラーを伝播する
+			let stored: string | null;
 			try {
-				const stored = window.localStorage.getItem(STORAGE_KEY);
-				if (stored !== JSON.stringify(view)) {
-					throw new Error("Failed to persist calendar view preference");
-				}
+				stored = window.localStorage.getItem(STORAGE_KEY);
 			} catch {
+				throw new Error("Failed to persist calendar view preference");
+			}
+			if (stored !== JSON.stringify(view)) {
 				throw new Error("Failed to persist calendar view preference");
 			}
 		},

@@ -38,15 +38,6 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-// Mock LogoutButton component
-vi.mock("@/components/auth/logout-button", () => ({
-  LogoutButton: ({ variant }: { variant?: string }) => (
-    <button data-testid="logout-button" data-variant={variant} type="button">
-      ログアウト
-    </button>
-  ),
-}));
-
 // Mock ThemeSettingPanel
 vi.mock("@/components/settings/theme-setting-panel", () => ({
   ThemeSettingPanel: () => (

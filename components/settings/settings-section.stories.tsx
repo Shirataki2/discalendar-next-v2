@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { SettingsSection } from "./settings-section";
 
 const meta = {
-  title: "Guilds/SettingsSection",
+  title: "Settings/SettingsSection",
   component: SettingsSection,
   tags: ["autodocs"],
   parameters: {
