@@ -156,6 +156,10 @@ export function useCalendarUrlSync(
       const newDateStr = formatDateForUrl(newDate);
       return currentDateStr !== newDateStr ? newDate : current;
     });
+    // NOTE: defaultViewMode は useUserPreferences() → useLocalStorage() 経由で取得される。
+    // 別タブで設定変更時に storage event で値が変化すると、URLに ?view= がない場合は
+    // 新しいデフォルト値でビューが上書きされる。これは意図した動作：
+    // ユーザーが設定したデフォルトビューを常に反映するため。
   }, [searchParams, defaultViewMode]);
 
   /**

@@ -54,7 +54,7 @@ vi.mock("@/components/settings/calendar-view-setting-panel", () => ({
   ),
 }));
 
-import { UserSettingsPageLayout } from "@/app/dashboard/user/settings/page";
+import { UserSettingsPageLayout } from "@/app/dashboard/user/settings/user-settings-page-layout";
 import type { DashboardUser } from "@/types/user";
 
 const mockUser: DashboardUser = {
