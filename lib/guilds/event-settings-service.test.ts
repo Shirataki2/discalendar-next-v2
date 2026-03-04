@@ -158,10 +158,13 @@ describe("EventSettingsService", () => {
 				},
 			});
 			expect(mockSupabaseClient.from).toHaveBeenCalledWith("event_settings");
-			expect(mockQuery.upsert).toHaveBeenCalledWith({
-				guild_id: "123456789012345678",
-				channel_id: "987654321098765432",
-			});
+			expect(mockQuery.upsert).toHaveBeenCalledWith(
+				{
+					guild_id: "123456789012345678",
+					channel_id: "987654321098765432",
+				},
+				{ onConflict: "guild_id" },
+			);
 		});
 
 		it("既存更新（UPDATE）が成功した場合、success を返す", async () => {

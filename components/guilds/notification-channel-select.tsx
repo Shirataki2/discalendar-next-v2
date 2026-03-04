@@ -43,18 +43,26 @@ type ChannelGroup = {
 
 /**
  * チャンネルをカテゴリ別にグループ化する
+ *
+ * parentId をキーに使い、同名カテゴリが存在しても別グループとして扱う
  */
 function groupByCategory(channels: DiscordTextChannel[]): ChannelGroup[] {
-  const groupMap = new Map<string, DiscordTextChannel[]>();
+  const groupMap = new Map<
+    string,
+    { categoryName: string; channels: DiscordTextChannel[] }
+  >();
   const uncategorized: DiscordTextChannel[] = [];
 
   for (const channel of channels) {
-    if (channel.categoryName) {
-      const existing = groupMap.get(channel.categoryName);
+    if (channel.parentId) {
+      const existing = groupMap.get(channel.parentId);
       if (existing) {
-        existing.push(channel);
+        existing.channels.push(channel);
       } else {
-        groupMap.set(channel.categoryName, [channel]);
+        groupMap.set(channel.parentId, {
+          categoryName: channel.categoryName ?? "不明なカテゴリ",
+          channels: [channel],
+        });
       }
     } else {
       uncategorized.push(channel);
@@ -68,8 +76,8 @@ function groupByCategory(channels: DiscordTextChannel[]): ChannelGroup[] {
     groups.push({ categoryName: "その他", channels: uncategorized });
   }
 
-  for (const [categoryName, channels] of groupMap) {
-    groups.push({ categoryName, channels });
+  for (const [, group] of groupMap) {
+    groups.push({ categoryName: group.categoryName, channels: group.channels });
   }
 
   return groups;

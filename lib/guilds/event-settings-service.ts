@@ -84,34 +84,47 @@ export function createEventSettingsService(
 		async getEventSettings(
 			guildId: string,
 		): Promise<EventSettingsMutationResult<EventSettings | null>> {
-			const { data, error } = await supabase
-				.from("event_settings")
-				.select("*")
-				.eq("guild_id", guildId)
-				.single();
+			try {
+				const { data, error } = await supabase
+					.from("event_settings")
+					.select("*")
+					.eq("guild_id", guildId)
+					.single();
 
-			if (error) {
-				if (error.code === "PGRST116") {
+				if (error) {
+					if (error.code === "PGRST116") {
+						return { success: true, data: null };
+					}
+					return {
+						success: false,
+						error: {
+							code: "FETCH_FAILED",
+							message: "設定の取得に失敗しました。",
+							details: error.message,
+						},
+					};
+				}
+
+				if (!data) {
 					return { success: true, data: null };
 				}
+
+				return {
+					success: true,
+					data: toEventSettings(data as EventSettingsRow),
+				};
+			} catch (err) {
+				const errorMessage =
+					err instanceof Error ? err.message : "Unknown error";
 				return {
 					success: false,
 					error: {
 						code: "FETCH_FAILED",
 						message: "設定の取得に失敗しました。",
-						details: error.message,
+						details: errorMessage,
 					},
 				};
 			}
-
-			if (!data) {
-				return { success: true, data: null };
-			}
-
-			return {
-				success: true,
-				data: toEventSettings(data as EventSettingsRow),
-			};
 		},
 
 		async upsertEventSettings(
@@ -131,10 +144,13 @@ export function createEventSettingsService(
 			try {
 				const { data, error } = await supabase
 					.from("event_settings")
-					.upsert({
-						guild_id: guildId,
-						channel_id: channelId,
-					})
+					.upsert(
+						{
+							guild_id: guildId,
+							channel_id: channelId,
+						},
+						{ onConflict: "guild_id" },
+					)
 					.select()
 					.single();
 

@@ -57,6 +57,7 @@ type NotificationChannelError =
   | { code: "rate_limited"; message: string; retryAfter: number }
   | { code: "network_error"; message: string }
   | { code: "bot_token_missing"; message: string }
+  | { code: "bot_config_missing"; message: string }
   | { code: "unknown"; message: string };
 
 /** チャンネル一覧取得結果 */
@@ -134,7 +135,7 @@ export async function getGuildChannels(
     return {
       success: false,
       error: {
-        code: "bot_token_missing",
+        code: "bot_config_missing",
         message:
           "BOTの設定が不完全です。管理者に連絡してください。",
       },

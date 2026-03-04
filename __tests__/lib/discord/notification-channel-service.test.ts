@@ -533,4 +533,30 @@ describe("getGuildChannels", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
   });
+
+  describe("エラー系: DISCORD_CLIENT_ID 未設定", () => {
+    it("DISCORD_CLIENT_ID が未設定の場合は bot_config_missing エラーを返す", async () => {
+      process.env.DISCORD_CLIENT_ID = "";
+
+      const result = await getGuildChannels(guildId);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("bot_config_missing");
+      }
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("DISCORD_CLIENT_ID が undefined の場合は bot_config_missing エラーを返す", async () => {
+      process.env.DISCORD_CLIENT_ID = undefined;
+
+      const result = await getGuildChannels(guildId);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("bot_config_missing");
+      }
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
 });
