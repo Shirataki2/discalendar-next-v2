@@ -15,6 +15,8 @@ export const DISCORD_PERMISSION_FLAGS = {
   ADMINISTRATOR: ONE << BigInt(3),
   MANAGE_CHANNELS: ONE << BigInt(4),
   MANAGE_GUILD: ONE << BigInt(5),
+  VIEW_CHANNEL: ONE << BigInt(10),
+  SEND_MESSAGES: ONE << BigInt(11),
   MANAGE_MESSAGES: ONE << BigInt(13),
   MANAGE_ROLES: ONE << BigInt(28),
   MANAGE_EVENTS: ONE << BigInt(33),
@@ -25,6 +27,8 @@ export interface DiscordPermissions {
   administrator: boolean;
   manageGuild: boolean;
   manageChannels: boolean;
+  viewChannel: boolean;
+  sendMessages: boolean;
   manageMessages: boolean;
   manageRoles: boolean;
   manageEvents: boolean;
@@ -35,6 +39,8 @@ const DEFAULT_PERMISSIONS: DiscordPermissions = {
   administrator: false,
   manageGuild: false,
   manageChannels: false,
+  viewChannel: false,
+  sendMessages: false,
   manageMessages: false,
   manageRoles: false,
   manageEvents: false,
@@ -65,6 +71,8 @@ export function parsePermissions(
     administrator: (raw & DISCORD_PERMISSION_FLAGS.ADMINISTRATOR) !== ZERO,
     manageGuild: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_GUILD) !== ZERO,
     manageChannels: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_CHANNELS) !== ZERO,
+    viewChannel: (raw & DISCORD_PERMISSION_FLAGS.VIEW_CHANNEL) !== ZERO,
+    sendMessages: (raw & DISCORD_PERMISSION_FLAGS.SEND_MESSAGES) !== ZERO,
     manageMessages: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_MESSAGES) !== ZERO,
     manageRoles: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_ROLES) !== ZERO,
     manageEvents: (raw & DISCORD_PERMISSION_FLAGS.MANAGE_EVENTS) !== ZERO,

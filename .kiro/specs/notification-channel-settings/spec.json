@@ -1,0 +1,22 @@
+{
+  "feature_name": "notification-channel-settings",
+  "created_at": "2026-03-04T09:59:29Z",
+  "updated_at": "2026-03-04T10:29:25Z",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": true
+}
