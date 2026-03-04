@@ -129,11 +129,21 @@ export async function getGuildChannels(
     };
   }
 
-  const botUserId = process.env.DISCORD_CLIENT_ID ?? "";
+  const botUserId = process.env.DISCORD_CLIENT_ID;
+  if (!botUserId) {
+    return {
+      success: false,
+      error: {
+        code: "bot_token_missing",
+        message:
+          "BOTの設定が不完全です。管理者に連絡してください。",
+      },
+    };
+  }
 
   try {
     const response = await fetch(
-      `${DISCORD_API_BASE_URL}/guilds/${guildId}/channels`,
+      `${DISCORD_API_BASE_URL}/guilds/${encodeURIComponent(guildId)}/channels`,
       {
         headers: {
           Authorization: `Bot ${botToken}`,

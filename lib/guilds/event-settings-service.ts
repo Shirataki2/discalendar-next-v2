@@ -11,6 +11,7 @@
  * Requirements: 3.1, 3.2, 3.5, 6.1, 6.2
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 
 /**
  * イベント設定の型定義（アプリケーション層 - camelCase）
@@ -59,8 +60,6 @@ export interface EventSettingsServiceInterface {
 		channelId: string,
 	): Promise<EventSettingsMutationResult<EventSettings>>;
 }
-
-const SNOWFLAKE_PATTERN = /^\d{17,20}$/;
 
 /**
  * EventSettingsRow から EventSettings への変換

@@ -732,9 +732,7 @@ import {
   type EventSettings,
   type EventSettingsMutationResult,
 } from "@/lib/guilds/event-settings-service";
-
-/** Snowflake 形式バリデーション（17-20桁の数字） */
-const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 
 type UpdateNotificationChannelInput = {
   guildId: string;
@@ -785,7 +783,7 @@ export async function updateNotificationChannel(
     };
   }
 
-  if (!SNOWFLAKE_REGEX.test(input.channelId)) {
+  if (!SNOWFLAKE_PATTERN.test(input.channelId)) {
     return {
       success: false,
       error: {
