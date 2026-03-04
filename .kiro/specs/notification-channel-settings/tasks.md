@@ -58,8 +58,8 @@
   - `GuildConfigService` のテストパターン（モック Supabase クライアント）を踏襲する
   - _Requirements: 3.1, 3.2, 3.5, 6.1, 6.2_
 
-- [ ] 4. 通知チャンネル管理の Server Actions
-- [ ] 4.1 チャンネル一覧取得の Server Action を実装する
+- [x] 4. 通知チャンネル管理の Server Actions
+- [x] 4.1 チャンネル一覧取得の Server Action を実装する
   - `resolveServerAuth()` による認証チェックを実装する
   - ギルドIDのフォーマットバリデーションを実装する
   - チャンネル取得サービスを呼び出し、結果を返す
@@ -68,7 +68,7 @@
   - _Requirements: 1.1, 5.1, 5.3_
   - _Contracts: fetchGuildChannels API Contract_
 
-- [ ] 4.2 通知チャンネル更新の Server Action を実装する
+- [x] 4.2 通知チャンネル更新の Server Action を実装する
   - `resolveServerAuth()` による認証チェックを実装する
   - `canManageGuild()` による MANAGE_GUILD 権限チェックを実装する
   - 権限不足時は `PERMISSION_DENIED` エラーを返す

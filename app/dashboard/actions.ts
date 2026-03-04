@@ -659,3 +659,152 @@ export async function refreshGuilds(): Promise<RefreshGuildsResult> {
     guildPermissions,
   };
 }
+
+// ──────────────────────────────────────────────
+// Task 4.1 (notification-channel-settings): チャンネル一覧取得
+// ──────────────────────────────────────────────
+
+import {
+  type DiscordTextChannel,
+  getGuildChannels,
+} from "@/lib/discord/notification-channel-service";
+
+/** fetchGuildChannels の戻り値型 */
+type FetchGuildChannelsResult =
+  | { success: true; data: DiscordTextChannel[] }
+  | { success: false; error: { code: string; message: string } };
+
+/**
+ * ギルドの通知チャンネル一覧を取得する Server Action
+ *
+ * 認証チェック後に Discord BOT API からチャンネル一覧を取得する。
+ * チャンネル閲覧は管理権限不要（MANAGE_GUILD チェックなし）。
+ *
+ * Requirements: 1.1, 5.1, 5.3
+ */
+export async function fetchGuildChannels(
+  guildId: string
+): Promise<FetchGuildChannelsResult> {
+  if (!GUILD_ID_REGEX.test(guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(guildId);
+
+  if (!authResult.success) {
+    return {
+      success: false,
+      error: {
+        code: authResult.error.code,
+        message: authResult.error.message,
+      },
+    };
+  }
+
+  // チャンネル一覧の閲覧は管理権限不要（design.md: canManageGuild チェック不要）
+  const channelsResult = await getGuildChannels(guildId);
+
+  if (!channelsResult.success) {
+    return {
+      success: false,
+      error: {
+        code: channelsResult.error.code,
+        message: channelsResult.error.message,
+      },
+    };
+  }
+
+  return { success: true, data: channelsResult.data };
+}
+
+// ──────────────────────────────────────────────
+// Task 4.2 (notification-channel-settings): 通知チャンネル更新
+// ──────────────────────────────────────────────
+
+import {
+  createEventSettingsService,
+  type EventSettings,
+  type EventSettingsMutationResult,
+} from "@/lib/guilds/event-settings-service";
+
+/** Snowflake 形式バリデーション（17-20桁の数字） */
+const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+
+type UpdateNotificationChannelInput = {
+  guildId: string;
+  channelId: string;
+};
+
+/**
+ * 通知チャンネル設定を更新する Server Action
+ *
+ * 認証 → MANAGE_GUILD 権限チェック → チャンネルID バリデーション → upsert
+ *
+ * Requirements: 3.1, 3.2, 5.1, 5.2, 5.3
+ */
+export async function updateNotificationChannel(
+  input: UpdateNotificationChannelInput
+): Promise<EventSettingsMutationResult<EventSettings>> {
+  if (!GUILD_ID_REGEX.test(input.guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(input.guildId);
+
+  if (!authResult.success) {
+    return {
+      success: false,
+      error: {
+        code: authResult.error.code,
+        message: authResult.error.message,
+      },
+    };
+  }
+
+  const { auth } = authResult;
+
+  if (!canManageGuild(auth.permissions)) {
+    return {
+      success: false,
+      error: {
+        code: "PERMISSION_DENIED",
+        message: "通知チャンネルの設定にはサーバー管理権限が必要です。",
+      },
+    };
+  }
+
+  if (!SNOWFLAKE_REGEX.test(input.channelId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "無効なチャンネルIDです。",
+      },
+    };
+  }
+
+  const service = createEventSettingsService(auth.supabase);
+  const result = await service.upsertEventSettings(
+    input.guildId,
+    input.channelId
+  );
+
+  if (!result.success) {
+    const { details: _details, ...error } = result.error;
+    return { success: false, error };
+  }
+
+  return result;
+}
