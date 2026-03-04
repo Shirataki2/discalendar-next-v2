@@ -31,23 +31,30 @@ import type {
 } from "@/lib/calendar/types";
 import { getUserGuilds } from "@/lib/discord/client";
 import {
+  type DiscordTextChannel,
+  getGuildChannels,
+} from "@/lib/discord/notification-channel-service";
+import {
   canManageGuild,
   type DiscordPermissions,
   parsePermissions,
 } from "@/lib/discord/permissions";
-import { getCachedGuilds } from "@/lib/guilds/cache";
+import { clearCache, getCachedGuilds } from "@/lib/guilds/cache";
 import {
   createEventSettingsService,
   type EventSettings,
   type EventSettingsMutationResult,
 } from "@/lib/guilds/event-settings-service";
+import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
 import {
   createGuildConfigService,
   type GuildConfig,
   type GuildConfigMutationResult,
 } from "@/lib/guilds/guild-config-service";
+import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
 import { createClient } from "@/lib/supabase/server";
 import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
+import type { GuildPermissionInfo } from "./dashboard-with-calendar";
 
 /** 共通の未認証エラー */
 const UNAUTHORIZED_ERROR: CalendarError = {
@@ -563,11 +570,6 @@ export async function deleteOccurrenceAction(
 // Task 4.1 (bot-invite-flow): ギルド再取得
 // ──────────────────────────────────────────────
 
-import { clearCache } from "@/lib/guilds/cache";
-import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
-import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
-import type { GuildPermissionInfo } from "./dashboard-with-calendar";
-
 /** refreshGuilds の戻り値型 */
 export type RefreshGuildsResult = {
   guilds: Guild[];
@@ -669,11 +671,6 @@ export async function refreshGuilds(): Promise<RefreshGuildsResult> {
 // ──────────────────────────────────────────────
 // Task 4.1 (notification-channel-settings): チャンネル一覧取得
 // ──────────────────────────────────────────────
-
-import {
-  type DiscordTextChannel,
-  getGuildChannels,
-} from "@/lib/discord/notification-channel-service";
 
 /** fetchGuildChannels の戻り値型 */
 type FetchGuildChannelsResult =
