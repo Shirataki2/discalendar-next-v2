@@ -37,6 +37,8 @@ export type NotificationChannelSelectProps = {
 
 /** カテゴリ別にグループ化されたチャンネル */
 type ChannelGroup = {
+  /** グループの一意キー（parentId またはフォールバック文字列） */
+  key: string;
   categoryName: string;
   channels: DiscordTextChannel[];
 };
@@ -73,11 +75,19 @@ function groupByCategory(channels: DiscordTextChannel[]): ChannelGroup[] {
 
   // カテゴリなしチャンネルを先頭に
   if (uncategorized.length > 0) {
-    groups.push({ categoryName: "その他", channels: uncategorized });
+    groups.push({
+      key: "__uncategorized__",
+      categoryName: "その他",
+      channels: uncategorized,
+    });
   }
 
-  for (const [, group] of groupMap) {
-    groups.push({ categoryName: group.categoryName, channels: group.channels });
+  for (const [parentId, group] of groupMap) {
+    groups.push({
+      key: parentId,
+      categoryName: group.categoryName,
+      channels: group.channels,
+    });
   }
 
   return groups;
@@ -193,7 +203,7 @@ export function NotificationChannelSelect({
         </SelectTrigger>
         <SelectContent>
           {groups.map((group) => (
-            <SelectGroup key={group.categoryName}>
+            <SelectGroup key={group.key}>
               <SelectLabel>{group.categoryName}</SelectLabel>
               {group.channels.map((channel) => (
                 <SelectItem

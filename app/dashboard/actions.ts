@@ -37,11 +37,17 @@ import {
 } from "@/lib/discord/permissions";
 import { getCachedGuilds } from "@/lib/guilds/cache";
 import {
+  createEventSettingsService,
+  type EventSettings,
+  type EventSettingsMutationResult,
+} from "@/lib/guilds/event-settings-service";
+import {
   createGuildConfigService,
   type GuildConfig,
   type GuildConfigMutationResult,
 } from "@/lib/guilds/guild-config-service";
 import { createClient } from "@/lib/supabase/server";
+import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 
 /** 共通の未認証エラー */
 const UNAUTHORIZED_ERROR: CalendarError = {
@@ -726,13 +732,6 @@ export async function fetchGuildChannels(
 // ──────────────────────────────────────────────
 // Task 4.2 (notification-channel-settings): 通知チャンネル更新
 // ──────────────────────────────────────────────
-
-import {
-  createEventSettingsService,
-  type EventSettings,
-  type EventSettingsMutationResult,
-} from "@/lib/guilds/event-settings-service";
-import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 
 type UpdateNotificationChannelInput = {
   guildId: string;

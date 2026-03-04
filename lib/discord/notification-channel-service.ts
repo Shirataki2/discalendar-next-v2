@@ -75,6 +75,9 @@ const CHANNEL_TYPE_CATEGORY = 4;
  *
  * @everyone ロール（id=guildId）と BOT ユーザー（id=botUserId）の
  * deny ビットに SEND_MESSAGES または VIEW_CHANNEL が含まれていれば false
+ *
+ * 制限事項: BOT に付与されたロール経由の overwrite は検査対象外。
+ * ロールレベルで deny されたチャンネルが「送信可能」と誤判定される可能性がある。
  */
 function checkBotSendPermission(
   overwrites: DiscordPermissionOverwrite[],
@@ -130,6 +133,7 @@ export async function getGuildChannels(
     };
   }
 
+  // Discord では Application ID と BOT User ID が同値のため、DISCORD_CLIENT_ID を流用
   const botUserId = process.env.DISCORD_CLIENT_ID;
   if (!botUserId) {
     return {
