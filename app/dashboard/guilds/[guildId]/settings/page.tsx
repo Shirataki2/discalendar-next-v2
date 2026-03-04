@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { GuildSettingsForm } from "@/components/guilds/guild-settings-form";
 import { canManageGuild } from "@/lib/discord/permissions";
+import { createEventSettingsService } from "@/lib/guilds/event-settings-service";
 import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
 import { createGuildConfigService } from "@/lib/guilds/guild-config-service";
 import { createClient } from "@/lib/supabase/server";
@@ -64,6 +65,14 @@ export default async function GuildSettingsPage({
     redirect("/dashboard");
   }
 
+  // イベント設定（通知チャンネル）取得
+  const eventSettingsService = createEventSettingsService(supabase);
+  const eventSettingsResult =
+    await eventSettingsService.getEventSettings(guildId);
+  const currentChannelId = eventSettingsResult.success
+    ? (eventSettingsResult.data?.channelId ?? null)
+    : null;
+
   // ユーザー情報を整形
   const dashboardUser = buildDashboardUser(user);
 
@@ -72,6 +81,7 @@ export default async function GuildSettingsPage({
       <DashboardHeader user={dashboardUser} />
       <main className="container mx-auto flex flex-1 flex-col px-4 py-6">
         <GuildSettingsForm
+          currentChannelId={currentChannelId}
           guild={{
             guildId: targetGuild.guildId,
             name: targetGuild.name,

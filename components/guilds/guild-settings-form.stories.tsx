@@ -29,6 +29,7 @@ export const WithAvatar: Story = {
       avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
     },
     restricted: false,
+    currentChannelId: null,
   },
 };
 
@@ -40,6 +41,7 @@ export const WithoutAvatar: Story = {
       avatarUrl: null,
     },
     restricted: false,
+    currentChannelId: null,
   },
 };
 
@@ -51,6 +53,7 @@ export const RestrictedOn: Story = {
       avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
     },
     restricted: true,
+    currentChannelId: "11111111111111111",
   },
 };
 
@@ -62,6 +65,7 @@ export const Mobile: Story = {
       avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
     },
     restricted: false,
+    currentChannelId: null,
   },
   parameters: {
     viewport: { defaultViewport: "mobile1" },
