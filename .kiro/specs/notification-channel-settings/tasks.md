@@ -16,8 +16,8 @@
   - 既存の権限チェック関数（`canInviteBot`, `canManageGuild`）に影響を与えないことを確認する
   - _Requirements: 4.1_
 
-- [ ] 2. Discord BOT API チャンネル取得サービス
-- [ ] 2.1 Discord チャンネル型定義とチャンネル一覧取得サービスを実装する
+- [x] 2. Discord BOT API チャンネル取得サービス
+- [x] 2.1 Discord チャンネル型定義とチャンネル一覧取得サービスを実装する
   - Discord API のチャンネルオブジェクトと権限オーバーライドオブジェクトの型定義を追加する
   - テキストチャンネル情報の型（ID、名前、カテゴリID、カテゴリ名、表示順序、BOT送信可否フラグ）を定義する
   - BOT トークン（環境変数）を使用して Discord API v10 `GET /guilds/{guild.id}/channels` を呼び出す関数を実装する
@@ -29,7 +29,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 4.1_
   - _Contracts: NotificationChannelService Service Interface_
 
-- [ ] 2.2 チャンネル取得サービスのユニットテストを追加する
+- [x] 2.2 チャンネル取得サービスのユニットテストを追加する
   - テキストチャンネルのみがフィルタリングされることを検証する
   - カテゴリ名が正しく解決されることを検証する
   - `permission_overwrites` の deny ビットに基づく `canBotSendMessages` 判定を検証する
