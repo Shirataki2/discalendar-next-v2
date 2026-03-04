@@ -6,8 +6,8 @@
  * - 4.4: ユーザーが所属するDiscalendar登録済みギルドが存在しない場合、「利用可能なサーバーがありません」というメッセージを表示する
  * - 4.5: ギルド一覧を取得中、ローディングインジケーターを表示する（Suspense対応）
  */
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { Guild, GuildListError } from "@/lib/guilds/types";
 import { GuildListClient } from "./guild-list-client";
 
@@ -20,10 +20,6 @@ const LOGIN_LINK_REGEX = /ログイン/i;
 const SECTION_TITLE_REGEX = /参加中のサーバー/i;
 
 describe("GuildListClient", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   // テスト用ギルドデータ
   const mockGuilds: Guild[] = [
     {

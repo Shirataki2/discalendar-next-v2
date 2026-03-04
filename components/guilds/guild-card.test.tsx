@@ -5,8 +5,8 @@
  * - 4.2: 各ギルドカードにギルド名とアイコン画像を表示する
  * - 4.3: ギルドにアイコンが設定されていない場合、ギルド名のイニシャルをフォールバックとして表示する
  */
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { Guild } from "@/lib/guilds/types";
 import { GuildCard } from "./guild-card";
 
@@ -14,10 +14,6 @@ import { GuildCard } from "./guild-card";
 const TEST_SERVER_NAME_REGEX = /テストサーバー/i;
 
 describe("GuildCard", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   // テスト用ギルドデータ
   const guildWithIcon: Guild = {
     id: 1,

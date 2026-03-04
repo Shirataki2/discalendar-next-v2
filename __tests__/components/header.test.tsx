@@ -8,8 +8,8 @@
  * - タスク8: 既存ヘッダーのログインリンクを更新する
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock for Server Component patterns
 const mockGetUser = vi.fn();
@@ -42,10 +42,6 @@ describe("Header - ヘッダーナビゲーション", () => {
     vi.clearAllMocks();
     // Default: unauthenticated
     mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   describe("タスク3.1: Headerコンポーネントの基本構造実装", () => {

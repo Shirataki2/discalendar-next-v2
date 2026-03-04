@@ -1,18 +1,8 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { DatePicker } from "@/components/ui/date-picker";
 
 describe("DatePicker", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   describe("Popover開閉 (Req 1.1)", () => {
     it("ボタンクリックでカレンダーPopoverが表示される", () => {
       render(<DatePicker onChange={vi.fn()} value={undefined} />);

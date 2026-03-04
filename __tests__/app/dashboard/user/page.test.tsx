@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
@@ -38,13 +38,9 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-// Mock LogoutButton component
-vi.mock("@/components/auth/logout-button", () => ({
-  LogoutButton: ({ variant }: { variant?: string }) => (
-    <button data-testid="logout-button" data-variant={variant} type="button">
-      ログアウト
-    </button>
-  ),
+// Mock signOut server action (used by UserMenu)
+vi.mock("@/app/auth/actions", () => ({
+  signOut: vi.fn(),
 }));
 
 import { UserProfilePageLayout } from "@/app/dashboard/user/page";
@@ -78,10 +74,6 @@ const mockGuilds: Guild[] = [
 describe("UserProfilePageLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   describe("ページ構造とレイアウト (Req 1.1, 5.1, 5.2)", () => {
@@ -155,10 +147,12 @@ describe("UserProfilePageLayout", () => {
   });
 
   describe("ログアウト (Req 4.1-4.3)", () => {
-    it("should render LogoutButton", () => {
+    it("should render user menu with logout access", () => {
       render(<UserProfilePageLayout guilds={mockGuilds} user={mockUser} />);
 
-      expect(screen.getByTestId("logout-button")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /ユーザーメニュー/ })
+      ).toBeInTheDocument();
     });
   });
 

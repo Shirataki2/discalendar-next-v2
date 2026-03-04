@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
@@ -69,10 +69,6 @@ const mockUserWithAvatar: DashboardUser = {
 describe("DashboardHeader", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   it("should render logo link to home", () => {

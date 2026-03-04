@@ -1,18 +1,8 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { TimePicker } from "@/components/ui/time-picker";
 
 describe("TimePicker", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   describe("Popover開閉 (Req 2.1)", () => {
     it("ボタンクリックで時刻選択Popoverが表示される", () => {
       render(<TimePicker onChange={vi.fn()} value={undefined} />);

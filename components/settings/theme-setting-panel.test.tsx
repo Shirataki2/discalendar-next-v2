@@ -5,10 +5,10 @@
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "next-themes";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeSettingPanel } from "./theme-setting-panel";
 
@@ -29,10 +29,6 @@ function renderWithThemeProvider(
 describe("ThemeSettingPanel - テーマ選択パネル", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   describe("Req 2.1: テーマ選択UIの表示", () => {

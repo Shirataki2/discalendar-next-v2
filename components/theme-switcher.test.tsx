@@ -3,10 +3,10 @@
  * @description テーマ切り替えコンポーネントの動作を検証
  */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "next-themes";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import component
 import { ThemeSwitcher } from "./theme-switcher";
@@ -14,10 +14,6 @@ import { ThemeSwitcher } from "./theme-switcher";
 describe("ThemeSwitcher - テーマ切り替えコンポーネント", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   it("レンダリングされること", async () => {

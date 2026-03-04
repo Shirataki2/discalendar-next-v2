@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Top-level regex patterns for error message matching
 const NETWORK_ERROR_PATTERN =
@@ -21,10 +21,6 @@ vi.mock("@/components/auth/discord-login-button", () => ({
 describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   describe("Task 4: ログインページ基本表示", () => {
