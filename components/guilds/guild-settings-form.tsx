@@ -14,6 +14,7 @@ import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
+import { NotificationChannelSelect } from "@/components/guilds/notification-channel-select";
 import { SettingsSection } from "@/components/settings/settings-section";
 
 export type GuildSettingsFormProps = {
@@ -23,6 +24,7 @@ export type GuildSettingsFormProps = {
     avatarUrl: string | null;
   };
   restricted: boolean;
+  currentChannelId: string | null;
 };
 
 function getGuildInitial(name: string): string {
@@ -35,6 +37,7 @@ function getGuildInitial(name: string): string {
 export function GuildSettingsForm({
   guild,
   restricted,
+  currentChannelId,
 }: GuildSettingsFormProps) {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -73,6 +76,17 @@ export function GuildSettingsForm({
         title="権限設定"
       >
         <GuildSettingsPanel guildId={guild.guildId} restricted={restricted} />
+      </SettingsSection>
+
+      {/* 通知設定セクション */}
+      <SettingsSection
+        description="イベント通知の送信先チャンネルを設定します。"
+        title="通知設定"
+      >
+        <NotificationChannelSelect
+          currentChannelId={currentChannelId}
+          guildId={guild.guildId}
+        />
       </SettingsSection>
     </div>
   );

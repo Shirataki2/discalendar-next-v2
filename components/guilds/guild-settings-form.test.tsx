@@ -1,12 +1,17 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// updateGuildConfig Server Action のモック
+// Server Actions のモック
 vi.mock("@/app/dashboard/actions", () => ({
   updateGuildConfig: vi.fn(),
+  fetchGuildChannels: vi.fn(),
+  updateNotificationChannel: vi.fn(),
 }));
 
+import { fetchGuildChannels } from "@/app/dashboard/actions";
 import { GuildSettingsForm } from "./guild-settings-form";
+
+const mockedFetchGuildChannels = vi.mocked(fetchGuildChannels);
 
 describe("GuildSettingsForm", () => {
   const defaultProps = {
@@ -16,7 +21,17 @@ describe("GuildSettingsForm", () => {
       avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
     },
     restricted: false,
+    currentChannelId: null as string | null,
   };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // NotificationChannelSelect がマウント時にチャンネル取得するので常にモック
+    mockedFetchGuildChannels.mockResolvedValue({
+      success: true,
+      data: [],
+    });
+  });
 
   describe("ギルド情報ヘッダー", () => {
     it("ギルド名を表示する", () => {
@@ -75,6 +90,22 @@ describe("GuildSettingsForm", () => {
         screen.getByText("イベント編集を管理者のみに制限")
       ).toBeInTheDocument();
       expect(screen.getByRole("switch")).toBeInTheDocument();
+    });
+
+    it("通知設定セクションを表示する", () => {
+      render(<GuildSettingsForm {...defaultProps} />);
+
+      expect(screen.getByText("通知設定")).toBeInTheDocument();
+      expect(
+        screen.getByText("イベント通知の送信先チャンネルを設定します。")
+      ).toBeInTheDocument();
+    });
+
+    it("通知チャンネル選択コンポーネントを表示する", async () => {
+      render(<GuildSettingsForm {...defaultProps} />);
+
+      // NotificationChannelSelect がチャンネル取得して表示される
+      expect(mockedFetchGuildChannels).toHaveBeenCalledWith("123456789");
     });
   });
 

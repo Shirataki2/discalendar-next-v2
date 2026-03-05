@@ -16,11 +16,13 @@ import {
 describe("parsePermissions", () => {
   describe("全フラグ ON/OFF", () => {
     it("すべての管理権限フラグがONのビットフィールドを正しく解析する", () => {
-      // ADMINISTRATOR(8) + MANAGE_CHANNELS(16) + MANAGE_GUILD(32) + MANAGE_MESSAGES(8192) + MANAGE_ROLES(268435456) + MANAGE_EVENTS(8589934592)
+      // ADMINISTRATOR(8) + MANAGE_CHANNELS(16) + MANAGE_GUILD(32) + VIEW_CHANNEL(1024) + SEND_MESSAGES(2048) + MANAGE_MESSAGES(8192) + MANAGE_ROLES(268435456) + MANAGE_EVENTS(8589934592)
       const allFlags = (
         (1n << 3n) |
         (1n << 4n) |
         (1n << 5n) |
+        (1n << 10n) |
+        (1n << 11n) |
         (1n << 13n) |
         (1n << 28n) |
         (1n << 33n)
@@ -31,6 +33,8 @@ describe("parsePermissions", () => {
       expect(result.administrator).toBe(true);
       expect(result.manageGuild).toBe(true);
       expect(result.manageChannels).toBe(true);
+      expect(result.viewChannel).toBe(true);
+      expect(result.sendMessages).toBe(true);
       expect(result.manageMessages).toBe(true);
       expect(result.manageRoles).toBe(true);
       expect(result.manageEvents).toBe(true);
@@ -42,6 +46,8 @@ describe("parsePermissions", () => {
       expect(result.administrator).toBe(false);
       expect(result.manageGuild).toBe(false);
       expect(result.manageChannels).toBe(false);
+      expect(result.viewChannel).toBe(false);
+      expect(result.sendMessages).toBe(false);
       expect(result.manageMessages).toBe(false);
       expect(result.manageRoles).toBe(false);
       expect(result.manageEvents).toBe(false);
@@ -54,6 +60,8 @@ describe("parsePermissions", () => {
       expect(result.administrator).toBe(false);
       expect(result.manageGuild).toBe(false);
       expect(result.manageChannels).toBe(false);
+      expect(result.viewChannel).toBe(false);
+      expect(result.sendMessages).toBe(false);
       expect(result.manageMessages).toBe(false);
       expect(result.manageRoles).toBe(false);
       expect(result.manageEvents).toBe(false);
@@ -108,6 +116,24 @@ describe("parsePermissions", () => {
       expect(result.manageGuild).toBe(false);
     });
 
+    it("VIEW_CHANNEL (1 << 10) のみ ON の場合", () => {
+      const result = parsePermissions("1024");
+
+      expect(result.administrator).toBe(false);
+      expect(result.viewChannel).toBe(true);
+      expect(result.sendMessages).toBe(false);
+      expect(result.manageChannels).toBe(false);
+    });
+
+    it("SEND_MESSAGES (1 << 11) のみ ON の場合", () => {
+      const result = parsePermissions("2048");
+
+      expect(result.administrator).toBe(false);
+      expect(result.sendMessages).toBe(true);
+      expect(result.viewChannel).toBe(false);
+      expect(result.manageMessages).toBe(false);
+    });
+
     it("MANAGE_EVENTS (1 << 33) のみ ON の場合（64ビット超）", () => {
       const result = parsePermissions("8589934592");
 
@@ -132,6 +158,8 @@ describe("parsePermissions", () => {
       expect(result.administrator).toBe(false);
       expect(result.manageGuild).toBe(false);
       expect(result.manageChannels).toBe(false);
+      expect(result.viewChannel).toBe(false);
+      expect(result.sendMessages).toBe(false);
       expect(result.manageMessages).toBe(false);
       expect(result.manageRoles).toBe(false);
       expect(result.manageEvents).toBe(false);
@@ -155,6 +183,8 @@ describe("canManageGuild", () => {
     administrator: false,
     manageGuild: false,
     manageChannels: false,
+    viewChannel: false,
+    sendMessages: false,
     manageMessages: false,
     manageRoles: false,
     manageEvents: false,
@@ -217,6 +247,8 @@ describe("canInviteBot", () => {
     administrator: false,
     manageGuild: false,
     manageChannels: false,
+    viewChannel: false,
+    sendMessages: false,
     manageMessages: false,
     manageRoles: false,
     manageEvents: false,
@@ -277,6 +309,8 @@ describe("DISCORD_PERMISSION_FLAGS", () => {
     expect(DISCORD_PERMISSION_FLAGS.ADMINISTRATOR).toBe(1n << 3n);
     expect(DISCORD_PERMISSION_FLAGS.MANAGE_CHANNELS).toBe(1n << 4n);
     expect(DISCORD_PERMISSION_FLAGS.MANAGE_GUILD).toBe(1n << 5n);
+    expect(DISCORD_PERMISSION_FLAGS.VIEW_CHANNEL).toBe(1n << 10n);
+    expect(DISCORD_PERMISSION_FLAGS.SEND_MESSAGES).toBe(1n << 11n);
     expect(DISCORD_PERMISSION_FLAGS.MANAGE_MESSAGES).toBe(1n << 13n);
     expect(DISCORD_PERMISSION_FLAGS.MANAGE_ROLES).toBe(1n << 28n);
     expect(DISCORD_PERMISSION_FLAGS.MANAGE_EVENTS).toBe(1n << 33n);
