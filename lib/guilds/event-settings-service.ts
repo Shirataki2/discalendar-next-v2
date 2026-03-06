@@ -142,16 +142,16 @@ export function createEventSettingsService(
 			}
 
 			try {
+				// upsert_event_settings RPC を使用する。
+				// INSERT ... ON CONFLICT DO UPDATE + RLS の組み合わせで
+				// authenticated ロールが正しく適用されないケースを回避するため、
+				// SECURITY DEFINER 関数経由で upsert を実行する。
+				// 関数内で auth.uid() チェックを行い、anon からの呼び出しを拒否する。
 				const { data, error } = await supabase
-					.from("event_settings")
-					.upsert(
-						{
-							guild_id: guildId,
-							channel_id: channelId,
-						},
-						{ onConflict: "guild_id" },
-					)
-					.select()
+					.rpc("upsert_event_settings", {
+						p_guild_id: guildId,
+						p_channel_id: channelId,
+					})
 					.single();
 
 				if (error) {

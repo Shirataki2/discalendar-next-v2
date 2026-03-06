@@ -124,7 +124,6 @@ export function NotificationChannelSelect({
   }, []);
 
   // マウント時・guildId変更時にチャンネル一覧を取得
-  // biome-ignore lint/correctness/useExhaustiveDependencies: loadChannels は useCallback で安定化済みだが、guildId 変更時にリセットも行うため依存配列はそのまま
   useEffect(() => {
     setSelectedChannelId(currentChannelId);
     setError(null);
@@ -185,8 +184,6 @@ export function NotificationChannelSelect({
     );
   }
 
-  // チャンネルを名前から取得
-  const selectedChannel = channels.find((ch) => ch.id === selectedChannelId);
   const groups = groupByCategory(channels);
 
   return (
@@ -197,9 +194,7 @@ export function NotificationChannelSelect({
         value={selectedChannelId ?? undefined}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="チャンネルを選択">
-            {selectedChannel ? `# ${selectedChannel.name}` : undefined}
-          </SelectValue>
+          <SelectValue placeholder="チャンネルを選択" />
         </SelectTrigger>
         <SelectContent>
           {groups.map((group) => (
@@ -224,16 +219,14 @@ export function NotificationChannelSelect({
         </SelectContent>
       </Select>
 
-      {error && (
+      {!!error && (
         <p className="text-destructive text-xs" role="alert">
           {error}
         </p>
       )}
 
-      {successMessage && (
-        <p className="text-green-600 text-xs" role="status">
-          {successMessage}
-        </p>
+      {!!successMessage && (
+        <output className="text-green-600 text-xs">{successMessage}</output>
       )}
     </div>
   );
