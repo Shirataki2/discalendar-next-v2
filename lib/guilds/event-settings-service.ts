@@ -72,6 +72,24 @@ function toEventSettings(row: EventSettingsRow): EventSettings {
 }
 
 /**
+ * upsert_event_settings RPC の戻り値型（out_ プレフィックス付き列名）
+ */
+interface UpsertEventSettingsRpcRow {
+	out_guild_id: string;
+	out_channel_id: string;
+}
+
+/**
+ * UpsertEventSettingsRpcRow から EventSettings への変換
+ */
+function fromRpcRow(row: UpsertEventSettingsRpcRow): EventSettings {
+	return {
+		guildId: row.out_guild_id,
+		channelId: row.out_channel_id,
+	};
+}
+
+/**
  * EventSettingsService のファクトリ関数
  *
  * @param supabase - Supabase クライアントインスタンス
@@ -167,7 +185,7 @@ export function createEventSettingsService(
 
 				return {
 					success: true,
-					data: toEventSettings(data as EventSettingsRow),
+					data: fromRpcRow(data as UpsertEventSettingsRpcRow),
 				};
 			} catch (err) {
 				const errorMessage =

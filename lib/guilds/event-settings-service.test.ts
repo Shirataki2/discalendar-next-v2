@@ -136,8 +136,8 @@ describe("EventSettingsService", () => {
 	describe("upsertEventSettings", () => {
 		it("新規作成（INSERT）が成功した場合、success を返す", async () => {
 			const mockRow = {
-				guild_id: "123456789012345678",
-				channel_id: "987654321098765432",
+				out_guild_id: "123456789012345678",
+				out_channel_id: "987654321098765432",
 			};
 
 			mockRpcQuery.single.mockResolvedValue({
@@ -168,8 +168,8 @@ describe("EventSettingsService", () => {
 
 		it("既存更新（UPDATE）が成功した場合、success を返す", async () => {
 			const mockRow = {
-				guild_id: "123456789012345678",
-				channel_id: "111222333444555666",
+				out_guild_id: "123456789012345678",
+				out_channel_id: "111222333444555666",
 			};
 
 			mockRpcQuery.single.mockResolvedValue({
@@ -232,8 +232,8 @@ describe("EventSettingsService", () => {
 
 		it("upsert は冪等である（同じ入力で同じ結果）", async () => {
 			const mockRow = {
-				guild_id: "123456789012345678",
-				channel_id: "987654321098765432",
+				out_guild_id: "123456789012345678",
+				out_channel_id: "987654321098765432",
 			};
 
 			mockRpcQuery.single.mockResolvedValue({
@@ -257,8 +257,8 @@ describe("EventSettingsService", () => {
 	describe("Snowflake バリデーション", () => {
 		it("17桁のSnowflakeは有効", async () => {
 			const mockRow = {
-				guild_id: "123456789012345678",
-				channel_id: "12345678901234567",
+				out_guild_id: "123456789012345678",
+				out_channel_id: "12345678901234567",
 			};
 			mockRpcQuery.single.mockResolvedValue({ data: mockRow, error: null });
 
@@ -272,8 +272,8 @@ describe("EventSettingsService", () => {
 
 		it("20桁のSnowflakeは有効", async () => {
 			const mockRow = {
-				guild_id: "123456789012345678",
-				channel_id: "12345678901234567890",
+				out_guild_id: "123456789012345678",
+				out_channel_id: "12345678901234567890",
 			};
 			mockRpcQuery.single.mockResolvedValue({ data: mockRow, error: null });
 
