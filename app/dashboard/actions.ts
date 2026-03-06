@@ -797,6 +797,14 @@ export async function updateNotificationChannel(
 
   if (!result.success) {
     const { details: _details, ...error } = result.error;
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[updateNotificationChannel] upsert failed:", {
+        code: error.code,
+        message: error.message,
+        details: _details,
+        guildId: input.guildId,
+      });
+    }
     return { success: false, error };
   }
 
