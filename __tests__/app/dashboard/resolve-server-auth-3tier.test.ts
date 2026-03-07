@@ -167,14 +167,14 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
   describe("Tier 1: キャッシュヒット", () => {
     it("キャッシュヒット時にDB・Discord APIが呼ばれない", async () => {
       setupAuthenticatedUser();
-      setupCacheHit("guild-1");
+      setupCacheHit("11111111111111111");
       mockUpsertGuildConfig.mockResolvedValueOnce({
         success: true,
-        data: { guildId: "guild-1", restricted: false },
+        data: { guildId: "11111111111111111", restricted: false },
       });
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: false,
       });
 
@@ -191,18 +191,18 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       setupDbHit(MANAGE_GUILD_BITFIELD);
       mockUpsertGuildConfig.mockResolvedValueOnce({
         success: true,
-        data: { guildId: "guild-1", restricted: true },
+        data: { guildId: "11111111111111111", restricted: true },
       });
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: true,
       });
 
       expect(result.success).toBe(true);
       expect(mockGetUserGuildPermissions).toHaveBeenCalledWith(
         "user-1",
-        "guild-1"
+        "11111111111111111"
       );
       expect(mockGetUserGuilds).not.toHaveBeenCalled();
       expect(mockGetSession).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       setupDbHit("0");
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: true,
       });
 
@@ -230,15 +230,15 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       setupAuthenticatedUser();
       setupCacheMiss();
       setupDbError();
-      setupDiscordApiSuccess("guild-1");
+      setupDiscordApiSuccess("11111111111111111");
       setupSyncSuccess();
       mockUpsertGuildConfig.mockResolvedValueOnce({
         success: true,
-        data: { guildId: "guild-1", restricted: false },
+        data: { guildId: "11111111111111111", restricted: false },
       });
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: false,
       });
 
@@ -252,21 +252,21 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       setupAuthenticatedUser();
       setupCacheMiss();
       setupDbMiss();
-      setupDiscordApiSuccess("guild-1");
+      setupDiscordApiSuccess("11111111111111111");
       setupSyncSuccess();
       mockUpsertGuildConfig.mockResolvedValueOnce({
         success: true,
-        data: { guildId: "guild-1", restricted: false },
+        data: { guildId: "11111111111111111", restricted: false },
       });
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: false,
       });
 
       expect(result.success).toBe(true);
       expect(mockUpsertSingleGuild).toHaveBeenCalledWith({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         permissions: MANAGE_GUILD_BITFIELD,
       });
     });
@@ -275,18 +275,18 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       setupAuthenticatedUser();
       setupCacheMiss();
       setupDbMiss();
-      setupDiscordApiSuccess("guild-1");
+      setupDiscordApiSuccess("11111111111111111");
       mockUpsertSingleGuild.mockResolvedValueOnce({
         success: false,
         error: { code: "SYNC_FAILED", message: "DB write failed" },
       });
       mockUpsertGuildConfig.mockResolvedValueOnce({
         success: true,
-        data: { guildId: "guild-1", restricted: false },
+        data: { guildId: "11111111111111111", restricted: false },
       });
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: false,
       });
 
@@ -303,11 +303,11 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       });
       mockGetUserGuilds.mockResolvedValueOnce({
         success: true,
-        data: [{ id: "other-guild", name: "Other", permissions: "8" }],
+        data: [{ id: "99999999999999999", name: "Other", permissions: "8" }],
       });
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: true,
       });
 
@@ -324,15 +324,15 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       setupCacheMiss();
       // DBは常にnull（空テーブル）
       setupDbMiss();
-      setupDiscordApiSuccess("guild-1");
+      setupDiscordApiSuccess("11111111111111111");
       setupSyncSuccess();
       mockUpsertGuildConfig.mockResolvedValueOnce({
         success: true,
-        data: { guildId: "guild-1", restricted: false },
+        data: { guildId: "11111111111111111", restricted: false },
       });
 
       const result = await updateGuildConfig({
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         restricted: false,
       });
 

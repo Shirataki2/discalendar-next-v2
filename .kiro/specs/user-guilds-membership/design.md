@@ -135,7 +135,7 @@ sequenceDiagram
             Auth->>Discord: getUserGuilds(providerToken)
             alt Discord Success
                 Discord-->>Auth: Guild list with permissions
-                Auth->>UGS: syncUserGuilds(userId, guilds)
+                Auth->>UGS: syncUserGuilds(guilds)
                 UGS->>DB: UPSERT user_guilds
                 Auth-->>SA: success with permissions
             else Discord Failure
@@ -165,7 +165,7 @@ sequenceDiagram
     FG->>Discord: getUserGuilds(providerToken)
     Discord-->>FG: DiscordGuild[] with permissions
 
-    FG->>UGS: syncUserGuilds(userId, discordGuilds)
+    FG->>UGS: syncUserGuilds(discordGuilds)
     UGS->>DB: UPSERT matching guilds
     UGS->>DB: DELETE guilds not in API response
     DB-->>UGS: sync result
@@ -442,11 +442,15 @@ interface SyncGuildInput {
 
 /** UserGuildsService インターフェース */
 interface UserGuildsServiceInterface {
-  /** Discord API 結果を一括 upsert + 不在ギルド削除 */
+  /** Discord API 結果を一括 upsert + 不在ギルド削除（userId は RPC 内で auth.uid() を使用） */
   syncUserGuilds(
-    userId: string,
     guilds: SyncGuildInput[]
   ): Promise<UserGuildsMutationResult<{ synced: number; removed: number }>>;
+
+  /** 単一ギルドの upsert（resolveServerAuth の Discord API フォールバック用） */
+  upsertSingleGuild(
+    guild: SyncGuildInput
+  ): Promise<UserGuildsMutationResult<void>>;
 
   /** 指定ギルドの権限ビットフィールドを取得（不在時は null） */
   getUserGuildPermissions(
@@ -461,13 +465,14 @@ function createUserGuildsService(
 ): UserGuildsServiceInterface;
 ```
 
-- Preconditions: `userId` は有効な UUID、`guilds` の各要素の `guildId` は `guilds` テーブルに存在する guild_id
+- Preconditions: `guilds` の各要素の `guildId` は `guilds` テーブルに存在する guild_id。`userId` は RPC 内で `auth.uid()` から取得
 - Postconditions: `syncUserGuilds` 完了後、`user_guilds` テーブルは Discord API の最新状態を反映
 - Invariants: `(user_id, guild_id)` の組み合わせは一意
 
 **Implementation Notes**
-- `syncUserGuilds` 内の upsert は Supabase の `.upsert()` メソッドを使用（`onConflict: 'user_id,guild_id'`）
-- 不在ギルドの削除は `.delete().eq('user_id', userId).not('guild_id', 'in', guildIds)` パターン
+- `syncUserGuilds` は SECURITY DEFINER の `sync_user_guilds` RPC を使用（`auth.uid()` で userId を取得、unnest ベースの一括 INSERT）
+- `upsertSingleGuild` は `upsert_user_guild` RPC を使用（resolveServerAuth の書き戻し用、削除なし）
+- SQL 関数の `permissions` パラメータは TEXT で受け取り、内部で `::BIGINT` キャスト（Number.MAX_SAFE_INTEGER 超えの精度保持）
 - `permissions` は BIGINT だが `@supabase/supabase-js` が string で返却するため、型定義で string を明示（`research.md` 参照）
 - ファイル配置: `lib/guilds/user-guilds-service.ts`
 
@@ -490,7 +495,7 @@ function createUserGuildsService(
 
 **Implementation Notes**
 - `fetchGuilds` の `getOrSetPendingRequest` コールバック内で、DB 照合後に `syncUserGuilds` を呼び出す
-- `syncUserGuilds` には `userId` と Discord API レスポンスから構築した `SyncGuildInput[]` を渡す
+- `syncUserGuilds` には Discord API レスポンスから構築した `SyncGuildInput[]` を渡す（`userId` は RPC 内で `auth.uid()` から取得）
 - `SupabaseClient` は `fetchGuilds` に新しい引数として追加するか、関数内で `createClient()` を呼び出す（後者は既存パターンを壊さないため推奨）
 - 同期処理は `try-catch` でラップし、失敗時は `captureException` + ログ出力のみ
 

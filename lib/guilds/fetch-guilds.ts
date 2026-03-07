@@ -194,7 +194,6 @@ async function syncMembership(
     }
   } catch (syncError) {
     captureException(syncError);
-    console.error("[fetchGuilds] user_guilds sync error:", syncError);
   }
 }
 
