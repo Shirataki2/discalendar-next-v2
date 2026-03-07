@@ -191,7 +191,7 @@ async function syncMembership(
     const service = createUserGuildsService(supabase);
     const result = await service.syncUserGuilds(userId, syncInputs);
     if (!result.success) {
-      console.error("[fetchGuilds] user_guilds sync failed:", result.error);
+      captureException(new Error(`[fetchGuilds] user_guilds sync failed: ${result.error.message}`));
     }
   } catch (syncError) {
     captureException(syncError);

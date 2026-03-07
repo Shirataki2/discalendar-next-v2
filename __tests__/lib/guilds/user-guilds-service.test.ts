@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  type UserGuildsServiceInterface,
   createUserGuildsService,
-} from "./user-guilds-service";
+  type UserGuildsServiceInterface,
+} from "@/lib/guilds/user-guilds-service";
 
 const mockSupabaseClient = {
   from: vi.fn(),
@@ -15,7 +15,7 @@ describe("UserGuildsService", () => {
     service = createUserGuildsService(
       mockSupabaseClient as unknown as Parameters<
         typeof createUserGuildsService
-      >[0],
+      >[0]
     );
   });
 
@@ -65,7 +65,7 @@ describe("UserGuildsService", () => {
           },
           { user_id: userId, guild_id: "guild-2", permissions: "0" },
         ],
-        { onConflict: "user_id,guild_id" },
+        { onConflict: "user_id,guild_id" }
       );
     });
 

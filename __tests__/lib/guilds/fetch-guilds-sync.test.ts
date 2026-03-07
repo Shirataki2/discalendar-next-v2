@@ -143,6 +143,8 @@ describe("fetchGuilds メンバーシップ同期", () => {
 
     // syncUserGuilds は呼ばれている
     expect(mockSyncUserGuilds).toHaveBeenCalledTimes(1);
+    // captureException でエラーが報告される
+    expect(captureException).toHaveBeenCalledTimes(1);
   });
 
   it("同期処理が例外をスローしてもギルド一覧は正常に返却される", async () => {

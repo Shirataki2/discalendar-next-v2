@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** PostgREST: .single() でレコードが見つからない場合のエラーコード */
+const POSTGREST_NOT_FOUND = "PGRST116";
+
 /**
  * user_guilds の DB Row 型（snake_case）
  */
@@ -10,15 +13,6 @@ interface UserGuildRow {
   updated_at: string;
 }
 
-/**
- * user_guilds のドメイン型（camelCase）
- */
-export interface UserGuild {
-  userId: string;
-  guildId: string;
-  permissions: string;
-  updatedAt: string;
-}
 
 /**
  * UserGuildsService エラー型
@@ -57,15 +51,6 @@ export interface UserGuildsServiceInterface {
     userId: string,
     guildId: string,
   ): Promise<UserGuildsMutationResult<string | null>>;
-}
-
-function toUserGuild(row: UserGuildRow): UserGuild {
-  return {
-    userId: row.user_id,
-    guildId: row.guild_id,
-    permissions: row.permissions,
-    updatedAt: row.updated_at,
-  };
 }
 
 /**
@@ -165,8 +150,7 @@ export function createUserGuildsService(
         .single();
 
       if (error) {
-        // PGRST116: not found → レコード不在（null を返す）
-        if (error.code === "PGRST116") {
+        if (error.code === POSTGREST_NOT_FOUND) {
           return { success: true, data: null };
         }
         return {

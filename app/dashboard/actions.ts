@@ -72,7 +72,13 @@ const GUILD_ID_REGEX = /^[\w-]{1,30}$/;
  * Server Action → クライアントの境界で使用し、
  * Supabase の内部エラーメッセージがクライアントに漏洩するのを防ぐ。
  */
-function sanitizeResult<T>(result: MutationResult<T>): MutationResult<T> {
+function sanitizeResult<T>(result: MutationResult<T>): MutationResult<T>;
+function sanitizeResult<T>(
+  result: GuildConfigMutationResult<T>
+): GuildConfigMutationResult<T>;
+function sanitizeResult<T>(
+  result: MutationResult<T> | GuildConfigMutationResult<T>
+) {
   if (result.success) {
     return result;
   }
@@ -189,7 +195,7 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
   const syncResult = await userGuildsService.syncUserGuilds(user.id, [
     { guildId, permissions: discordGuild.permissions },
   ]);
-  if (!syncResult.success) {
+  if (!syncResult.success && process.env.NODE_ENV !== "production") {
     console.error(
       "[resolveServerAuth] user_guilds sync failed:",
       syncResult.error
@@ -257,7 +263,7 @@ export async function updateGuildConfig(
     revalidatePath("/dashboard");
   }
 
-  return upsertResult;
+  return sanitizeResult(upsertResult);
 }
 
 // ──────────────────────────────────────────────
@@ -823,12 +829,12 @@ export async function updateNotificationChannel(
   );
 
   if (!result.success) {
-    const { details: _details, ...error } = result.error;
+    const { details, ...error } = result.error;
     if (process.env.NODE_ENV !== "production") {
       console.error("[updateNotificationChannel] upsert failed:", {
         code: error.code,
         message: error.message,
-        details: _details,
+        details,
         guildId: input.guildId,
       });
     }
