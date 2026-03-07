@@ -13,6 +13,7 @@
  * Requirements: 3.3, 3.4, 4.1, 4.2, 4.3
  */
 
+import { captureException } from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import {
   type CalendarError,
@@ -197,10 +198,11 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     guildId,
     permissions: discordGuild.permissions,
   });
-  if (!syncResult.success && process.env.NODE_ENV !== "production") {
-    console.error(
-      "[resolveServerAuth] user_guilds upsert failed:",
-      syncResult.error
+  if (!syncResult.success) {
+    captureException(
+      new Error(
+        `[resolveServerAuth] user_guilds upsert failed: ${syncResult.error.message}`
+      )
     );
   }
 

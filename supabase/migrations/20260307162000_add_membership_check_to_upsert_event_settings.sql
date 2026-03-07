@@ -4,7 +4,7 @@
 --
 -- Requirements: 6.1, 6.2, 6.3
 
--- 戻り値型を変更するため、既存関数を一度削除して再作成
+-- メンバーシップ検証を追加するため、既存関数を一度削除して再作成
 DROP FUNCTION IF EXISTS upsert_event_settings(TEXT, TEXT);
 
 CREATE FUNCTION upsert_event_settings(

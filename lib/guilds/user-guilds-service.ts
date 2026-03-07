@@ -13,12 +13,11 @@ interface UserGuildRow {
   updated_at: string;
 }
 
-
 /**
  * UserGuildsService エラー型
  */
 export interface UserGuildsError {
-  code: "SYNC_FAILED" | "FETCH_FAILED" | "DELETE_FAILED";
+  code: "SYNC_FAILED" | "FETCH_FAILED";
   message: string;
   details?: string;
 }
@@ -43,7 +42,6 @@ export interface SyncGuildInput {
  */
 export interface UserGuildsServiceInterface {
   syncUserGuilds(
-    userId: string,
     guilds: SyncGuildInput[],
   ): Promise<UserGuildsMutationResult<{ synced: number; removed: number }>>;
 
@@ -65,14 +63,13 @@ export function createUserGuildsService(
 ): UserGuildsServiceInterface {
   return {
     async syncUserGuilds(
-      _userId: string,
       guilds: SyncGuildInput[],
     ): Promise<
       UserGuildsMutationResult<{ synced: number; removed: number }>
     > {
       try {
         const guildIds = guilds.map((g) => g.guildId);
-        const permissions = guilds.map((g) => g.permissions);
+        const permissions = guilds.map((g) => Number(g.permissions));
 
         const { data, error } = await supabase.rpc("sync_user_guilds", {
           p_guild_ids: guildIds,
@@ -118,7 +115,7 @@ export function createUserGuildsService(
       try {
         const { error } = await supabase.rpc("upsert_user_guild", {
           p_guild_id: guild.guildId,
-          p_permissions: guild.permissions,
+          p_permissions: Number(guild.permissions),
         });
 
         if (error) {

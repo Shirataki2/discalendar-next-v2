@@ -26,7 +26,6 @@ describe("UserGuildsService", () => {
   });
 
   describe("syncUserGuilds", () => {
-    const userId = "user-uuid-123";
     const guilds = [
       { guildId: "guild-1", permissions: "2147483647" },
       { guildId: "guild-2", permissions: "0" },
@@ -38,7 +37,7 @@ describe("UserGuildsService", () => {
         error: null,
       });
 
-      const result = await service.syncUserGuilds(userId, guilds);
+      const result = await service.syncUserGuilds(guilds);
 
       expect(result).toEqual({
         success: true,
@@ -47,7 +46,7 @@ describe("UserGuildsService", () => {
 
       expect(mockRpc).toHaveBeenCalledWith("sync_user_guilds", {
         p_guild_ids: ["guild-1", "guild-2"],
-        p_permissions: ["2147483647", "0"],
+        p_permissions: [2_147_483_647, 0],
       });
     });
 
@@ -57,7 +56,7 @@ describe("UserGuildsService", () => {
         error: { message: "FK constraint violation" },
       });
 
-      const result = await service.syncUserGuilds(userId, guilds);
+      const result = await service.syncUserGuilds(guilds);
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -72,7 +71,7 @@ describe("UserGuildsService", () => {
         error: null,
       });
 
-      const result = await service.syncUserGuilds(userId, []);
+      const result = await service.syncUserGuilds([]);
 
       expect(result).toEqual({
         success: true,
@@ -88,7 +87,7 @@ describe("UserGuildsService", () => {
     it("例外発生時に SYNC_FAILED エラーを返す", async () => {
       mockRpc.mockRejectedValueOnce(new Error("Network error"));
 
-      const result = await service.syncUserGuilds(userId, guilds);
+      const result = await service.syncUserGuilds(guilds);
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -103,7 +102,7 @@ describe("UserGuildsService", () => {
         error: null,
       });
 
-      const result = await service.syncUserGuilds(userId, guilds);
+      const result = await service.syncUserGuilds(guilds);
 
       expect(result).toEqual({
         success: true,
@@ -124,7 +123,7 @@ describe("UserGuildsService", () => {
       expect(result).toEqual({ success: true, data: undefined });
       expect(mockRpc).toHaveBeenCalledWith("upsert_user_guild", {
         p_guild_id: "guild-1",
-        p_permissions: "32",
+        p_permissions: 32,
       });
     });
 

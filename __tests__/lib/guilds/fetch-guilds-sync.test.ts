@@ -113,7 +113,7 @@ describe("fetchGuilds メンバーシップ同期", () => {
 
     // syncUserGuilds が呼ばれている
     expect(mockSyncUserGuilds).toHaveBeenCalledTimes(1);
-    expect(mockSyncUserGuilds).toHaveBeenCalledWith(userId, [
+    expect(mockSyncUserGuilds).toHaveBeenCalledWith([
       { guildId: "guild-1", permissions: "2147483647" },
       { guildId: "guild-2", permissions: "0" },
     ]);
@@ -212,6 +212,6 @@ describe("fetchGuilds メンバーシップ同期", () => {
 
     expect(result.guilds).toEqual([]);
     // 空のギルドリストでも syncUserGuilds は呼ばれる（脱退検知のため）
-    expect(mockSyncUserGuilds).toHaveBeenCalledWith(userId, []);
+    expect(mockSyncUserGuilds).toHaveBeenCalledWith([]);
   });
 });

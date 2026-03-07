@@ -189,7 +189,7 @@ async function syncMembership(
   try {
     const supabase = await createClient();
     const service = createUserGuildsService(supabase);
-    const result = await service.syncUserGuilds(userId, syncInputs);
+    const result = await service.syncUserGuilds(syncInputs);
     if (!result.success) {
       captureException(new Error(`[fetchGuilds] user_guilds sync failed: ${result.error.message}`));
     }
