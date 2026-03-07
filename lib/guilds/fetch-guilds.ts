@@ -95,7 +95,7 @@ export async function fetchGuilds(
 
       if (guildIds.length === 0) {
         // 空ギルドでも同期を実行（脱退検知: 全レコード削除）
-        await syncMembership(userId, []);
+        await syncMembership([]);
 
         const emptyData: FetchGuildsData = {
           guilds: [],
@@ -129,7 +129,7 @@ export async function fetchGuilds(
           guildId: g.guildId,
           permissions: permissionsMap.get(g.guildId) ?? "0",
         }));
-        await syncMembership(userId, syncInputs);
+        await syncMembership(syncInputs);
 
         const data: FetchGuildsData = {
           guilds: guildsWithPermissions,
@@ -183,7 +183,6 @@ export async function fetchGuilds(
  * Requirements: 3.1, 3.2, 3.3, 3.4
  */
 async function syncMembership(
-  userId: string,
   syncInputs: SyncGuildInput[]
 ): Promise<void> {
   try {

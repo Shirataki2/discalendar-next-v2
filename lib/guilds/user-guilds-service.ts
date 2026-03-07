@@ -69,7 +69,7 @@ export function createUserGuildsService(
     > {
       try {
         const guildIds = guilds.map((g) => g.guildId);
-        const permissions = guilds.map((g) => Number(g.permissions));
+        const permissions = guilds.map((g) => g.permissions);
 
         const { data, error } = await supabase.rpc("sync_user_guilds", {
           p_guild_ids: guildIds,
@@ -115,7 +115,7 @@ export function createUserGuildsService(
       try {
         const { error } = await supabase.rpc("upsert_user_guild", {
           p_guild_id: guild.guildId,
-          p_permissions: Number(guild.permissions),
+          p_permissions: guild.permissions,
         });
 
         if (error) {
@@ -148,31 +148,44 @@ export function createUserGuildsService(
       userId: string,
       guildId: string,
     ): Promise<UserGuildsMutationResult<string | null>> {
-      const { data, error } = await supabase
-        .from("user_guilds")
-        .select("permissions")
-        .eq("user_id", userId)
-        .eq("guild_id", guildId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("user_guilds")
+          .select("permissions")
+          .eq("user_id", userId)
+          .eq("guild_id", guildId)
+          .single();
 
-      if (error) {
-        if (error.code === POSTGREST_NOT_FOUND) {
-          return { success: true, data: null };
+        if (error) {
+          if (error.code === POSTGREST_NOT_FOUND) {
+            return { success: true, data: null };
+          }
+          return {
+            success: false,
+            error: {
+              code: "FETCH_FAILED",
+              message: "権限情報の取得に失敗しました。",
+              details: error.message,
+            },
+          };
         }
+
+        return {
+          success: true,
+          data: (data as Pick<UserGuildRow, "permissions">).permissions,
+        };
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
         return {
           success: false,
           error: {
             code: "FETCH_FAILED",
             message: "権限情報の取得に失敗しました。",
-            details: error.message,
+            details: errorMessage,
           },
         };
       }
-
-      return {
-        success: true,
-        data: (data as Pick<UserGuildRow, "permissions">).permissions,
-      };
     },
   };
 }

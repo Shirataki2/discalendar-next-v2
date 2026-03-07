@@ -46,7 +46,7 @@ describe("UserGuildsService", () => {
 
       expect(mockRpc).toHaveBeenCalledWith("sync_user_guilds", {
         p_guild_ids: ["guild-1", "guild-2"],
-        p_permissions: [2_147_483_647, 0],
+        p_permissions: ["2147483647", "0"],
       });
     });
 
@@ -123,7 +123,7 @@ describe("UserGuildsService", () => {
       expect(result).toEqual({ success: true, data: undefined });
       expect(mockRpc).toHaveBeenCalledWith("upsert_user_guild", {
         p_guild_id: "guild-1",
-        p_permissions: 32,
+        p_permissions: "32",
       });
     });
 
