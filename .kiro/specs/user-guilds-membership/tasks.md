@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. user_guilds テーブル作成マイグレーション
+- [x] 1. user_guilds テーブル作成マイグレーション
 - [x] 1.1 テーブルスキーマとRLSポリシーのマイグレーションファイルを作成する
   - `user_guilds` テーブルを作成し、ユーザーID（UUID）とギルドID（VARCHAR(32)）をカラムとして定義する
   - ユーザーIDは `auth.users` への外部キー（ON DELETE CASCADE）、ギルドIDは `guilds(guild_id)` への外部キー（ON DELETE CASCADE）として設定する
@@ -12,7 +12,7 @@
   - パフォーマンス用インデックス（`user_id` 単体、`user_id + guild_id` 複合）を作成する
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 2. UserGuildsサービス層の実装
+- [x] 2. UserGuildsサービス層の実装
 - [x] 2.1 ドメイン型とエラー型を定義する
   - DBのRow型（snake_case）とドメイン型（camelCase）を定義し、変換関数を用意する
   - サービス固有のエラー型（同期失敗、取得失敗、削除失敗）を定義する
@@ -34,7 +34,7 @@
   - Supabaseクライアントをモックし、各メソッドのResult型レスポンスを検証する
   - _Requirements: 4.5_
 
-- [ ] 3. fetchGuildsへのメンバーシップ同期統合
+- [x] 3. fetchGuildsへのメンバーシップ同期統合
 - [x] 3.1 ギルド一覧取得時にuser_guildsテーブルへの同期処理を追加する
   - Discord APIからのギルド取得成功後に、サービス層の同期メソッドを呼び出してメンバーシップをupsertする
   - Discord APIレスポンスからギルドIDと権限文字列のペアリストを構築して同期メソッドに渡す
@@ -49,7 +49,7 @@
   - キャッシュヒット時に同期処理がスキップされることを検証する
   - _Requirements: 3.1, 3.4_
 
-- [ ] 4. resolveServerAuthの3-tier権限解決
+- [x] 4. resolveServerAuthの3-tier権限解決
 - [x] 4.1 (P) メモリキャッシュミス時にDBフォールバック層を追加する
   - 権限解決の順序を「メモリキャッシュ → user_guilds DB → Discord API」の3-tierに拡張する
   - キャッシュミス時にサービス層の権限取得メソッドでDBから権限を検索する
@@ -67,7 +67,7 @@
   - user_guildsが空の初期状態でDiscord APIフォールバックが正常動作することを検証する
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.4_
 
-- [ ] 5. 既存RLSポリシーのメンバーシップベース移行とSECURITY DEFINER更新
+- [x] 5. 既存RLSポリシーのメンバーシップベース移行とSECURITY DEFINER更新
 - [x] 5.1 user_guild_ids()ヘルパー関数とRLSポリシー移行のマイグレーションを作成する
   - SECURITY DEFINER + STABLEで`user_guild_ids()`関数を作成し、現在のユーザーが所属するギルドID一覧を返す（RLSパフォーマンス最適化）
   - `guild_config`のINSERT/UPDATEポリシーを `guild_id IN (SELECT user_guild_ids())` ベースに移行する
@@ -85,8 +85,8 @@
   - `CREATE OR REPLACE FUNCTION`でべき等に実行する
   - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 6. 後方互換性の検証
-- [ ] 6.1 既存テストの回帰確認を行う
+- [x] 6. 後方互換性の検証
+- [x] 6.1 既存テストの回帰確認を行う
   - マイグレーションが既存テーブル（guilds, guild_config, event_settings, events）のスキーマを変更していないことを確認する
   - 既存の単体テストが全て通ることを確認する
   - 既存のE2Eテストが全て通ることを確認する
