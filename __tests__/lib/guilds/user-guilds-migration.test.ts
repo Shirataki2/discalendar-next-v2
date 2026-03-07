@@ -1,18 +1,20 @@
 /**
- * Task 1.1: user_guilds テーブル作成マイグレーションのテスト
+ * user_guilds テーブル作成マイグレーションのテスト
  *
  * Requirements:
  * - 1.1: user_id (UUID, auth.users FK) と guild_id (VARCHAR(32), guilds FK) カラム
- * - 1.2: (user_id, guild_id) 複合ユニーク制約
+ * - 1.2: (user_id, guild_id) PRIMARY KEY
  * - 1.3: permissions カラム (BIGINT, DEFAULT 0)
  * - 1.4: updated_at カラム (TIMESTAMPTZ, DEFAULT NOW())
  * - 1.5: guilds ON DELETE CASCADE
  * - 1.6: auth.users ON DELETE CASCADE
  * - 2.1: RLS 有効化
  * - 2.2: SELECT ポリシー (auth.uid() = user_id)
- * - 2.3: INSERT ポリシー (auth.uid() = user_id)
- * - 2.4: UPDATE ポリシー (auth.uid() = user_id)
- * - 2.5: DELETE ポリシー (auth.uid() = user_id)
+ * - 2.3: クライアント直接書き込み禁止（INSERT/UPDATE/DELETE ポリシーなし）
+ * - 3.1: upsert_user_guild SECURITY DEFINER 関数
+ * - 3.2: sync_user_guilds SECURITY DEFINER 関数
+ * - 3.3: user_guild_ids SECURITY DEFINER 関数
+ * - 3.4: REVOKE/GRANT による最小権限
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -24,7 +26,7 @@ const SUPABASE_MIGRATIONS_DIR = join(process.cwd(), "supabase", "migrations");
 function getUserGuildsMigrationSql(): string {
   const files = readdirSync(SUPABASE_MIGRATIONS_DIR);
   const migration = files.find(
-    (f) => f.includes("user_guilds") && f.endsWith(".sql")
+    (f) => f.includes("create_user_guilds_table") && f.endsWith(".sql")
   );
   if (!migration) {
     throw new Error("user_guilds migration file not found");
@@ -32,16 +34,16 @@ function getUserGuildsMigrationSql(): string {
   return readFileSync(join(SUPABASE_MIGRATIONS_DIR, migration), "utf-8");
 }
 
-describe("Task 1.1: user_guilds table migration", () => {
+describe("user_guilds table migration", () => {
   it("should have a migration file for user_guilds table", () => {
     const files = readdirSync(SUPABASE_MIGRATIONS_DIR);
     const migration = files.find(
-      (f) => f.includes("user_guilds") && f.endsWith(".sql")
+      (f) => f.includes("create_user_guilds_table") && f.endsWith(".sql")
     );
     expect(migration).toBeDefined();
   });
 
-  describe("Requirement 1: テーブルスキーマ", () => {
+  describe("テーブルスキーマ", () => {
     it("should create user_guilds table", () => {
       const sql = getUserGuildsMigrationSql();
       expect(sql).toMatch(/CREATE\s+TABLE\s+user_guilds/i);
@@ -51,7 +53,6 @@ describe("Task 1.1: user_guilds table migration", () => {
       const sql = getUserGuildsMigrationSql();
       expect(sql).toMatch(/user_id\s+UUID\s+NOT\s+NULL/i);
       expect(sql).toMatch(/REFERENCES\s+auth\.users/i);
-      // auth.users FK に ON DELETE CASCADE
       expect(sql).toMatch(/REFERENCES\s+auth\.users.*ON\s+DELETE\s+CASCADE/i);
     });
 
@@ -75,12 +76,9 @@ describe("Task 1.1: user_guilds table migration", () => {
       );
     });
 
-    it("should define UNIQUE or PRIMARY KEY constraint on (user_id, guild_id) (Req 1.2)", () => {
+    it("should define PRIMARY KEY on (user_id, guild_id) (Req 1.2)", () => {
       const sql = getUserGuildsMigrationSql();
-      // Original migration has UNIQUE, later migration upgrades to PRIMARY KEY
-      expect(sql).toMatch(
-        /(UNIQUE|PRIMARY\s+KEY)\s*\(\s*user_id\s*,\s*guild_id\s*\)/i
-      );
+      expect(sql).toMatch(/PRIMARY\s+KEY\s*\(\s*user_id\s*,\s*guild_id\s*\)/i);
     });
 
     it("should create update_updated_at trigger using existing function", () => {
@@ -90,7 +88,7 @@ describe("Task 1.1: user_guilds table migration", () => {
     });
   });
 
-  describe("Requirement 2: RLSポリシー", () => {
+  describe("RLS ポリシー", () => {
     it("should enable RLS on user_guilds table (Req 2.1)", () => {
       const sql = getUserGuildsMigrationSql();
       expect(sql).toMatch(
@@ -100,45 +98,79 @@ describe("Task 1.1: user_guilds table migration", () => {
 
     it("should create SELECT policy with auth.uid() = user_id (Req 2.2)", () => {
       const sql = getUserGuildsMigrationSql();
-      // SELECT ポリシーの存在を確認
       expect(sql).toMatch(/FOR\s+SELECT/i);
       expect(sql).toMatch(/TO\s+authenticated/i);
+      expect(sql).toMatch(/auth\.uid\(\)\s*=\s*user_id/i);
     });
 
-    it("should create INSERT policy with auth.uid() = user_id (Req 2.3)", () => {
+    it("should NOT have INSERT/UPDATE/DELETE policies for authenticated (Req 2.3)", () => {
       const sql = getUserGuildsMigrationSql();
-      expect(sql).toMatch(/FOR\s+INSERT/i);
-    });
-
-    it("should create UPDATE policy with auth.uid() = user_id (Req 2.4)", () => {
-      const sql = getUserGuildsMigrationSql();
-      expect(sql).toMatch(/FOR\s+UPDATE/i);
-    });
-
-    it("should create DELETE policy with auth.uid() = user_id (Req 2.5)", () => {
-      const sql = getUserGuildsMigrationSql();
-      expect(sql).toMatch(/FOR\s+DELETE/i);
-    });
-
-    it("should use auth.uid() = user_id condition in all RLS policies", () => {
-      const sql = getUserGuildsMigrationSql();
-      // auth.uid() = user_id が複数回使われていることを確認
-      const matches = sql.match(/auth\.uid\(\)\s*=\s*user_id/gi);
-      expect(matches).not.toBeNull();
-      // SELECT(USING), INSERT(WITH CHECK), UPDATE(USING + WITH CHECK), DELETE(USING) = 少なくとも5箇所
-      expect(matches!.length).toBeGreaterThanOrEqual(5);
+      expect(sql).not.toMatch(/CREATE\s+POLICY.*FOR\s+INSERT/i);
+      expect(sql).not.toMatch(/CREATE\s+POLICY.*FOR\s+UPDATE/i);
+      expect(sql).not.toMatch(/CREATE\s+POLICY.*FOR\s+DELETE/i);
     });
   });
 
-  describe("パフォーマンス用インデックス", () => {
-    it("should create index on user_id", () => {
+  describe("SECURITY DEFINER 関数", () => {
+    it("should create upsert_user_guild function with TEXT param (Req 3.1)", () => {
       const sql = getUserGuildsMigrationSql();
-      expect(sql).toMatch(/CREATE\s+INDEX\s+idx_user_guilds_user_id/i);
+      expect(sql).toMatch(/CREATE\s+FUNCTION\s+upsert_user_guild\s*\(/i);
+      expect(sql).toMatch(/p_permissions\s+TEXT/i);
+      expect(sql).toMatch(/SECURITY\s+DEFINER/i);
     });
 
-    it("should create composite index on (user_id, guild_id)", () => {
+    it("should create sync_user_guilds function with TEXT[] param and unnest (Req 3.2)", () => {
       const sql = getUserGuildsMigrationSql();
-      expect(sql).toMatch(/CREATE\s+INDEX\s+idx_user_guilds_user_guild/i);
+      expect(sql).toMatch(/CREATE\s+FUNCTION\s+sync_user_guilds\s*\(/i);
+      expect(sql).toMatch(/p_permissions\s+TEXT\[\]/i);
+      expect(sql).toMatch(/unnest/i);
+    });
+
+    it("should create user_guild_ids function with STABLE (Req 3.3)", () => {
+      const sql = getUserGuildsMigrationSql();
+      expect(sql).toMatch(/CREATE\s+FUNCTION\s+user_guild_ids\s*\(\)/i);
+      expect(sql).toMatch(/STABLE/i);
+    });
+
+    it("should set search_path = public on all functions", () => {
+      const sql = getUserGuildsMigrationSql();
+      const matches = sql.match(/SET\s+search_path\s*=\s*public/gi) || [];
+      expect(matches.length).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  describe("REVOKE/GRANT（最小権限）", () => {
+    it("should REVOKE ALL FROM PUBLIC on all functions (Req 3.4)", () => {
+      const sql = getUserGuildsMigrationSql();
+      expect(sql).toMatch(
+        /REVOKE\s+ALL\s+ON\s+FUNCTION\s+upsert_user_guild.*FROM\s+PUBLIC/i
+      );
+      expect(sql).toMatch(
+        /REVOKE\s+ALL\s+ON\s+FUNCTION\s+sync_user_guilds.*FROM\s+PUBLIC/i
+      );
+      expect(sql).toMatch(
+        /REVOKE\s+ALL\s+ON\s+FUNCTION\s+user_guild_ids\(\)\s+FROM\s+PUBLIC/i
+      );
+    });
+
+    it("should GRANT EXECUTE to authenticated on write functions", () => {
+      const sql = getUserGuildsMigrationSql();
+      expect(sql).toMatch(
+        /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+upsert_user_guild.*TO\s+authenticated/i
+      );
+      expect(sql).toMatch(
+        /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+sync_user_guilds.*TO\s+authenticated/i
+      );
+    });
+
+    it("should GRANT EXECUTE on user_guild_ids to authenticated and service_role", () => {
+      const sql = getUserGuildsMigrationSql();
+      expect(sql).toMatch(
+        /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+user_guild_ids\(\)\s+TO\s+authenticated/i
+      );
+      expect(sql).toMatch(
+        /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+user_guild_ids\(\)\s+TO\s+service_role/i
+      );
     });
   });
 });
