@@ -38,6 +38,14 @@ vi.mock("@/lib/guilds/guild-config-service", () => ({
   }),
 }));
 
+// Mock EventSettingsService
+const mockGetEventSettings = vi.fn();
+vi.mock("@/lib/guilds/event-settings-service", () => ({
+  createEventSettingsService: () => ({
+    getEventSettings: mockGetEventSettings,
+  }),
+}));
+
 // Mock buildDashboardUser
 vi.mock("@/lib/user/build-dashboard-user", () => ({
   buildDashboardUser: (user: { id: string; email?: string }) => ({
@@ -56,6 +64,7 @@ vi.mock("@/components/dashboard/dashboard-header", () => ({
 // Mock GuildSettingsForm to capture props
 const mockGuildSettingsForm = vi.fn(
   (props: {
+    currentChannelId: string | null;
     guild: { guildId: string; name: string; avatarUrl: string | null };
     restricted: boolean;
   }) => (
@@ -70,6 +79,7 @@ const mockGuildSettingsForm = vi.fn(
 );
 vi.mock("@/components/guilds/guild-settings-form", () => ({
   GuildSettingsForm: (props: {
+    currentChannelId: string | null;
     guild: { guildId: string; name: string; avatarUrl: string | null };
     restricted: boolean;
   }) => mockGuildSettingsForm(props),
@@ -128,6 +138,10 @@ describe("GuildSettingsPage", () => {
     vi.clearAllMocks();
     mockGetSession.mockResolvedValue({
       data: { session: { provider_token: "mock-token" } },
+    });
+    mockGetEventSettings.mockResolvedValue({
+      success: true,
+      data: null,
     });
   });
 
@@ -290,6 +304,7 @@ describe("GuildSettingsPage", () => {
 
       // GuildSettingsForm が正しい props で呼ばれること
       expect(mockGuildSettingsForm).toHaveBeenCalledWith({
+        currentChannelId: null,
         guild: {
           guildId: "guild-1",
           name: "Test Server",

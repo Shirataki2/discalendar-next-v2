@@ -66,6 +66,18 @@ vi.mock("@/lib/guilds/guild-config-service", () => ({
   })),
 }));
 
+// UserGuildsService モック（resolveServerAuth 3-tier で使用）
+const mockGetUserGuildPermissions = vi.fn();
+const mockSyncUserGuilds = vi.fn();
+const mockUpsertSingleGuild = vi.fn();
+vi.mock("@/lib/guilds/user-guilds-service", () => ({
+  createUserGuildsService: vi.fn(() => ({
+    getUserGuildPermissions: mockGetUserGuildPermissions,
+    syncUserGuilds: mockSyncUserGuilds,
+    upsertSingleGuild: mockUpsertSingleGuild,
+  })),
+}));
+
 import {
   fetchGuildChannels,
   updateNotificationChannel,
@@ -110,7 +122,7 @@ function setupAuthenticatedUser(permissions = ADMIN_PERMISSIONS) {
   mockGetCachedGuilds.mockReturnValueOnce({
     guilds: [
       {
-        guildId: "guild-123",
+        guildId: "98765432101234567",
         name: "Test Guild",
         permissions,
       },
@@ -138,7 +150,7 @@ describe("fetchGuildChannels Server Action", () => {
       error: { message: "Not authenticated" },
     });
 
-    const result = await fetchGuildChannels("guild-123");
+    const result = await fetchGuildChannels("98765432101234567");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -147,9 +159,7 @@ describe("fetchGuildChannels Server Action", () => {
   });
 
   it("無効なギルドIDの場合 VALIDATION_ERROR を返す", async () => {
-    const result = await fetchGuildChannels(
-      "a".repeat(31) // 31文字 = 上限超過
-    );
+    const result = await fetchGuildChannels("not-a-snowflake-id");
 
     // guildId のバリデーションは resolveServerAuth 前に実施
     expect(result.success).toBe(false);
@@ -176,13 +186,13 @@ describe("fetchGuildChannels Server Action", () => {
       data: channels,
     });
 
-    const result = await fetchGuildChannels("guild-123");
+    const result = await fetchGuildChannels("98765432101234567");
 
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toEqual(channels);
     }
-    expect(mockGetGuildChannels).toHaveBeenCalledWith("guild-123");
+    expect(mockGetGuildChannels).toHaveBeenCalledWith("98765432101234567");
   });
 
   it("Discord API エラーの場合エラーを返す", async () => {
@@ -196,7 +206,7 @@ describe("fetchGuildChannels Server Action", () => {
       },
     });
 
-    const result = await fetchGuildChannels("guild-123");
+    const result = await fetchGuildChannels("98765432101234567");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -210,12 +220,20 @@ describe("fetchGuildChannels Server Action", () => {
       error: null,
     });
     mockGetCachedGuilds.mockReturnValueOnce(null);
+    mockGetUserGuildPermissions.mockResolvedValueOnce({
+      success: true,
+      data: null,
+    }); // DBミス
+    mockUpsertSingleGuild.mockResolvedValueOnce({
+      success: true,
+      data: undefined,
+    });
     mockGetSession.mockResolvedValueOnce({
       data: { session: { provider_token: "discord-token" } },
     });
     mockGetUserGuilds.mockResolvedValueOnce({
       success: true,
-      data: [{ id: "guild-123", name: "Test", permissions: "8" }],
+      data: [{ id: "98765432101234567", name: "Test", permissions: "8" }],
     });
 
     const channels = [
@@ -233,7 +251,7 @@ describe("fetchGuildChannels Server Action", () => {
       data: channels,
     });
 
-    const result = await fetchGuildChannels("guild-123");
+    const result = await fetchGuildChannels("98765432101234567");
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -259,7 +277,7 @@ describe("fetchGuildChannels Server Action", () => {
       data: channels,
     });
 
-    const result = await fetchGuildChannels("guild-123");
+    const result = await fetchGuildChannels("98765432101234567");
 
     // 閲覧は MANAGE_GUILD 権限不要
     expect(result.success).toBe(true);
@@ -286,7 +304,7 @@ describe("updateNotificationChannel Server Action", () => {
     });
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "12345678901234567",
     });
 
@@ -300,7 +318,7 @@ describe("updateNotificationChannel Server Action", () => {
     setupAuthenticatedUser(NO_PERMISSIONS);
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "12345678901234567",
     });
 
@@ -327,7 +345,7 @@ describe("updateNotificationChannel Server Action", () => {
     setupAuthenticatedUser();
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "not-a-snowflake",
     });
 
@@ -342,7 +360,7 @@ describe("updateNotificationChannel Server Action", () => {
     setupAuthenticatedUser();
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "1234567890123456", // 16桁 = 短すぎ
     });
 
@@ -357,23 +375,23 @@ describe("updateNotificationChannel Server Action", () => {
 
     mockUpsertEventSettings.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-123", channelId: "12345678901234567" },
+      data: { guildId: "98765432101234567", channelId: "12345678901234567" },
     });
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "12345678901234567",
     });
 
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toEqual({
-        guildId: "guild-123",
+        guildId: "98765432101234567",
         channelId: "12345678901234567",
       });
     }
     expect(mockUpsertEventSettings).toHaveBeenCalledWith(
-      "guild-123",
+      "98765432101234567",
       "12345678901234567"
     );
   });
@@ -391,7 +409,7 @@ describe("updateNotificationChannel Server Action", () => {
     });
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "12345678901234567",
     });
 
@@ -411,7 +429,7 @@ describe("updateNotificationChannel Server Action", () => {
     mockGetCachedGuilds.mockReturnValueOnce({
       guilds: [
         {
-          guildId: "guild-123",
+          guildId: "98765432101234567",
           name: "Test Guild",
           permissions: {
             administrator: false,
@@ -431,11 +449,11 @@ describe("updateNotificationChannel Server Action", () => {
 
     mockUpsertEventSettings.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-123", channelId: "12345678901234567" },
+      data: { guildId: "98765432101234567", channelId: "12345678901234567" },
     });
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "12345678901234567",
     });
 
@@ -449,13 +467,13 @@ describe("updateNotificationChannel Server Action", () => {
     mockUpsertEventSettings.mockResolvedValueOnce({
       success: true,
       data: {
-        guildId: "guild-123",
+        guildId: "98765432101234567",
         channelId: "12345678901234567890",
       },
     });
 
     const result = await updateNotificationChannel({
-      guildId: "guild-123",
+      guildId: "98765432101234567",
       channelId: "12345678901234567890", // 20桁
     });
 

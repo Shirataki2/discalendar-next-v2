@@ -49,6 +49,18 @@ vi.mock("@/lib/discord/client", () => ({
   getUserGuilds: (...args: unknown[]) => mockGetUserGuilds(...args),
 }));
 
+// UserGuildsService モック（resolveServerAuth 3-tier で使用）
+const mockGetUserGuildPermissions = vi.fn();
+const mockSyncUserGuilds = vi.fn();
+const mockUpsertSingleGuild = vi.fn();
+vi.mock("@/lib/guilds/user-guilds-service", () => ({
+  createUserGuildsService: vi.fn(() => ({
+    getUserGuildPermissions: mockGetUserGuildPermissions,
+    syncUserGuilds: mockSyncUserGuilds,
+    upsertSingleGuild: mockUpsertSingleGuild,
+  })),
+}));
+
 import { revalidatePath } from "next/cache";
 import { updateGuildConfig } from "@/app/dashboard/actions";
 
@@ -166,6 +178,14 @@ describe("updateGuildConfig Server Action", () => {
       error: null,
     });
     mockGetCachedGuilds.mockReturnValueOnce(null); // キャッシュミス
+    mockGetUserGuildPermissions.mockResolvedValueOnce({
+      success: true,
+      data: null,
+    }); // DBミス
+    mockUpsertSingleGuild.mockResolvedValueOnce({
+      success: true,
+      data: undefined,
+    });
     mockGetSession.mockResolvedValueOnce({
       data: { session: { provider_token: "discord-token" } },
     });
@@ -196,6 +216,10 @@ describe("updateGuildConfig Server Action", () => {
       error: null,
     });
     mockGetCachedGuilds.mockReturnValueOnce(null);
+    mockGetUserGuildPermissions.mockResolvedValueOnce({
+      success: true,
+      data: null,
+    }); // DBミス
     mockGetSession.mockResolvedValueOnce({
       data: { session: null },
     });
@@ -293,6 +317,10 @@ describe("updateGuildConfig Server Action", () => {
       error: null,
     });
     mockGetCachedGuilds.mockReturnValueOnce(null);
+    mockGetUserGuildPermissions.mockResolvedValueOnce({
+      success: true,
+      data: null,
+    }); // DBミス
     mockGetSession.mockResolvedValueOnce({
       data: { session: { provider_token: "discord-token" } },
     });

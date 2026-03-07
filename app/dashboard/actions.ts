@@ -13,6 +13,7 @@
  * Requirements: 3.3, 3.4, 4.1, 4.2, 4.3
  */
 
+import { captureException } from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import {
   type CalendarError,
@@ -52,6 +53,7 @@ import {
   type GuildConfigMutationResult,
 } from "@/lib/guilds/guild-config-service";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
+import { createUserGuildsService } from "@/lib/guilds/user-guilds-service";
 import { createClient } from "@/lib/supabase/server";
 import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 import type { GuildPermissionInfo } from "./dashboard-with-calendar";
@@ -62,8 +64,8 @@ const UNAUTHORIZED_ERROR: CalendarError = {
   message: "認証が必要です。再度ログインしてください。",
 };
 
-/** guild_id のフォーマット検証（英数字・ハイフンのみ、1〜30文字） */
-const GUILD_ID_REGEX = /^[\w-]{1,30}$/;
+/** guild_id のフォーマット検証（Discord Snowflake: 数値17〜20桁） */
+const GUILD_ID_PATTERN = SNOWFLAKE_PATTERN;
 
 /**
  * MutationResult からデバッグ用の details フィールドを除去する
@@ -71,7 +73,13 @@ const GUILD_ID_REGEX = /^[\w-]{1,30}$/;
  * Server Action → クライアントの境界で使用し、
  * Supabase の内部エラーメッセージがクライアントに漏洩するのを防ぐ。
  */
-function sanitizeResult<T>(result: MutationResult<T>): MutationResult<T> {
+function sanitizeResult<T>(result: MutationResult<T>): MutationResult<T>;
+function sanitizeResult<T>(
+  result: GuildConfigMutationResult<T>
+): GuildConfigMutationResult<T>;
+function sanitizeResult<T>(
+  result: MutationResult<T> | GuildConfigMutationResult<T>
+) {
   if (result.success) {
     return result;
   }
@@ -98,7 +106,8 @@ type AuthResult =
  *
  * クライアント入力を一切信頼せず、以下の順序で権限を取得する:
  * 1. メモリキャッシュ（getCachedGuilds）からギルド権限を検索
- * 2. キャッシュミス時は Discord API から取得
+ * 2. user_guilds DB からフォールバック
+ * 3. Discord API からフォールバック（成功時は DB に書き戻し）
  *
  * @param guildId 対象ギルドID
  */
@@ -127,7 +136,25 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     }
   }
 
-  // 2. Discord API から取得
+  // 2. user_guilds DB からフォールバック
+  const userGuildsService = createUserGuildsService(supabase);
+  const dbResult = await userGuildsService.getUserGuildPermissions(
+    user.id,
+    guildId
+  );
+
+  if (dbResult.success && dbResult.data !== null) {
+    return {
+      success: true,
+      auth: {
+        supabase,
+        userId: user.id,
+        permissions: parsePermissions(dbResult.data),
+      },
+    };
+  }
+
+  // 3. Discord API からフォールバック
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -154,10 +181,6 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     };
   }
 
-  // TODO(DIS-15): Discord API 結果をキャッシュに反映する
-  // setCachedGuilds は GuildWithPermissions[]（DB結合済み）を要求するため、
-  // ここでは直接利用できない。user_guilds テーブル導入時にキャッシュ更新を追加する。
-
   const discordGuild = discordResult.data.find((g) => g.id === guildId);
   if (!discordGuild) {
     return {
@@ -167,6 +190,20 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
         message: "このギルドのメンバーではありません。",
       },
     };
+  }
+
+  // Discord API 成功時に user_guilds へ書き戻し（次回以降の DB 参照を可能にする）
+  // upsertSingleGuild を使用し、他ギルドのメンバーシップを削除しない
+  const syncResult = await userGuildsService.upsertSingleGuild({
+    guildId,
+    permissions: discordGuild.permissions,
+  });
+  if (!syncResult.success) {
+    captureException(
+      new Error(
+        `[resolveServerAuth] user_guilds upsert failed: ${syncResult.error.message}`
+      )
+    );
   }
 
   return {
@@ -230,7 +267,7 @@ export async function updateGuildConfig(
     revalidatePath("/dashboard");
   }
 
-  return upsertResult;
+  return sanitizeResult(upsertResult);
 }
 
 // ──────────────────────────────────────────────
@@ -266,7 +303,7 @@ async function authorizeEventOperation(
   | { success: true; supabase: Awaited<ReturnType<typeof createClient>> }
   | { success: false; error: MutationResult<never> }
 > {
-  if (!GUILD_ID_REGEX.test(guildId)) {
+  if (!GUILD_ID_PATTERN.test(guildId)) {
     return {
       success: false,
       error: {
@@ -688,7 +725,7 @@ type FetchGuildChannelsResult =
 export async function fetchGuildChannels(
   guildId: string
 ): Promise<FetchGuildChannelsResult> {
-  if (!GUILD_ID_REGEX.test(guildId)) {
+  if (!GUILD_ID_PATTERN.test(guildId)) {
     return {
       success: false,
       error: {
@@ -745,7 +782,7 @@ type UpdateNotificationChannelInput = {
 export async function updateNotificationChannel(
   input: UpdateNotificationChannelInput
 ): Promise<EventSettingsMutationResult<EventSettings>> {
-  if (!GUILD_ID_REGEX.test(input.guildId)) {
+  if (!GUILD_ID_PATTERN.test(input.guildId)) {
     return {
       success: false,
       error: {
@@ -796,12 +833,12 @@ export async function updateNotificationChannel(
   );
 
   if (!result.success) {
-    const { details: _details, ...error } = result.error;
+    const { details, ...error } = result.error;
     if (process.env.NODE_ENV !== "production") {
       console.error("[updateNotificationChannel] upsert failed:", {
         code: error.code,
         message: error.message,
-        details: _details,
+        details,
         guildId: input.guildId,
       });
     }

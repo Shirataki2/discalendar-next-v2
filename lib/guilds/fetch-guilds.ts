@@ -16,6 +16,11 @@ import type {
   GuildWithPermissions,
   InvitableGuild,
 } from "@/lib/guilds/types";
+import { createClient } from "@/lib/supabase/server";
+import {
+  type SyncGuildInput,
+  createUserGuildsService,
+} from "@/lib/guilds/user-guilds-service";
 
 /**
  * ギルド一覧を取得する（キャッシュ対応）
@@ -89,6 +94,9 @@ export async function fetchGuilds(
       const guildIds = discordResult.data.map((guild) => guild.id);
 
       if (guildIds.length === 0) {
+        // 空ギルドでも同期を実行（脱退検知: 全レコード削除）
+        await syncMembership([]);
+
         const emptyData: FetchGuildsData = {
           guilds: [],
           invitableGuilds: [],
@@ -115,6 +123,13 @@ export async function fetchGuilds(
           joinedGuildIds,
           permissionsMap
         );
+
+        // user_guilds テーブルへの同期（DB に存在するギルドのみ）
+        const syncInputs: SyncGuildInput[] = joinedGuilds.map((g) => ({
+          guildId: g.guildId,
+          permissions: permissionsMap.get(g.guildId) ?? "0",
+        }));
+        await syncMembership(syncInputs);
 
         const data: FetchGuildsData = {
           guilds: guildsWithPermissions,
@@ -158,6 +173,27 @@ export async function fetchGuilds(
       invitableGuilds: [],
       error: { type: "api_error", message: errorMessage },
     };
+  }
+}
+
+/**
+ * user_guilds テーブルへのメンバーシップ同期
+ *
+ * 同期失敗時はエラーをログに記録し、呼び出し元の処理は継続する。
+ * Requirements: 3.1, 3.2, 3.3, 3.4
+ */
+async function syncMembership(
+  syncInputs: SyncGuildInput[]
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const service = createUserGuildsService(supabase);
+    const result = await service.syncUserGuilds(syncInputs);
+    if (!result.success) {
+      captureException(new Error(`[fetchGuilds] user_guilds sync failed: ${result.error.message}`));
+    }
+  } catch (syncError) {
+    captureException(syncError);
   }
 }
 
