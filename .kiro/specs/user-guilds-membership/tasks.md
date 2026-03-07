@@ -68,7 +68,7 @@
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.4_
 
 - [ ] 5. 既存RLSポリシーのメンバーシップベース移行とSECURITY DEFINER更新
-- [ ] 5.1 user_guild_ids()ヘルパー関数とRLSポリシー移行のマイグレーションを作成する
+- [x] 5.1 user_guild_ids()ヘルパー関数とRLSポリシー移行のマイグレーションを作成する
   - SECURITY DEFINER + STABLEで`user_guild_ids()`関数を作成し、現在のユーザーが所属するギルドID一覧を返す（RLSパフォーマンス最適化）
   - `guild_config`のINSERT/UPDATEポリシーを `guild_id IN (SELECT user_guild_ids())` ベースに移行する
   - `event_settings`のINSERT/UPDATEポリシーを同様に移行する
@@ -78,7 +78,7 @@
   - 既存ポリシーの`DROP POLICY IF EXISTS`と新ポリシーの`CREATE POLICY`でべき等に実行する
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 5.2 upsert_event_settings関数にメンバーシップ検証を追加するマイグレーションを作成する
+- [x] 5.2 upsert_event_settings関数にメンバーシップ検証を追加するマイグレーションを作成する
   - 既存の`auth.uid() IS NULL`チェック（認証チェック）を保持する
   - 認証チェックの後に`user_guilds`テーブルで`(auth.uid(), p_guild_id)`のレコード存在確認を追加する
   - メンバーシップレコードが存在しない場合に`'Forbidden: user is not a member of this guild'`例外を発生させる
