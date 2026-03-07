@@ -52,6 +52,7 @@ import {
   type GuildConfigMutationResult,
 } from "@/lib/guilds/guild-config-service";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
+import { createUserGuildsService } from "@/lib/guilds/user-guilds-service";
 import { createClient } from "@/lib/supabase/server";
 import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 import type { GuildPermissionInfo } from "./dashboard-with-calendar";
@@ -98,7 +99,8 @@ type AuthResult =
  *
  * クライアント入力を一切信頼せず、以下の順序で権限を取得する:
  * 1. メモリキャッシュ（getCachedGuilds）からギルド権限を検索
- * 2. キャッシュミス時は Discord API から取得
+ * 2. user_guilds DB からフォールバック
+ * 3. Discord API からフォールバック（成功時は DB に書き戻し）
  *
  * @param guildId 対象ギルドID
  */
@@ -127,7 +129,25 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     }
   }
 
-  // 2. Discord API から取得
+  // 2. user_guilds DB からフォールバック
+  const userGuildsService = createUserGuildsService(supabase);
+  const dbResult = await userGuildsService.getUserGuildPermissions(
+    user.id,
+    guildId
+  );
+
+  if (dbResult.success && dbResult.data !== null) {
+    return {
+      success: true,
+      auth: {
+        supabase,
+        userId: user.id,
+        permissions: parsePermissions(dbResult.data),
+      },
+    };
+  }
+
+  // 3. Discord API からフォールバック
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -154,10 +174,6 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
     };
   }
 
-  // TODO(DIS-15): Discord API 結果をキャッシュに反映する
-  // setCachedGuilds は GuildWithPermissions[]（DB結合済み）を要求するため、
-  // ここでは直接利用できない。user_guilds テーブル導入時にキャッシュ更新を追加する。
-
   const discordGuild = discordResult.data.find((g) => g.id === guildId);
   if (!discordGuild) {
     return {
@@ -167,6 +183,17 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
         message: "このギルドのメンバーではありません。",
       },
     };
+  }
+
+  // Discord API 成功時に user_guilds へ書き戻し（次回以降の DB 参照を可能にする）
+  const syncResult = await userGuildsService.syncUserGuilds(user.id, [
+    { guildId, permissions: discordGuild.permissions },
+  ]);
+  if (!syncResult.success) {
+    console.error(
+      "[resolveServerAuth] user_guilds sync failed:",
+      syncResult.error
+    );
   }
 
   return {

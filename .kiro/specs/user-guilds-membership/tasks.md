@@ -50,7 +50,7 @@
   - _Requirements: 3.1, 3.4_
 
 - [ ] 4. resolveServerAuthの3-tier権限解決
-- [ ] 4.1 (P) メモリキャッシュミス時にDBフォールバック層を追加する
+- [x] 4.1 (P) メモリキャッシュミス時にDBフォールバック層を追加する
   - 権限解決の順序を「メモリキャッシュ → user_guilds DB → Discord API」の3-tierに拡張する
   - キャッシュミス時にサービス層の権限取得メソッドでDBから権限を検索する
   - DBにレコードが存在する場合、権限文字列を既存のparsePermissionsで解析して認証結果を返す
@@ -59,7 +59,7 @@
   - user_guildsテーブルが空の初期状態ではDBフォールバックが常にnullを返し、既存のDiscord APIフォールバックが実行される（段階的移行をサポート）
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.4_
 
-- [ ] 4.2 (P) resolveServerAuth 3-tierの単体テストを作成する
+- [x] 4.2 (P) resolveServerAuth 3-tierの単体テストを作成する
   - キャッシュヒット時にDB/Discord APIが呼ばれないことを検証する
   - キャッシュミス + DBヒット時にDiscord APIが呼ばれず、DBの権限が使われることを検証する
   - キャッシュミス + DBミス + Discord API成功時にDBへの書き戻しが行われることを検証する
