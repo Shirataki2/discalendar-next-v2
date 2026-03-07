@@ -49,7 +49,7 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 
-refs/DisCalendarV2/
+/refs/
 
 *storybook.log
 storybook-static

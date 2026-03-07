@@ -6,7 +6,12 @@ export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
     environment: "jsdom",
-    exclude: ["refs/**/*", "node_modules/**/*", "e2e_tests/**/*"],
+    exclude: [
+      "refs/**/*",
+      "node_modules/**/*",
+      "e2e_tests/**/*",
+      "packages/**/*",
+    ],
     setupFiles: ["./vitest-setup.ts"],
     maxWorkers: "75%",
     testTimeout: 10_000,
