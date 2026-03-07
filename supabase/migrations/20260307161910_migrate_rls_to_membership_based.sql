@@ -27,6 +27,8 @@ $$;
 -- =============================================================================
 DROP POLICY IF EXISTS "authenticated_users_can_insert_guild_config" ON guild_config;
 DROP POLICY IF EXISTS "authenticated_users_can_update_guild_config" ON guild_config;
+DROP POLICY IF EXISTS "members_can_insert_guild_config" ON guild_config;
+DROP POLICY IF EXISTS "members_can_update_guild_config" ON guild_config;
 
 CREATE POLICY "members_can_insert_guild_config"
     ON guild_config
@@ -46,6 +48,8 @@ CREATE POLICY "members_can_update_guild_config"
 -- =============================================================================
 DROP POLICY IF EXISTS "authenticated_users_can_insert_event_settings" ON event_settings;
 DROP POLICY IF EXISTS "authenticated_users_can_update_event_settings" ON event_settings;
+DROP POLICY IF EXISTS "members_can_insert_event_settings" ON event_settings;
+DROP POLICY IF EXISTS "members_can_update_event_settings" ON event_settings;
 
 CREATE POLICY "members_can_insert_event_settings"
     ON event_settings
@@ -66,6 +70,9 @@ CREATE POLICY "members_can_update_event_settings"
 DROP POLICY IF EXISTS "authenticated_users_can_insert_events" ON events;
 DROP POLICY IF EXISTS "authenticated_users_can_update_events" ON events;
 DROP POLICY IF EXISTS "authenticated_users_can_delete_events" ON events;
+DROP POLICY IF EXISTS "members_can_insert_events" ON events;
+DROP POLICY IF EXISTS "members_can_update_events" ON events;
+DROP POLICY IF EXISTS "members_can_delete_events" ON events;
 
 CREATE POLICY "members_can_insert_events"
     ON events
@@ -92,6 +99,9 @@ CREATE POLICY "members_can_delete_events"
 DROP POLICY IF EXISTS "authenticated_users_can_insert_event_series" ON event_series;
 DROP POLICY IF EXISTS "authenticated_users_can_update_event_series" ON event_series;
 DROP POLICY IF EXISTS "authenticated_users_can_delete_event_series" ON event_series;
+DROP POLICY IF EXISTS "members_can_insert_event_series" ON event_series;
+DROP POLICY IF EXISTS "members_can_update_event_series" ON event_series;
+DROP POLICY IF EXISTS "members_can_delete_event_series" ON event_series;
 
 CREATE POLICY "members_can_insert_event_series"
     ON event_series

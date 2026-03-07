@@ -16,6 +16,13 @@ import type { Guild } from "@/lib/guilds/types";
 
 vi.mock("@/lib/discord/client");
 vi.mock("@/lib/guilds/service");
+vi.mock("@/lib/guilds/user-guilds-service");
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn(),
+}));
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn().mockResolvedValue({}),
+}));
 
 describe("fetchGuilds 権限情報拡張", () => {
   const userId = "user-perm-test";
