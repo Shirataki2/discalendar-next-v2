@@ -75,9 +75,12 @@ describe("Task 1.1: user_guilds table migration", () => {
       );
     });
 
-    it("should define UNIQUE constraint on (user_id, guild_id) (Req 1.2)", () => {
+    it("should define UNIQUE or PRIMARY KEY constraint on (user_id, guild_id) (Req 1.2)", () => {
       const sql = getUserGuildsMigrationSql();
-      expect(sql).toMatch(/UNIQUE\s*\(\s*user_id\s*,\s*guild_id\s*\)/i);
+      // Original migration has UNIQUE, later migration upgrades to PRIMARY KEY
+      expect(sql).toMatch(
+        /(UNIQUE|PRIMARY\s+KEY)\s*\(\s*user_id\s*,\s*guild_id\s*\)/i
+      );
     });
 
     it("should create update_updated_at trigger using existing function", () => {

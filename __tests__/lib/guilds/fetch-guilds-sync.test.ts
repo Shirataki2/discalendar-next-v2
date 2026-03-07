@@ -88,6 +88,7 @@ describe("fetchGuilds メンバーシップ同期", () => {
 
     vi.mocked(createUserGuildsService).mockReturnValue({
       syncUserGuilds: mockSyncUserGuilds,
+      upsertSingleGuild: vi.fn(),
       getUserGuildPermissions: vi.fn(),
     } as UserGuildsServiceInterface);
   });

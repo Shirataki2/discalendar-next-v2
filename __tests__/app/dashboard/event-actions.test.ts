@@ -74,6 +74,15 @@ vi.mock("@/lib/discord/client", () => ({
   getUserGuilds: (...args: unknown[]) => mockGetUserGuilds(...args),
 }));
 
+// UserGuildsService モック（resolveServerAuth 3-tier で使用）
+vi.mock("@/lib/guilds/user-guilds-service", () => ({
+  createUserGuildsService: vi.fn(() => ({
+    getUserGuildPermissions: vi.fn(),
+    syncUserGuilds: vi.fn(),
+    upsertSingleGuild: vi.fn(),
+  })),
+}));
+
 import {
   createEventAction,
   createRecurringEventAction,
@@ -85,7 +94,7 @@ import {
 
 /** テスト用シリーズ入力 */
 const sampleSeriesInput = {
-  guildId: "guild-1",
+  guildId: "11111111111111111",
   title: "Weekly Meeting",
   startAt: new Date("2026-03-01T10:00:00Z"),
   endAt: new Date("2026-03-01T11:00:00Z"),
@@ -95,7 +104,7 @@ const sampleSeriesInput = {
 /** テスト用シリーズレコード */
 const sampleSeriesRecord = {
   id: "series-1",
-  guild_id: "guild-1",
+  guild_id: "11111111111111111",
   name: "Weekly Meeting",
   description: null,
   color: "#3B82F6",
@@ -172,9 +181,9 @@ describe("createEventAction", () => {
     });
 
     const result = await createEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: {
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         title: "Test Event",
         startAt: new Date("2026-03-01T10:00:00Z"),
         endAt: new Date("2026-03-01T11:00:00Z"),
@@ -193,16 +202,16 @@ describe("createEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
 
     const result = await createEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: {
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         title: "Test Event",
         startAt: new Date("2026-03-01T10:00:00Z"),
         endAt: new Date("2026-03-01T11:00:00Z"),
@@ -221,16 +230,16 @@ describe("createEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithAdminPermissions("guild-1");
+    setupCacheWithAdminPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
     mockCreateEvent.mockResolvedValueOnce({
       success: true,
       data: {
         id: "event-1",
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         title: "Test Event",
         start: new Date("2026-03-01T10:00:00Z"),
         end: new Date("2026-03-01T11:00:00Z"),
@@ -238,14 +247,14 @@ describe("createEventAction", () => {
     });
 
     const eventData = {
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       title: "Test Event",
       startAt: new Date("2026-03-01T10:00:00Z"),
       endAt: new Date("2026-03-01T11:00:00Z"),
     };
 
     const result = await createEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData,
     });
 
@@ -258,10 +267,10 @@ describe("createEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: false },
+      data: { guildId: "11111111111111111", restricted: false },
     });
     mockCreateEvent.mockResolvedValueOnce({
       success: true,
@@ -269,9 +278,9 @@ describe("createEventAction", () => {
     });
 
     const result = await createEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: {
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         title: "Test Event",
         startAt: new Date("2026-03-01T10:00:00Z"),
         endAt: new Date("2026-03-01T11:00:00Z"),
@@ -300,7 +309,7 @@ describe("updateEventAction", () => {
 
     const result = await updateEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: { title: "Updated" },
     });
 
@@ -316,15 +325,15 @@ describe("updateEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
 
     const result = await updateEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: { title: "Updated" },
     });
 
@@ -340,10 +349,10 @@ describe("updateEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithAdminPermissions("guild-1");
+    setupCacheWithAdminPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
     mockUpdateEvent.mockResolvedValueOnce({
       success: true,
@@ -352,14 +361,18 @@ describe("updateEventAction", () => {
 
     const result = await updateEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: { title: "Updated" },
     });
 
     expect(result.success).toBe(true);
-    expect(mockUpdateEvent).toHaveBeenCalledWith("guild-1", "event-1", {
-      title: "Updated",
-    });
+    expect(mockUpdateEvent).toHaveBeenCalledWith(
+      "11111111111111111",
+      "event-1",
+      {
+        title: "Updated",
+      }
+    );
   });
 
   it("非 restricted ギルドでは権限に関係なくイベントを更新できる", async () => {
@@ -367,10 +380,10 @@ describe("updateEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: false },
+      data: { guildId: "11111111111111111", restricted: false },
     });
     mockUpdateEvent.mockResolvedValueOnce({
       success: true,
@@ -379,7 +392,7 @@ describe("updateEventAction", () => {
 
     const result = await updateEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: { title: "Updated" },
     });
 
@@ -405,7 +418,7 @@ describe("deleteEventAction", () => {
 
     const result = await deleteEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
     });
 
     expect(result.success).toBe(false);
@@ -420,15 +433,15 @@ describe("deleteEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
 
     const result = await deleteEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
     });
 
     expect(result.success).toBe(false);
@@ -443,10 +456,10 @@ describe("deleteEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithAdminPermissions("guild-1");
+    setupCacheWithAdminPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
     mockDeleteEvent.mockResolvedValueOnce({
       success: true,
@@ -455,11 +468,14 @@ describe("deleteEventAction", () => {
 
     const result = await deleteEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
     });
 
     expect(result.success).toBe(true);
-    expect(mockDeleteEvent).toHaveBeenCalledWith("guild-1", "event-1");
+    expect(mockDeleteEvent).toHaveBeenCalledWith(
+      "11111111111111111",
+      "event-1"
+    );
   });
 
   it("非 restricted ギルドでは権限に関係なくイベントを削除できる", async () => {
@@ -467,10 +483,10 @@ describe("deleteEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: false },
+      data: { guildId: "11111111111111111", restricted: false },
     });
     mockDeleteEvent.mockResolvedValueOnce({
       success: true,
@@ -479,7 +495,7 @@ describe("deleteEventAction", () => {
 
     const result = await deleteEventAction({
       eventId: "event-1",
-      guildId: "guild-1",
+      guildId: "11111111111111111",
     });
 
     expect(result.success).toBe(true);
@@ -503,7 +519,7 @@ describe("createRecurringEventAction", () => {
     });
 
     const result = await createRecurringEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: sampleSeriesInput,
     });
 
@@ -519,14 +535,14 @@ describe("createRecurringEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
 
     const result = await createRecurringEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: sampleSeriesInput,
     });
 
@@ -542,10 +558,10 @@ describe("createRecurringEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithAdminPermissions("guild-1");
+    setupCacheWithAdminPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
     mockCreateRecurringSeries.mockResolvedValueOnce({
       success: true,
@@ -553,7 +569,7 @@ describe("createRecurringEventAction", () => {
     });
 
     const result = await createRecurringEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: sampleSeriesInput,
     });
 
@@ -570,10 +586,10 @@ describe("createRecurringEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: false },
+      data: { guildId: "11111111111111111", restricted: false },
     });
     mockCreateRecurringSeries.mockResolvedValueOnce({
       success: true,
@@ -581,7 +597,7 @@ describe("createRecurringEventAction", () => {
     });
 
     const result = await createRecurringEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: sampleSeriesInput,
     });
 
@@ -594,10 +610,10 @@ describe("createRecurringEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithAdminPermissions("guild-1");
+    setupCacheWithAdminPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: false },
+      data: { guildId: "11111111111111111", restricted: false },
     });
     mockCreateRecurringSeries.mockResolvedValueOnce({
       success: false,
@@ -608,7 +624,7 @@ describe("createRecurringEventAction", () => {
     });
 
     const result = await createRecurringEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: sampleSeriesInput,
     });
 
@@ -623,10 +639,10 @@ describe("createRecurringEventAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: false },
+      data: { guildId: "11111111111111111", restricted: false },
     });
     mockCreateEvent.mockResolvedValueOnce({
       success: true,
@@ -634,9 +650,9 @@ describe("createRecurringEventAction", () => {
     });
 
     const result = await createEventAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       eventData: {
-        guildId: "guild-1",
+        guildId: "11111111111111111",
         title: "Single Event",
         startAt: new Date("2026-03-01T10:00:00Z"),
         endAt: new Date("2026-03-01T11:00:00Z"),
@@ -707,7 +723,7 @@ describe("updateOccurrenceAction", () => {
     });
 
     const result = await updateOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,
@@ -728,14 +744,14 @@ describe("updateOccurrenceAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
 
     const result = await updateOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,
@@ -750,14 +766,14 @@ describe("updateOccurrenceAction", () => {
   });
 
   it("scope 'this' の場合 updateOccurrence に委譲する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     mockUpdateOccurrence.mockResolvedValueOnce({
       success: true,
       data: sampleCalendarEvent,
     });
 
     const result = await updateOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,
@@ -766,7 +782,7 @@ describe("updateOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockUpdateOccurrence).toHaveBeenCalledWith(
-      "guild-1",
+      "11111111111111111",
       "series-1",
       sampleOccurrenceDate,
       sampleEventUpdate
@@ -776,14 +792,14 @@ describe("updateOccurrenceAction", () => {
   });
 
   it("scope 'all' の場合 updateSeries に委譲する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     mockUpdateSeries.mockResolvedValueOnce({
       success: true,
       data: { ...sampleSeriesRecord, name: "Updated Series" },
     });
 
     const result = await updateOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "all",
       occurrenceDate: sampleOccurrenceDate,
@@ -792,7 +808,7 @@ describe("updateOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockUpdateSeries).toHaveBeenCalledWith(
-      "guild-1",
+      "11111111111111111",
       "series-1",
       sampleSeriesUpdate
     );
@@ -801,7 +817,7 @@ describe("updateOccurrenceAction", () => {
   });
 
   it("scope 'following' の場合 splitSeries に委譲する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     const newSeriesRecord = {
       ...sampleSeriesRecord,
       id: "series-2",
@@ -813,7 +829,7 @@ describe("updateOccurrenceAction", () => {
     });
 
     const result = await updateOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "following",
       occurrenceDate: sampleOccurrenceDate,
@@ -822,7 +838,7 @@ describe("updateOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockSplitSeries).toHaveBeenCalledWith(
-      "guild-1",
+      "11111111111111111",
       "series-1",
       sampleOccurrenceDate,
       sampleSeriesUpdate
@@ -832,7 +848,7 @@ describe("updateOccurrenceAction", () => {
   });
 
   it("EventService がエラーを返した場合にそのエラーを伝播する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     mockUpdateOccurrence.mockResolvedValueOnce({
       success: false,
       error: {
@@ -842,7 +858,7 @@ describe("updateOccurrenceAction", () => {
     });
 
     const result = await updateOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "nonexistent",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,
@@ -872,7 +888,7 @@ describe("deleteOccurrenceAction", () => {
     });
 
     const result = await deleteOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,
@@ -892,14 +908,14 @@ describe("deleteOccurrenceAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: true },
+      data: { guildId: "11111111111111111", restricted: true },
     });
 
     const result = await deleteOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,
@@ -913,14 +929,14 @@ describe("deleteOccurrenceAction", () => {
   });
 
   it("scope 'this' の場合 deleteOccurrence に委譲する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     mockDeleteOccurrence.mockResolvedValueOnce({
       success: true,
       data: undefined,
     });
 
     const result = await deleteOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,
@@ -928,7 +944,7 @@ describe("deleteOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockDeleteOccurrence).toHaveBeenCalledWith(
-      "guild-1",
+      "11111111111111111",
       "series-1",
       sampleOccurrenceDate
     );
@@ -937,34 +953,37 @@ describe("deleteOccurrenceAction", () => {
   });
 
   it("scope 'all' の場合 deleteSeries に委譲する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     mockDeleteSeries.mockResolvedValueOnce({
       success: true,
       data: undefined,
     });
 
     const result = await deleteOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "all",
       occurrenceDate: sampleOccurrenceDate,
     });
 
     expect(result.success).toBe(true);
-    expect(mockDeleteSeries).toHaveBeenCalledWith("guild-1", "series-1");
+    expect(mockDeleteSeries).toHaveBeenCalledWith(
+      "11111111111111111",
+      "series-1"
+    );
     expect(mockDeleteOccurrence).not.toHaveBeenCalled();
     expect(mockTruncateSeries).not.toHaveBeenCalled();
   });
 
   it("scope 'following' の場合 truncateSeries に委譲する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     mockTruncateSeries.mockResolvedValueOnce({
       success: true,
       data: undefined,
     });
 
     const result = await deleteOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "following",
       occurrenceDate: sampleOccurrenceDate,
@@ -972,7 +991,7 @@ describe("deleteOccurrenceAction", () => {
 
     expect(result.success).toBe(true);
     expect(mockTruncateSeries).toHaveBeenCalledWith(
-      "guild-1",
+      "11111111111111111",
       "series-1",
       sampleOccurrenceDate
     );
@@ -981,7 +1000,7 @@ describe("deleteOccurrenceAction", () => {
   });
 
   it("EventService がエラーを返した場合にそのエラーを伝播する", async () => {
-    setupAuthorizedUser("guild-1");
+    setupAuthorizedUser("11111111111111111");
     mockDeleteSeries.mockResolvedValueOnce({
       success: false,
       error: {
@@ -991,7 +1010,7 @@ describe("deleteOccurrenceAction", () => {
     });
 
     const result = await deleteOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "all",
       occurrenceDate: sampleOccurrenceDate,
@@ -1008,10 +1027,10 @@ describe("deleteOccurrenceAction", () => {
       data: { user: { id: "user-1" } },
       error: null,
     });
-    setupCacheWithNoPermissions("guild-1");
+    setupCacheWithNoPermissions("11111111111111111");
     mockGetGuildConfig.mockResolvedValueOnce({
       success: true,
-      data: { guildId: "guild-1", restricted: false },
+      data: { guildId: "11111111111111111", restricted: false },
     });
     mockDeleteOccurrence.mockResolvedValueOnce({
       success: true,
@@ -1019,7 +1038,7 @@ describe("deleteOccurrenceAction", () => {
     });
 
     const result = await deleteOccurrenceAction({
-      guildId: "guild-1",
+      guildId: "11111111111111111",
       seriesId: "series-1",
       scope: "this",
       occurrenceDate: sampleOccurrenceDate,

@@ -44,10 +44,12 @@ vi.mock("@/lib/discord/client", () => ({
 // UserGuildsService モック
 const mockGetUserGuildPermissions = vi.fn();
 const mockSyncUserGuilds = vi.fn();
+const mockUpsertSingleGuild = vi.fn();
 vi.mock("@/lib/guilds/user-guilds-service", () => ({
   createUserGuildsService: vi.fn(() => ({
     getUserGuildPermissions: mockGetUserGuildPermissions,
     syncUserGuilds: mockSyncUserGuilds,
+    upsertSingleGuild: mockUpsertSingleGuild,
   })),
 }));
 
@@ -143,9 +145,9 @@ function setupDiscordApiSuccess(guildId: string) {
 }
 
 function setupSyncSuccess() {
-  mockSyncUserGuilds.mockResolvedValueOnce({
+  mockUpsertSingleGuild.mockResolvedValueOnce({
     success: true,
-    data: { synced: 1, removed: 0 },
+    data: undefined,
   });
 }
 
@@ -263,9 +265,10 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockSyncUserGuilds).toHaveBeenCalledWith("user-1", [
-        { guildId: "guild-1", permissions: MANAGE_GUILD_BITFIELD },
-      ]);
+      expect(mockUpsertSingleGuild).toHaveBeenCalledWith({
+        guildId: "guild-1",
+        permissions: MANAGE_GUILD_BITFIELD,
+      });
     });
 
     it("Discord API成功時のDB書き戻し失敗がUIをブロックしない", async () => {
@@ -273,7 +276,7 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       setupCacheMiss();
       setupDbMiss();
       setupDiscordApiSuccess("guild-1");
-      mockSyncUserGuilds.mockResolvedValueOnce({
+      mockUpsertSingleGuild.mockResolvedValueOnce({
         success: false,
         error: { code: "SYNC_FAILED", message: "DB write failed" },
       });
@@ -336,7 +339,7 @@ describe("resolveServerAuth 3-Tier 権限解決", () => {
       expect(result.success).toBe(true);
       // Discord APIが呼ばれ、結果がDBに書き戻される
       expect(mockGetUserGuilds).toHaveBeenCalled();
-      expect(mockSyncUserGuilds).toHaveBeenCalled();
+      expect(mockUpsertSingleGuild).toHaveBeenCalled();
     });
   });
 });

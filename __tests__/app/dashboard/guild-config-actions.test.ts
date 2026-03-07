@@ -52,10 +52,12 @@ vi.mock("@/lib/discord/client", () => ({
 // UserGuildsService モック（resolveServerAuth 3-tier で使用）
 const mockGetUserGuildPermissions = vi.fn();
 const mockSyncUserGuilds = vi.fn();
+const mockUpsertSingleGuild = vi.fn();
 vi.mock("@/lib/guilds/user-guilds-service", () => ({
   createUserGuildsService: vi.fn(() => ({
     getUserGuildPermissions: mockGetUserGuildPermissions,
     syncUserGuilds: mockSyncUserGuilds,
+    upsertSingleGuild: mockUpsertSingleGuild,
   })),
 }));
 
@@ -180,9 +182,9 @@ describe("updateGuildConfig Server Action", () => {
       success: true,
       data: null,
     }); // DBミス
-    mockSyncUserGuilds.mockResolvedValueOnce({
+    mockUpsertSingleGuild.mockResolvedValueOnce({
       success: true,
-      data: { synced: 1, removed: 0 },
+      data: undefined,
     });
     mockGetSession.mockResolvedValueOnce({
       data: { session: { provider_token: "discord-token" } },

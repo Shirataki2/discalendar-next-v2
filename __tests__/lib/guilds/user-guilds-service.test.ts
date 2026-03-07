@@ -4,8 +4,10 @@ import {
   type UserGuildsServiceInterface,
 } from "@/lib/guilds/user-guilds-service";
 
+const mockRpc = vi.fn();
 const mockSupabaseClient = {
   from: vi.fn(),
+  rpc: mockRpc,
 };
 
 describe("UserGuildsService", () => {
@@ -30,23 +32,11 @@ describe("UserGuildsService", () => {
       { guildId: "guild-2", permissions: "0" },
     ];
 
-    it("upsert 成功時に synced 件数と removed 件数を返す", async () => {
-      const mockUpsertQuery = {
-        upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      const mockDeleteQuery = {
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        not: vi.fn().mockReturnThis(),
-        select: vi.fn().mockResolvedValue({
-          data: [{ guild_id: "guild-old" }],
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from
-        .mockReturnValueOnce(mockUpsertQuery)
-        .mockReturnValueOnce(mockDeleteQuery);
+    it("RPC 成功時に synced 件数と removed 件数を返す", async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: [{ synced: 2, removed: 1 }],
+        error: null,
+      });
 
       const result = await service.syncUserGuilds(userId, guilds);
 
@@ -55,29 +45,17 @@ describe("UserGuildsService", () => {
         data: { synced: 2, removed: 1 },
       });
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith("user_guilds");
-      expect(mockUpsertQuery.upsert).toHaveBeenCalledWith(
-        [
-          {
-            user_id: userId,
-            guild_id: "guild-1",
-            permissions: "2147483647",
-          },
-          { user_id: userId, guild_id: "guild-2", permissions: "0" },
-        ],
-        { onConflict: "user_id,guild_id" }
-      );
+      expect(mockRpc).toHaveBeenCalledWith("sync_user_guilds", {
+        p_guild_ids: ["guild-1", "guild-2"],
+        p_permissions: ["2147483647", "0"],
+      });
     });
 
-    it("upsert 失敗時に SYNC_FAILED エラーを返す", async () => {
-      const mockUpsertQuery = {
-        upsert: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: "FK constraint violation" },
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValueOnce(mockUpsertQuery);
+    it("RPC 失敗時に SYNC_FAILED エラーを返す", async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: "FK constraint violation" },
+      });
 
       const result = await service.syncUserGuilds(userId, guilds);
 
@@ -88,44 +66,11 @@ describe("UserGuildsService", () => {
       }
     });
 
-    it("不在ギルド削除失敗時に DELETE_FAILED エラーを返す", async () => {
-      const mockUpsertQuery = {
-        upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      const mockDeleteQuery = {
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        not: vi.fn().mockReturnThis(),
-        select: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: "Delete failed" },
-        }),
-      };
-
-      mockSupabaseClient.from
-        .mockReturnValueOnce(mockUpsertQuery)
-        .mockReturnValueOnce(mockDeleteQuery);
-
-      const result = await service.syncUserGuilds(userId, guilds);
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe("DELETE_FAILED");
-        expect(result.error.details).toBe("Delete failed");
-      }
-    });
-
-    it("空のギルドリストで全レコードが削除される", async () => {
-      const mockDeleteQuery = {
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockResolvedValue({
-          data: [{ guild_id: "guild-1" }, { guild_id: "guild-2" }],
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValueOnce(mockDeleteQuery);
+    it("空のギルドリストでも RPC が呼ばれる", async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: [{ synced: 0, removed: 2 }],
+        error: null,
+      });
 
       const result = await service.syncUserGuilds(userId, []);
 
@@ -133,14 +78,15 @@ describe("UserGuildsService", () => {
         success: true,
         data: { synced: 0, removed: 2 },
       });
-      // upsert はスキップされるので from は 1 回のみ（delete 用）
-      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+
+      expect(mockRpc).toHaveBeenCalledWith("sync_user_guilds", {
+        p_guild_ids: [],
+        p_permissions: [],
+      });
     });
 
     it("例外発生時に SYNC_FAILED エラーを返す", async () => {
-      mockSupabaseClient.from.mockImplementation(() => {
-        throw new Error("Network error");
-      });
+      mockRpc.mockRejectedValueOnce(new Error("Network error"));
 
       const result = await service.syncUserGuilds(userId, guilds);
 
@@ -151,23 +97,11 @@ describe("UserGuildsService", () => {
       }
     });
 
-    it("削除対象がない場合 removed: 0 を返す", async () => {
-      const mockUpsertQuery = {
-        upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      const mockDeleteQuery = {
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        not: vi.fn().mockReturnThis(),
-        select: vi.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from
-        .mockReturnValueOnce(mockUpsertQuery)
-        .mockReturnValueOnce(mockDeleteQuery);
+    it("RPC がオブジェクト（非配列）を返しても正しく処理する", async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: { synced: 2, removed: 0 },
+        error: null,
+      });
 
       const result = await service.syncUserGuilds(userId, guilds);
 
@@ -175,6 +109,56 @@ describe("UserGuildsService", () => {
         success: true,
         data: { synced: 2, removed: 0 },
       });
+    });
+  });
+
+  describe("upsertSingleGuild", () => {
+    it("RPC 成功時に success を返す", async () => {
+      mockRpc.mockResolvedValueOnce({ data: null, error: null });
+
+      const result = await service.upsertSingleGuild({
+        guildId: "guild-1",
+        permissions: "32",
+      });
+
+      expect(result).toEqual({ success: true, data: undefined });
+      expect(mockRpc).toHaveBeenCalledWith("upsert_user_guild", {
+        p_guild_id: "guild-1",
+        p_permissions: "32",
+      });
+    });
+
+    it("RPC 失敗時に SYNC_FAILED エラーを返す", async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: "FK constraint violation" },
+      });
+
+      const result = await service.upsertSingleGuild({
+        guildId: "guild-1",
+        permissions: "32",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("SYNC_FAILED");
+        expect(result.error.details).toBe("FK constraint violation");
+      }
+    });
+
+    it("例外発生時に SYNC_FAILED エラーを返す", async () => {
+      mockRpc.mockRejectedValueOnce(new Error("Network error"));
+
+      const result = await service.upsertSingleGuild({
+        guildId: "guild-1",
+        permissions: "32",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("SYNC_FAILED");
+        expect(result.error.details).toBe("Network error");
+      }
     });
   });
 

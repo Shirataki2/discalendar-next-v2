@@ -47,6 +47,10 @@ export interface UserGuildsServiceInterface {
     guilds: SyncGuildInput[],
   ): Promise<UserGuildsMutationResult<{ synced: number; removed: number }>>;
 
+  upsertSingleGuild(
+    guild: SyncGuildInput,
+  ): Promise<UserGuildsMutationResult<void>>;
+
   getUserGuildPermissions(
     userId: string,
     guildId: string,
@@ -61,68 +65,38 @@ export function createUserGuildsService(
 ): UserGuildsServiceInterface {
   return {
     async syncUserGuilds(
-      userId: string,
+      _userId: string,
       guilds: SyncGuildInput[],
     ): Promise<
       UserGuildsMutationResult<{ synced: number; removed: number }>
     > {
       try {
-        // Upsert: Discord API の結果を一括挿入/更新
-        const upsertRows = guilds.map((g) => ({
-          user_id: userId,
-          guild_id: g.guildId,
-          permissions: g.permissions,
-        }));
-
-        let synced = 0;
-        if (upsertRows.length > 0) {
-          const { error: upsertError } = await supabase
-            .from("user_guilds")
-            .upsert(upsertRows, { onConflict: "user_id,guild_id" });
-
-          if (upsertError) {
-            return {
-              success: false,
-              error: {
-                code: "SYNC_FAILED",
-                message: "メンバーシップの同期に失敗しました。",
-                details: upsertError.message,
-              },
-            };
-          }
-          synced = upsertRows.length;
-        }
-
-        // Delete: API 結果に含まれないギルドのレコードを削除
         const guildIds = guilds.map((g) => g.guildId);
-        let query = supabase
-          .from("user_guilds")
-          .delete()
-          .eq("user_id", userId);
+        const permissions = guilds.map((g) => g.permissions);
 
-        if (guildIds.length > 0) {
-          query = query.not("guild_id", "in", `(${guildIds.join(",")})`);
-        }
+        const { data, error } = await supabase.rpc("sync_user_guilds", {
+          p_guild_ids: guildIds,
+          p_permissions: permissions,
+        });
 
-        const { data: deletedRows, error: deleteError } =
-          await query.select("guild_id");
-
-        if (deleteError) {
+        if (error) {
           return {
             success: false,
             error: {
-              code: "DELETE_FAILED",
-              message: "脱退ギルドの削除に失敗しました。",
-              details: deleteError.message,
+              code: "SYNC_FAILED",
+              message: "メンバーシップの同期に失敗しました。",
+              details: error.message,
             },
           };
         }
 
-        const removed = deletedRows?.length ?? 0;
-
+        const row = Array.isArray(data) ? data[0] : data;
         return {
           success: true,
-          data: { synced, removed },
+          data: {
+            synced: row?.synced ?? 0,
+            removed: row?.removed ?? 0,
+          },
         };
       } catch (err) {
         const errorMessage =
@@ -132,6 +106,41 @@ export function createUserGuildsService(
           error: {
             code: "SYNC_FAILED",
             message: "メンバーシップの同期に失敗しました。",
+            details: errorMessage,
+          },
+        };
+      }
+    },
+
+    async upsertSingleGuild(
+      guild: SyncGuildInput,
+    ): Promise<UserGuildsMutationResult<void>> {
+      try {
+        const { error } = await supabase.rpc("upsert_user_guild", {
+          p_guild_id: guild.guildId,
+          p_permissions: guild.permissions,
+        });
+
+        if (error) {
+          return {
+            success: false,
+            error: {
+              code: "SYNC_FAILED",
+              message: "メンバーシップの書き込みに失敗しました。",
+              details: error.message,
+            },
+          };
+        }
+
+        return { success: true, data: undefined };
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        return {
+          success: false,
+          error: {
+            code: "SYNC_FAILED",
+            message: "メンバーシップの書き込みに失敗しました。",
             details: errorMessage,
           },
         };

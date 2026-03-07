@@ -63,8 +63,8 @@ const UNAUTHORIZED_ERROR: CalendarError = {
   message: "認証が必要です。再度ログインしてください。",
 };
 
-/** guild_id のフォーマット検証（英数字・ハイフンのみ、1〜30文字） */
-const GUILD_ID_REGEX = /^[\w-]{1,30}$/;
+/** guild_id のフォーマット検証（Discord Snowflake: 数値17〜20桁） */
+const GUILD_ID_PATTERN = SNOWFLAKE_PATTERN;
 
 /**
  * MutationResult からデバッグ用の details フィールドを除去する
@@ -192,12 +192,14 @@ async function resolveServerAuth(guildId: string): Promise<AuthResult> {
   }
 
   // Discord API 成功時に user_guilds へ書き戻し（次回以降の DB 参照を可能にする）
-  const syncResult = await userGuildsService.syncUserGuilds(user.id, [
-    { guildId, permissions: discordGuild.permissions },
-  ]);
+  // upsertSingleGuild を使用し、他ギルドのメンバーシップを削除しない
+  const syncResult = await userGuildsService.upsertSingleGuild({
+    guildId,
+    permissions: discordGuild.permissions,
+  });
   if (!syncResult.success && process.env.NODE_ENV !== "production") {
     console.error(
-      "[resolveServerAuth] user_guilds sync failed:",
+      "[resolveServerAuth] user_guilds upsert failed:",
       syncResult.error
     );
   }
@@ -299,7 +301,7 @@ async function authorizeEventOperation(
   | { success: true; supabase: Awaited<ReturnType<typeof createClient>> }
   | { success: false; error: MutationResult<never> }
 > {
-  if (!GUILD_ID_REGEX.test(guildId)) {
+  if (!GUILD_ID_PATTERN.test(guildId)) {
     return {
       success: false,
       error: {
@@ -721,7 +723,7 @@ type FetchGuildChannelsResult =
 export async function fetchGuildChannels(
   guildId: string
 ): Promise<FetchGuildChannelsResult> {
-  if (!GUILD_ID_REGEX.test(guildId)) {
+  if (!GUILD_ID_PATTERN.test(guildId)) {
     return {
       success: false,
       error: {
@@ -778,7 +780,7 @@ type UpdateNotificationChannelInput = {
 export async function updateNotificationChannel(
   input: UpdateNotificationChannelInput
 ): Promise<EventSettingsMutationResult<EventSettings>> {
-  if (!GUILD_ID_REGEX.test(input.guildId)) {
+  if (!GUILD_ID_PATTERN.test(input.guildId)) {
     return {
       success: false,
       error: {
