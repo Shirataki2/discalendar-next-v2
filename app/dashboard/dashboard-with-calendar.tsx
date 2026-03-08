@@ -462,7 +462,7 @@ export function DashboardWithCalendar({
 
   const { isRefreshing } = useGuildRefresh({
     onRefresh: handleGuildRefresh,
-    enabled: currentInvitableGuilds.length > 0,
+    enabled: true,
   });
 
   // 選択中ギルドの権限情報を取得

@@ -9,9 +9,45 @@
  * Contracts: GuildService Service Interface (design.md)
  */
 
+import { captureException } from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import type { Guild, GuildRow } from "./types";
 import { toGuild } from "./types";
+
+/**
+ * Discord APIから取得したギルド情報をguildsテーブルに登録する
+ *
+ * SECURITY DEFINER関数 ensure_guilds を使用してRLSをバイパスし、
+ * Botが未起動でもWeb側からギルドを登録できるようにする。
+ * ON CONFLICT DO UPDATE で名前・アバターを最新化する。
+ *
+ * @param guilds Discord APIから取得したギルド情報の配列
+ */
+export async function ensureGuilds(
+  guilds: { guildId: string; name: string; avatarUrl: string | null }[]
+): Promise<void> {
+  if (guilds.length === 0) {
+    return;
+  }
+
+  const supabase = await createClient();
+
+  const guildIds = guilds.map((g) => g.guildId);
+  const names = guilds.map((g) => g.name);
+  const avatarUrls = guilds.map((g) => g.avatarUrl);
+
+  const { error } = await supabase.rpc("ensure_guilds", {
+    p_guild_ids: guildIds,
+    p_names: names,
+    p_avatar_urls: avatarUrls,
+  });
+
+  if (error) {
+    captureException(
+      new Error(`[ensureGuilds] Failed to ensure guilds: ${error.message}`)
+    );
+  }
+}
 
 /**
  * ユーザーが所属するギルドIDリストでDB照合を行う
