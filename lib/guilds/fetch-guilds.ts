@@ -108,27 +108,31 @@ export async function fetchGuilds(
 
       // DB照合を実行
       try {
-        // Discord APIから取得したギルド情報をDBに登録（Bot未起動時のフォールバック）
-        // NOTE: キャッシュ + dedup（getOrSetPendingRequest）により呼び出し頻度は制限されている。
-        // RPC ensure_guilds は ON CONFLICT DO UPDATE で冪等なため、重複呼び出しも安全。
-        await ensureGuilds(
-          discordResult.data.map((dg) => ({
-            guildId: dg.id,
-            name: dg.name,
-            avatarUrl: getGuildIconUrl(dg.id, dg.icon),
-          }))
-        );
-
+        // まずDB照合を実行し、Bot導入済みギルドを特定する
         const joinedGuilds = await getJoinedGuilds(guildIds);
+
+        // Bot導入済みギルドの名前・アバターをDiscord APIの最新情報で更新する
+        // NOTE: ensureGuilds は ON CONFLICT DO UPDATE で冪等。
+        // Bot未導入のギルドは登録しない（登録はBot側のguildCreateイベントが担当）。
+        const joinedGuildIds = new Set(joinedGuilds.map((g) => g.guildId));
+        const joinedDiscordGuilds = discordResult.data.filter((dg) =>
+          joinedGuildIds.has(dg.id)
+        );
+        if (joinedDiscordGuilds.length > 0) {
+          await ensureGuilds(
+            joinedDiscordGuilds.map((dg) => ({
+              guildId: dg.id,
+              name: dg.name,
+              avatarUrl: getGuildIconUrl(dg.id, dg.icon),
+            }))
+          );
+        }
 
         // 権限情報をマージして GuildWithPermissions に変換
         const guildsWithPermissions = mergePermissions(
           joinedGuilds,
           permissionsMap
         );
-
-        // DB に存在しないギルドを招待対象として抽出
-        const joinedGuildIds = new Set(joinedGuilds.map((g) => g.guildId));
         const invitableGuilds = buildInvitableGuilds(
           discordResult.data,
           joinedGuildIds,

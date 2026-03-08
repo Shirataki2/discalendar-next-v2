@@ -15,11 +15,12 @@ import type { Guild, GuildRow } from "./types";
 import { toGuild } from "./types";
 
 /**
- * Discord APIから取得したギルド情報をguildsテーブルに登録する
+ * Bot導入済みギルドの名前・アバターをDiscord APIの最新情報で更新する
  *
- * SECURITY DEFINER関数 ensure_guilds を使用してRLSをバイパスし、
- * Botが未起動でもWeb側からギルドを登録できるようにする。
+ * SECURITY DEFINER関数 ensure_guilds を使用してRLSをバイパスする。
  * ON CONFLICT DO UPDATE で名前・アバターを最新化する。
+ * 新規ギルドの登録はBot側の guildCreate イベントが担当するため、
+ * この関数は既存レコードの更新用途で使用する。
  *
  * NOTE: この関数はエラー時に captureException で記録するのみで例外をスローしない。
  * 呼び出し元で await しても安全で、処理は中断されない。
