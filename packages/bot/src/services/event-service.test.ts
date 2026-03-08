@@ -8,9 +8,9 @@ const mockGte = vi.fn();
 const mockLt = vi.fn();
 const mockOrder = vi.fn();
 const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
 const mockUpsert = vi.fn();
 const mockIn = vi.fn();
+const mockLimit = vi.fn();
 
 function resetChain() {
   mockSelect.mockReturnValue({
@@ -28,9 +28,9 @@ function resetChain() {
   });
   mockGte.mockReturnValue({ order: mockOrder });
   mockLt.mockReturnValue({ order: mockOrder });
-  mockOrder.mockResolvedValue({ data: [], error: null });
+  mockOrder.mockReturnValue({ limit: mockLimit, data: [], error: null });
+  mockLimit.mockResolvedValue({ data: [], error: null });
   mockInsert.mockReturnValue({ select: mockSelect });
-  mockUpdate.mockReturnValue({ eq: mockEq });
   mockUpsert.mockReturnValue({ select: mockSelect });
   mockIn.mockResolvedValue({ data: [], error: null });
 }
@@ -40,7 +40,6 @@ vi.mock("../services/supabase.js", () => ({
     from: () => ({
       select: mockSelect,
       insert: mockInsert,
-      update: mockUpdate,
       upsert: mockUpsert,
       eq: mockEq,
       gte: mockGte,
@@ -102,7 +101,7 @@ describe("event-service", () => {
       },
     ];
 
-    mockOrder.mockResolvedValue({ data: mockEvents, error: null });
+    mockLimit.mockResolvedValue({ data: mockEvents, error: null });
 
     const { getEventsByGuildId } = await import("./event-service.js");
     const result = await getEventsByGuildId("guild-1", "all");
@@ -115,7 +114,7 @@ describe("event-service", () => {
   });
 
   it("getEventsByGuildId returns error on failure", async () => {
-    mockOrder.mockResolvedValue({
+    mockLimit.mockResolvedValue({
       data: null,
       error: { message: "DB error" },
     });

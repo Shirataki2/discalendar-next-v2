@@ -13,11 +13,14 @@ export async function getEventsByGuildId(
   rangeType: "past" | "future" | "all" = "all"
 ): Promise<ServiceResult<EventRecord[]>> {
   const supabase = getSupabaseClient();
+  const MAX_LIST_EVENTS = 100;
+
   let query = supabase
     .from("events")
     .select("*")
     .eq("guild_id", guildId)
-    .order("start_at", { ascending: true });
+    .order("start_at", { ascending: true })
+    .limit(MAX_LIST_EVENTS);
 
   const now = new Date().toISOString();
   if (rangeType === "future") {

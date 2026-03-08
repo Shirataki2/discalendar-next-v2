@@ -68,11 +68,19 @@ async function processNotifications(client: Client): Promise<void> {
     try {
       const settings = settingsMap.get(event.guild_id);
       if (!settings) {
+        logger.warn(
+          { guildId: event.guild_id },
+          "No event settings found for guild, skipping notifications"
+        );
         continue;
       }
 
       const channel = client.channels.cache.get(settings.channel_id);
       if (!channel?.isSendable()) {
+        logger.warn(
+          { guildId: event.guild_id, channelId: settings.channel_id },
+          "Notification channel not found or not sendable"
+        );
         continue;
       }
 

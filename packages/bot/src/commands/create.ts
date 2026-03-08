@@ -326,6 +326,7 @@ async function execute(
 
   const colorHex = COLOR_MAP[color] ?? "#3e44f7";
 
+  const seenNotifications = new Set<string>();
   const notifications = [
     interaction.options.getString("notify_1"),
     interaction.options.getString("notify_2"),
@@ -336,6 +337,10 @@ async function execute(
       if (!(value && value in NOTIFY_MAP)) {
         return null;
       }
+      if (seenNotifications.has(value)) {
+        return null;
+      }
+      seenNotifications.add(value);
       const mapped = NOTIFY_MAP[value];
       return { key: `n${index + 1}`, num: mapped.num, unit: mapped.unit };
     })
