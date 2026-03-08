@@ -10,14 +10,18 @@ async function main(): Promise<void> {
   await bot.setup();
   await bot.start();
 
-  const shutdown = (signal: string) => {
+  const shutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down...`);
-    bot.destroy();
+    await bot.destroy();
     process.exit(0);
   };
 
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => {
+    shutdown("SIGINT");
+  });
+  process.on("SIGTERM", () => {
+    shutdown("SIGTERM");
+  });
 }
 
 main().catch((error) => {

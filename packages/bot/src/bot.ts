@@ -153,10 +153,19 @@ export class DiscalendarBot extends Client {
     const commandData = this.commands.map((cmd) => cmd.data.toJSON());
 
     try {
-      await rest.put(Routes.applicationCommands(config.applicationId), {
-        body: commandData,
-      });
-      logger.info(`Registered ${commandData.length} slash command(s)`);
+      const route = config.devGuildId
+        ? Routes.applicationGuildCommands(
+            config.applicationId,
+            config.devGuildId
+          )
+        : Routes.applicationCommands(config.applicationId);
+
+      await rest.put(route, { body: commandData });
+
+      const scope = config.devGuildId ? `guild ${config.devGuildId}` : "global";
+      logger.info(
+        `Registered ${commandData.length} slash command(s) (${scope})`
+      );
     } catch (error) {
       logger.error({ error }, "Failed to register slash commands");
       throw error;

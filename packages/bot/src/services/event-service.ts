@@ -61,15 +61,22 @@ export async function createEvent(
   return { success: true, data: created as EventRecord };
 }
 
+// 最大通知オフセット: 7日（weeks=1 の最大値）
+const MAX_NOTIFY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 export async function getFutureEventsForAllGuilds(
   fromTime: Date
 ): Promise<ServiceResult<EventRecord[]>> {
   const supabase = getSupabaseClient();
 
+  // 通知ウィンドウ内のイベントのみ取得（全件フェッチを回避）
+  const upperBound = new Date(fromTime.getTime() + MAX_NOTIFY_WINDOW_MS);
+
   const { data, error } = await supabase
     .from("events")
     .select("*")
     .gte("start_at", fromTime.toISOString())
+    .lte("start_at", upperBound.toISOString())
     .order("start_at", { ascending: true });
 
   if (error) {

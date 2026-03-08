@@ -139,6 +139,11 @@ async function checkEventNotifications(
   }
 }
 
+// NOTE: 通知の重複送信について
+// 再起動やクラッシュ復旧時に同一分のウィンドウ内で重複送信される可能性がある。
+// 現時点ではDB送信済みフラグによる管理は複雑さに対して効果が見合わないため、
+// 再起動頻度が低いことを前提に重複を許容する設計とする。
+// 将来的に問題になった場合は、sent_notifications テーブルの追加を検討する。
 export function startNotifyTask(client: Client): NodeJS.Timeout {
   return setInterval(() => {
     processNotifications(client).catch((error) => {

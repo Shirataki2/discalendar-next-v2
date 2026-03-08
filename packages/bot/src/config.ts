@@ -6,6 +6,8 @@ export type Config = {
   invitationUrl: string;
   logLevel: string;
   sentryDsn: string | undefined;
+  /** 開発用: 指定するとグローバルではなくギルドコマンドとして登録（レート制限回避） */
+  devGuildId: string | undefined;
 };
 
 function requireEnv(name: string): string {
@@ -31,6 +33,7 @@ export function getConfig(): Config {
     invitationUrl: process.env.INVITATION_URL ?? "",
     logLevel: process.env.LOG_LEVEL?.toLowerCase() ?? "info",
     sentryDsn: process.env.SENTRY_DSN || undefined,
+    devGuildId: process.env.DEV_GUILD_ID || undefined,
   };
 
   return cachedConfig;
