@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockSingle = vi.fn();
 const mockSelectForGuild = vi.fn(() => ({ single: mockSingle }));
 const mockUpsert = vi.fn(() => ({ select: mockSelectForGuild }));
-const mockEqForDelete = vi.fn();
-const mockDelete = vi.fn(() => ({ eq: mockEqForDelete }));
+const mockEqForSoftDelete = vi.fn();
+const mockUpdate = vi.fn(() => ({ eq: mockEqForSoftDelete }));
 
 const mockEqForConfig = vi.fn(() => ({ single: mockSingle }));
 const mockSelectForConfig = vi.fn(() => ({ eq: mockEqForConfig }));
@@ -15,7 +15,7 @@ vi.mock("../services/supabase.js", () => ({
       if (table === "guilds") {
         return {
           upsert: mockUpsert,
-          delete: mockDelete,
+          update: mockUpdate,
         };
       }
       if (table === "guild_config") {
@@ -53,7 +53,7 @@ describe("guild-service", () => {
   beforeEach(() => {
     vi.resetModules();
     mockSingle.mockResolvedValue({ data: null, error: null });
-    mockEqForDelete.mockResolvedValue({ error: null });
+    mockEqForSoftDelete.mockResolvedValue({ error: null });
   });
 
   afterEach(() => {
@@ -84,7 +84,7 @@ describe("guild-service", () => {
   });
 
   it("deleteGuild returns success on completion", async () => {
-    mockEqForDelete.mockResolvedValue({ error: null });
+    mockEqForSoftDelete.mockResolvedValue({ error: null });
 
     const { deleteGuild } = await import("./guild-service.js");
     const result = await deleteGuild("123");

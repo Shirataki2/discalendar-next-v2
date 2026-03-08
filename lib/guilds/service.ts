@@ -21,8 +21,8 @@ import { toGuild } from "./types";
  * Botが未起動でもWeb側からギルドを登録できるようにする。
  * ON CONFLICT DO UPDATE で名前・アバターを最新化する。
  *
- * NOTE: この関数はfire-and-forget で呼び出される。エラー時は captureException で
- * 記録するのみで例外をスローしないため、呼び出し元の処理は中断されない。
+ * NOTE: この関数はエラー時に captureException で記録するのみで例外をスローしない。
+ * 呼び出し元で await しても安全で、処理は中断されない。
  *
  * @param guilds Discord APIから取得したギルド情報の配列
  */
@@ -81,7 +81,8 @@ export async function getJoinedGuilds(guildIds: string[]): Promise<Guild[]> {
   const { data, error } = await supabase
     .from("guilds")
     .select("*")
-    .in("guild_id", guildIds);
+    .in("guild_id", guildIds)
+    .is("deleted_at", null);
 
   if (error) {
     throw new Error(error.message);

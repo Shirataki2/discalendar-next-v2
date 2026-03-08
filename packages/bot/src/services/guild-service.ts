@@ -9,9 +9,10 @@ export async function upsertGuild(
 ): Promise<ServiceResult<GuildRow>> {
   const supabase = getSupabaseClient();
 
+  // 再参加時に deleted_at をクリアしてデータを復元する
   const { data: guild, error } = await supabase
     .from("guilds")
-    .upsert(data, { onConflict: "guild_id" })
+    .upsert({ ...data, deleted_at: null }, { onConflict: "guild_id" })
     .select()
     .single();
 
@@ -31,9 +32,10 @@ export async function deleteGuild(
 ): Promise<ServiceResult<void>> {
   const supabase = getSupabaseClient();
 
+  // ソフトデリート: データを保持し、Bot再参加時に復元可能にする
   const { error } = await supabase
     .from("guilds")
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq("guild_id", guildId);
 
   if (error) {

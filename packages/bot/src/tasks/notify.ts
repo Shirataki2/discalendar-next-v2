@@ -10,7 +10,8 @@ import { logger } from "../utils/logger.js";
 
 // JST (UTC+9) 固定: 本サービスは日本国内向けのため、タイムゾーンをJSTに限定している
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
-const NOTIFY_CHECK_INTERVAL_MS = 60_000;
+const MS_PER_MINUTE = 60_000;
+const NOTIFY_CHECK_INTERVAL_MS = MS_PER_MINUTE;
 
 function toMinutes(notification: NotificationPayload): number {
   switch (notification.unit) {
@@ -116,11 +117,11 @@ async function checkEventNotifications(
   ];
 
   for (const notification of notifications) {
-    const offsetMs = toMinutes(notification) * NOTIFY_CHECK_INTERVAL_MS;
+    const offsetMs = toMinutes(notification) * MS_PER_MINUTE;
     const notifyTimeMs = startMs - offsetMs;
     const diff = nowMs - notifyTimeMs;
 
-    if (diff >= 0 && diff < NOTIFY_CHECK_INTERVAL_MS) {
+    if (diff >= 0 && diff < MS_PER_MINUTE) {
       const isSentinel = notification.key === SENTINEL_NOTIFICATION.key;
       const label = isSentinel
         ? "以下の予定が開催されます"
