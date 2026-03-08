@@ -91,7 +91,7 @@ function addNotifyOption(
 function buildCommandData(): SlashCommandOptionsOnlyBuilder {
   const builder = new SlashCommandBuilder()
     .setName("create")
-    .setDescription("予定を新たに作成します")
+    .setDescription("予定を新たに作成します（時刻はJST/日本標準時）")
     .addStringOption((opt) =>
       opt
         .setName("name")

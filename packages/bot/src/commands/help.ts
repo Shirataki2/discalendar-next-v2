@@ -13,8 +13,13 @@ const data = new SlashCommandBuilder()
 async function execute(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
+  const config = getConfig();
   const botAvatarUrl = interaction.client.user?.displayAvatarURL() ?? null;
-  const embed = createHelpEmbed(botAvatarUrl, getConfig().invitationUrl);
+  const embed = createHelpEmbed(
+    botAvatarUrl,
+    config.invitationUrl,
+    config.supportServerUrl
+  );
   await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 

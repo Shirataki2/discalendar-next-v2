@@ -7,7 +7,8 @@ const BOT_VERSION = "2.0.0";
 
 export function createHelpEmbed(
   botAvatarUrl: string | null,
-  invitationUrl: string
+  invitationUrl: string,
+  supportServerUrl: string
 ): EmbedBuilder {
   const description = `DisCalendarはDiscord用の__予定管理Bot__です
 
@@ -36,7 +37,7 @@ __**🌟コマンド機能🌟**__
 
 __**🌟サポートサーバー🌟**__
 　機能要望やバグなどがあった場合には
-[サポートサーバー](https://discord.gg/MyaZRuze23)へ参加し，ご連絡をお願いします！
+[サポートサーバー](${supportServerUrl})へ参加し，ご連絡をお願いします！
 
 __**🌟他のサーバーにも導入する場合🌟**__
 　[こちら](${invitationUrl})より導入をお願いします！`;

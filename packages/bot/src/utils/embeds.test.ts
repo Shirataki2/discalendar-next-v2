@@ -34,7 +34,11 @@ function makeEvent(overrides: Partial<EventRecord> = {}): EventRecord {
 
 describe("createHelpEmbed", () => {
   it("should create help embed with title and description", () => {
-    const embed = createHelpEmbed(null, "https://example.com/invite");
+    const embed = createHelpEmbed(
+      null,
+      "https://example.com/invite",
+      "https://discord.gg/test"
+    );
     const json = embed.toJSON();
 
     expect(json.title).toBe("DisCalendar - Help");
@@ -44,14 +48,14 @@ describe("createHelpEmbed", () => {
   });
 
   it("should include thumbnail when avatar URL is provided", () => {
-    const embed = createHelpEmbed("https://cdn.discord.com/avatar.png", "");
+    const embed = createHelpEmbed("https://cdn.discord.com/avatar.png", "", "");
     const json = embed.toJSON();
 
     expect(json.thumbnail?.url).toBe("https://cdn.discord.com/avatar.png");
   });
 
   it("should not include thumbnail when avatar URL is null", () => {
-    const embed = createHelpEmbed(null, "");
+    const embed = createHelpEmbed(null, "", "");
     const json = embed.toJSON();
 
     expect(json.thumbnail).toBeUndefined();

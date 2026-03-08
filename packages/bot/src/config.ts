@@ -4,7 +4,9 @@ export type Config = {
   supabaseUrl: string;
   supabaseServiceKey: string;
   invitationUrl: string;
+  supportServerUrl: string;
   logLevel: string;
+  /** TODO: Sentry SDK初期化は未実装。将来的に追加予定 */
   sentryDsn: string | undefined;
   /** 開発用: 指定するとグローバルではなくギルドコマンドとして登録（レート制限回避） */
   devGuildId: string | undefined;
@@ -31,6 +33,8 @@ export function getConfig(): Config {
     supabaseUrl: requireEnv("SUPABASE_URL"),
     supabaseServiceKey: requireEnv("SUPABASE_SERVICE_KEY"),
     invitationUrl: process.env.INVITATION_URL ?? "",
+    supportServerUrl:
+      process.env.SUPPORT_SERVER_URL ?? "https://discord.gg/MyaZRuze23",
     logLevel: process.env.LOG_LEVEL?.toLowerCase() ?? "info",
     sentryDsn: process.env.SENTRY_DSN || undefined,
     devGuildId: process.env.DEV_GUILD_ID || undefined,

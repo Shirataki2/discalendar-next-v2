@@ -75,12 +75,15 @@ export async function getFutureEventsForAllGuilds(
   // 通知ウィンドウ内のイベントのみ取得（全件フェッチを回避）
   const upperBound = new Date(fromTime.getTime() + MAX_NOTIFY_WINDOW_MS);
 
+  const MAX_NOTIFY_EVENTS = 1000;
+
   const { data, error } = await supabase
     .from("events")
     .select("*")
     .gte("start_at", fromTime.toISOString())
     .lte("start_at", upperBound.toISOString())
-    .order("start_at", { ascending: true });
+    .order("start_at", { ascending: true })
+    .limit(MAX_NOTIFY_EVENTS);
 
   if (error) {
     logger.error({ error }, "Failed to fetch future events for all guilds");
