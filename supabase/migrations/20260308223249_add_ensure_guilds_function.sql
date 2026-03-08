@@ -5,7 +5,7 @@
 --   Botが未起動・遅延している場合でも、Web側からギルドを登録できるようにする。
 --   ON CONFLICT DO UPDATE で名前・アバターを最新化し、locale等の既存値は保持する。
 
-CREATE FUNCTION ensure_guilds(
+CREATE OR REPLACE FUNCTION ensure_guilds(
     p_guild_ids VARCHAR(32)[],
     p_names VARCHAR(100)[],
     p_avatar_urls VARCHAR(512)[]

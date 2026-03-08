@@ -28,8 +28,10 @@ function getEnsureGuildsMigrationSql(): string {
 describe("ensure_guilds migration", () => {
   const sql = getEnsureGuildsMigrationSql();
 
-  it("should create ensure_guilds function as SECURITY DEFINER", () => {
-    expect(sql).toMatch(/CREATE\s+FUNCTION\s+ensure_guilds\s*\(/i);
+  it("should create ensure_guilds function as SECURITY DEFINER with CREATE OR REPLACE", () => {
+    expect(sql).toMatch(
+      /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+ensure_guilds\s*\(/i
+    );
     expect(sql).toMatch(/SECURITY\s+DEFINER/i);
   });
 
