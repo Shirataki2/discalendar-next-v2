@@ -502,13 +502,13 @@ describe("Task 5.2: useGuildRefresh の統合", () => {
     });
   });
 
-  it("invitableGuilds が空の場合はリフレッシュフックを無効化する", () => {
+  it("invitableGuilds が空でもリフレッシュフックが有効である", () => {
     const addEventListenerSpy = vi.spyOn(document, "addEventListener");
 
     render(<DashboardWithCalendar guilds={mockGuilds} invitableGuilds={[]} />);
 
-    // visibilitychange リスナーが登録されていないこと
-    expect(addEventListenerSpy).not.toHaveBeenCalledWith(
+    // visibilitychange リスナーが常に登録されること（ギルド情報の最新化のため）
+    expect(addEventListenerSpy).toHaveBeenCalledWith(
       "visibilitychange",
       expect.any(Function)
     );

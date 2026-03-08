@@ -18,6 +18,7 @@ type MockSupabaseClient = {
   from: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
   in: ReturnType<typeof vi.fn>;
+  is: ReturnType<typeof vi.fn>;
 };
 
 // モック用のSupabaseクライアント
@@ -25,6 +26,7 @@ const mockSupabaseClient: MockSupabaseClient = {
   from: vi.fn(),
   select: vi.fn(),
   in: vi.fn(),
+  is: vi.fn(),
 };
 
 // lib/supabase/serverモジュールをモック
@@ -40,6 +42,9 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
     });
     mockSupabaseClient.select.mockReturnValue({
       in: mockSupabaseClient.in,
+    });
+    mockSupabaseClient.in.mockReturnValue({
+      is: mockSupabaseClient.is,
     });
   });
 
@@ -73,7 +78,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
       },
     ];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: mockRows,
       error: null,
     });
@@ -118,7 +123,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
       },
     ];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: mockRows,
       error: null,
     });
@@ -139,7 +144,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
     // Arrange
     const guildIds = ["999888777666555444", "111222333444555666"];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: [],
       error: null,
     });
@@ -169,7 +174,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
       },
     ];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: mockRows,
       error: null,
     });
@@ -196,7 +201,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
       },
     ];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: mockRows,
       error: null,
     });
@@ -227,7 +232,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
       },
     ];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: mockRows,
       error: null,
     });
@@ -243,7 +248,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
     // Arrange
     const guildIds = ["123456789012345678"];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: null,
       error: { message: "Database connection failed", code: "PGRST301" },
     });
@@ -258,7 +263,7 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
     // Arrange
     const guildIds = ["123456789012345678"];
 
-    mockSupabaseClient.in.mockResolvedValueOnce({
+    mockSupabaseClient.is.mockResolvedValueOnce({
       data: [],
       error: null,
     });

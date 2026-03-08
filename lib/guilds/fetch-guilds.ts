@@ -9,7 +9,7 @@ import {
   getOrSetPendingRequest,
   setCachedGuilds,
 } from "@/lib/guilds/cache";
-import { getJoinedGuilds } from "@/lib/guilds/service";
+import { ensureGuilds, getJoinedGuilds } from "@/lib/guilds/service";
 import type {
   Guild,
   GuildListError,
@@ -108,6 +108,17 @@ export async function fetchGuilds(
 
       // DB照合を実行
       try {
+        // Discord APIから取得したギルド情報をDBに登録（Bot未起動時のフォールバック）
+        // NOTE: キャッシュ + dedup（getOrSetPendingRequest）により呼び出し頻度は制限されている。
+        // RPC ensure_guilds は ON CONFLICT DO UPDATE で冪等なため、重複呼び出しも安全。
+        await ensureGuilds(
+          discordResult.data.map((dg) => ({
+            guildId: dg.id,
+            name: dg.name,
+            avatarUrl: getGuildIconUrl(dg.id, dg.icon),
+          }))
+        );
+
         const joinedGuilds = await getJoinedGuilds(guildIds);
 
         // 権限情報をマージして GuildWithPermissions に変換

@@ -2,9 +2,14 @@
 
 ## 組織哲学
 
-Next.js App Routerの規約に従いつつ、shadcn/uiのコンポーネント管理パターンを採用。機能はApp Router配下でルーティングベース、UIコンポーネントは独立して管理。
+npm workspacesによるモノレポ構成。ルートにNext.js Webアプリ、`packages/`配下に独立パッケージを配置。Webアプリ側はNext.js App Routerの規約に従いつつ、shadcn/uiのコンポーネント管理パターンを採用。
 
-## ディレクトリパターン
+## モノレポ構成
+
+- **ルート (`/`)** - Next.js Webアプリ（フロントエンド）。`package.json` の `workspaces: ["packages/*"]` でワークスペース管理
+- **`packages/bot`** (`@discalendar/bot`) - Discord Bot。discord.js v14 + Supabase。独立した `tsconfig.json`、`biome.jsonc`、`vitest.config.mts` を持つ
+
+## ディレクトリパターン（Web）
 
 ### App Router (`/app/`)
 
@@ -148,6 +153,46 @@ import { localHelper } from './utils'
 - UIコンポーネント → ビジネスロジック依存禁止
 - ビジネスロジック → UIコンポーネント依存OK
 - `/lib` → 他モジュール依存最小化
+
+## ディレクトリパターン（Bot: `packages/bot/`）
+
+### コマンド (`src/commands/`)
+
+**目的**: Discord スラッシュコマンドの定義と実行ロジック
+**例**: `create.ts`（イベント作成）、`list.ts`（イベント一覧）、`init.ts`（ギルド初期化）、`help.ts`、`invite.ts`
+
+### イベントハンドラ (`src/events/`)
+
+**目的**: Discordクライアントイベント（guildCreate, guildDelete等）のハンドリング
+
+### サービス (`src/services/`)
+
+**目的**: ビジネスロジック層。Supabaseとの通信を含む
+**例**: `guild-service.ts`（ギルドCRUD）、`event-service.ts`（イベントCRUD）、`supabase.ts`（クライアント初期化）
+
+**特徴**: Result型パターンを採用（Web側と同じ規約）
+
+### タスク (`src/tasks/`)
+
+**目的**: 定期実行タスク
+**例**: `notify.ts`（イベント通知）、`presence.ts`（Botプレゼンス更新）
+
+### 型定義 (`src/types/`)
+
+**目的**: Bot固有の型定義
+**例**: `command.ts`、`event.ts`、`guild.ts`、`result.ts`
+
+### ユーティリティ (`src/utils/`)
+
+**目的**: 共通ヘルパー
+**例**: `logger.ts`（pino）、`embeds.ts`（Discord Embed構築）、`datetime.ts`（日時処理）
+
+### Bot固有の設定ファイル
+
+- `biome.jsonc` - ルートのUltracite `core` プリセットを継承（`root: false`）
+- `tsconfig.json` - ES2022ターゲット、Node16モジュール解決
+- `vitest.config.mts` - Node環境でテスト実行
+- `env.example` - 環境変数テンプレート
 
 ---
 _パターンを文書化し、ファイルツリーは記載しない。パターンに従った新規ファイルは更新不要_
