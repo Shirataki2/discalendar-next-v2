@@ -101,7 +101,7 @@ describe("GuildSettingsForm", () => {
       ).toBeInTheDocument();
     });
 
-    it("通知チャンネル選択コンポーネントを表示する", async () => {
+    it("通知チャンネル選択コンポーネントを表示する", () => {
       render(<GuildSettingsForm {...defaultProps} />);
 
       // NotificationChannelSelect がチャンネル取得して表示される

@@ -1,9 +1,16 @@
-export type NotificationUnit = "分前" | "時間前" | "日前" | "週間前";
+export type NotificationUnit = "minutes" | "hours" | "days" | "weeks";
+
+export const NOTIFICATION_UNIT_LABELS: Record<NotificationUnit, string> = {
+  minutes: "分前",
+  hours: "時間前",
+  days: "日前",
+  weeks: "週間前",
+};
 
 export type NotificationPayload = {
-  key: number;
+  key: string;
   num: number;
-  type: NotificationUnit;
+  unit: NotificationUnit;
 };
 
 export type EventRecord = {

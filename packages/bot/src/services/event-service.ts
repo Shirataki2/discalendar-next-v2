@@ -98,40 +98,45 @@ export async function upsertEventSettings(
 ): Promise<EventSettings> {
   const supabase = getSupabaseClient();
 
-  const existing = await getEventSettings(guildId);
-
-  if (existing) {
-    const { data: updated, error: updateError } = await supabase
-      .from("event_settings")
-      .update({ channel_id: channelId })
-      .eq("guild_id", guildId)
-      .select()
-      .single();
-
-    if (updateError) {
-      logger.error(
-        { error: updateError, guildId },
-        "Failed to update event settings"
-      );
-      throw updateError;
-    }
-
-    return updated as EventSettings;
-  }
-
-  const { data: created, error: insertError } = await supabase
+  const { data, error } = await supabase
     .from("event_settings")
-    .insert({ guild_id: guildId, channel_id: channelId })
+    .upsert(
+      { guild_id: guildId, channel_id: channelId },
+      { onConflict: "guild_id" }
+    )
     .select()
     .single();
 
-  if (insertError) {
-    logger.error(
-      { error: insertError, guildId },
-      "Failed to create event settings"
-    );
-    throw insertError;
+  if (error) {
+    logger.error({ error, guildId }, "Failed to upsert event settings");
+    throw error;
   }
 
-  return created as EventSettings;
+  return data as EventSettings;
+}
+
+export async function getEventSettingsByGuildIds(
+  guildIds: string[]
+): Promise<Map<string, EventSettings>> {
+  if (guildIds.length === 0) {
+    return new Map();
+  }
+
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("event_settings")
+    .select("*")
+    .in("guild_id", guildIds);
+
+  if (error) {
+    logger.error({ error }, "Failed to fetch event settings by guild IDs");
+    throw error;
+  }
+
+  const map = new Map<string, EventSettings>();
+  for (const row of data as EventSettings[]) {
+    map.set(row.guild_id, row);
+  }
+  return map;
 }

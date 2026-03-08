@@ -3,10 +3,11 @@ import {
   type GuildMember,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  type SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
-import type { Command } from "../bot.js";
 import { createEvent } from "../services/event-service.js";
 import { getGuildConfig } from "../services/guild-service.js";
+import type { Command } from "../types/command.js";
 import type { NotificationUnit } from "../types/event.js";
 import { validateDate } from "../utils/datetime.js";
 import { createEventEmbed } from "../utils/embeds.js";
@@ -53,28 +54,28 @@ const NOTIFICATION_CHOICES = [
   { name: "7日前", value: "7d" },
 ] as const;
 
-const NOTIFY_MAP: Record<string, { num: number; type: NotificationUnit }> = {
-  "5m": { num: 5, type: "分前" },
-  "10m": { num: 10, type: "分前" },
-  "15m": { num: 15, type: "分前" },
-  "30m": { num: 30, type: "分前" },
-  "1h": { num: 1, type: "時間前" },
-  "2h": { num: 2, type: "時間前" },
-  "3h": { num: 3, type: "時間前" },
-  "6h": { num: 6, type: "時間前" },
-  "12h": { num: 12, type: "時間前" },
-  "1d": { num: 1, type: "日前" },
-  "2d": { num: 2, type: "日前" },
-  "3d": { num: 3, type: "日前" },
-  "7d": { num: 7, type: "日前" },
+const NOTIFY_MAP: Record<string, { num: number; unit: NotificationUnit }> = {
+  "5m": { num: 5, unit: "minutes" },
+  "10m": { num: 10, unit: "minutes" },
+  "15m": { num: 15, unit: "minutes" },
+  "30m": { num: 30, unit: "minutes" },
+  "1h": { num: 1, unit: "hours" },
+  "2h": { num: 2, unit: "hours" },
+  "3h": { num: 3, unit: "hours" },
+  "6h": { num: 6, unit: "hours" },
+  "12h": { num: 12, unit: "hours" },
+  "1d": { num: 1, unit: "days" },
+  "2d": { num: 2, unit: "days" },
+  "3d": { num: 3, unit: "days" },
+  "7d": { num: 7, unit: "days" },
 };
 
 function addNotifyOption(
-  cmd: ReturnType<SlashCommandBuilder["addStringOption"]>,
+  cmd: SlashCommandOptionsOnlyBuilder,
   name: string,
   description: string
-): ReturnType<SlashCommandBuilder["addStringOption"]> {
-  return cmd.addStringOption((opt) =>
+): void {
+  cmd.addStringOption((opt) =>
     opt
       .setName(name)
       .setDescription(description)
@@ -83,86 +84,99 @@ function addNotifyOption(
   );
 }
 
-let builder = new SlashCommandBuilder()
-  .setName("create")
-  .setDescription("予定を新たに作成します")
-  .addStringOption((opt) =>
-    opt.setName("name").setDescription("予定の名称").setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt
-      .setName("start_year")
-      .setDescription("予定開始時間(年)")
-      .setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt
-      .setName("start_month")
-      .setDescription("予定開始時間(月)")
-      .setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt
-      .setName("start_day")
-      .setDescription("予定開始時間(日)")
-      .setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt
-      .setName("start_hour")
-      .setDescription("予定開始時間(時)")
-      .setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt
-      .setName("start_minute")
-      .setDescription("予定開始時間(分)")
-      .setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt.setName("end_year").setDescription("予定終了時間(年)").setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt
-      .setName("end_month")
-      .setDescription("予定終了時間(月)")
-      .setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt.setName("end_day").setDescription("予定終了時間(日)").setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt.setName("end_hour").setDescription("予定終了時間(時)").setRequired(true)
-  )
-  .addIntegerOption((opt) =>
-    opt
-      .setName("end_minute")
-      .setDescription("予定終了時間(分)")
-      .setRequired(true)
-  )
-  .addStringOption((opt) =>
-    opt.setName("description").setDescription("予定の説明").setRequired(false)
-  )
-  .addBooleanOption((opt) =>
-    opt
-      .setName("is_all_day")
-      .setDescription("終日行う予定か")
-      .setRequired(false)
-  )
-  .addStringOption((opt) =>
-    opt
-      .setName("color")
-      .setDescription("予定の配色")
-      .addChoices(...COLOR_CHOICES)
-      .setRequired(false)
-  );
+function buildCommandData(): SlashCommandOptionsOnlyBuilder {
+  const builder = new SlashCommandBuilder()
+    .setName("create")
+    .setDescription("予定を新たに作成します")
+    .addStringOption((opt) =>
+      opt.setName("name").setDescription("予定の名称").setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("start_year")
+        .setDescription("予定開始時間(年)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("start_month")
+        .setDescription("予定開始時間(月)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("start_day")
+        .setDescription("予定開始時間(日)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("start_hour")
+        .setDescription("予定開始時間(時)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("start_minute")
+        .setDescription("予定開始時間(分)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("end_year")
+        .setDescription("予定終了時間(年)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("end_month")
+        .setDescription("予定終了時間(月)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("end_day")
+        .setDescription("予定終了時間(日)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("end_hour")
+        .setDescription("予定終了時間(時)")
+        .setRequired(true)
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("end_minute")
+        .setDescription("予定終了時間(分)")
+        .setRequired(true)
+    )
+    .addStringOption((opt) =>
+      opt.setName("description").setDescription("予定の説明").setRequired(false)
+    )
+    .addBooleanOption((opt) =>
+      opt
+        .setName("is_all_day")
+        .setDescription("終日行う予定か")
+        .setRequired(false)
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("color")
+        .setDescription("予定の配色")
+        .addChoices(...COLOR_CHOICES)
+        .setRequired(false)
+    );
 
-builder = addNotifyOption(builder, "notify_1", "予定の事前通知");
-builder = addNotifyOption(builder, "notify_2", "予定の事前通知");
-builder = addNotifyOption(builder, "notify_3", "予定の事前通知");
-builder = addNotifyOption(builder, "notify_4", "予定の事前通知");
+  addNotifyOption(builder, "notify_1", "予定の事前通知");
+  addNotifyOption(builder, "notify_2", "予定の事前通知");
+  addNotifyOption(builder, "notify_3", "予定の事前通知");
+  addNotifyOption(builder, "notify_4", "予定の事前通知");
 
-const data = builder;
+  return builder;
+}
+
+const data = buildCommandData();
 
 async function execute(
   interaction: ChatInputCommandInteraction
@@ -273,7 +287,7 @@ async function execute(
         return null;
       }
       const mapped = NOTIFY_MAP[value];
-      return { key: index, num: mapped.num, type: mapped.type };
+      return { key: `n${index + 1}`, num: mapped.num, unit: mapped.unit };
     })
     .filter((n) => n !== null);
 

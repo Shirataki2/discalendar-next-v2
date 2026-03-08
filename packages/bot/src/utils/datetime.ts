@@ -15,10 +15,6 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
   day: "2-digit",
 });
 
-export function getJstNow(): Date {
-  return new Date();
-}
-
 export function formatDateTime(date: Date): string {
   const parts = DATE_TIME_FORMATTER.formatToParts(date);
   const get = (type: string): string =>

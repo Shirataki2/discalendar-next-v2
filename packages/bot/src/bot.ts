@@ -1,19 +1,20 @@
 import {
-  type ChatInputCommandInteraction,
   Client,
   Collection,
   GatewayIntentBits,
   REST,
   Routes,
-  type SharedNameAndDescription,
 } from "discord.js";
+import createCommand from "./commands/create.js";
+import helpCommand from "./commands/help.js";
+import initCommand from "./commands/init.js";
+import inviteCommand from "./commands/invite.js";
+import listCommand from "./commands/list.js";
 import { getConfig } from "./config.js";
+import type { Command } from "./types/command.js";
 import { logger } from "./utils/logger.js";
 
-export type Command = {
-  data: SharedNameAndDescription & { toJSON: () => unknown };
-  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
-};
+export type { Command } from "./types/command.js";
 
 export class DiscalendarBot extends Client {
   commands = new Collection<string, Command>();
@@ -25,7 +26,7 @@ export class DiscalendarBot extends Client {
   }
 
   async setup(): Promise<void> {
-    await this.loadCommands();
+    this.loadCommands();
     this.registerEventHandlers();
     this.startTasks();
     await this.registerSlashCommands();
@@ -37,36 +38,22 @@ export class DiscalendarBot extends Client {
     logger.info("Bot logged in successfully");
   }
 
-  private async loadCommands(): Promise<void> {
-    try {
-      const { readdir } = await import("node:fs/promises");
-      const { fileURLToPath } = await import("node:url");
-      const { dirname, join } = await import("node:path");
+  private loadCommands(): void {
+    const commands: Command[] = [
+      createCommand,
+      helpCommand,
+      initCommand,
+      inviteCommand,
+      listCommand,
+    ];
 
-      const currentDir = dirname(fileURLToPath(import.meta.url));
-      const commandsDir = join(currentDir, "commands");
-
-      const files = await readdir(commandsDir);
-      const commandFiles = files.filter(
-        (f) => (f.endsWith(".js") || f.endsWith(".ts")) && !f.endsWith(".d.ts")
-      );
-
-      for (const file of commandFiles) {
-        const mod = (await import(join(commandsDir, file))) as {
-          default?: Command;
-        };
-        const command = mod.default;
-        if (command && "data" in command && "execute" in command) {
-          this.commands.set(command.data.name, command);
-          logger.info(`Loaded command: ${command.data.name}`);
-        } else {
-          logger.warn(`Skipping invalid command module: ${file}`);
-        }
-      }
-    } catch (_error) {
-      logger.warn("No command modules found, skipping command loading");
+    for (const command of commands) {
+      this.commands.set(command.data.name, command);
+      logger.info(`Loaded command: ${command.data.name}`);
     }
+  }
 
+  private registerEventHandlers(): void {
     this.on("interactionCreate", async (interaction) => {
       if (!interaction.isChatInputCommand()) {
         return;
@@ -96,9 +83,7 @@ export class DiscalendarBot extends Client {
         }
       }
     });
-  }
 
-  private registerEventHandlers(): void {
     this.on("guildCreate", async (guild) => {
       try {
         const { onGuildCreate } = await import("./events/guild.js");

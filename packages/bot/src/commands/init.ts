@@ -5,11 +5,11 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import type { Command } from "../bot.js";
 import {
   getEventSettings,
   upsertEventSettings,
 } from "../services/event-service.js";
+import type { Command } from "../types/command.js";
 
 const data = new SlashCommandBuilder()
   .setName("init")

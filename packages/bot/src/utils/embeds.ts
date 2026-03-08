@@ -1,5 +1,6 @@
 import { EmbedBuilder } from "discord.js";
 import type { EventRecord } from "../types/event.js";
+import { NOTIFICATION_UNIT_LABELS } from "../types/event.js";
 import { formatDate, formatDateTime } from "./datetime.js";
 
 const BOT_VERSION = "2.0.0";
@@ -78,7 +79,7 @@ export function createEventEmbed(event: EventRecord): EmbedBuilder {
 
   if (event.notifications.length > 0) {
     const notifStr = event.notifications
-      .map((n) => `${n.num}${n.type}`)
+      .map((n) => `${n.num}${NOTIFICATION_UNIT_LABELS[n.unit]}`)
       .join(", ");
     embed.addFields({ name: "通知", value: notifStr, inline: true });
   }

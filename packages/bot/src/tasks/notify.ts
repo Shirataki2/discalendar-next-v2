@@ -1,26 +1,34 @@
-import type { Client } from "discord.js";
+import type { Client, SendableChannels } from "discord.js";
 import {
-  getEventSettings,
+  getEventSettingsByGuildIds,
   getFutureEventsForAllGuilds,
 } from "../services/event-service.js";
 import type { EventRecord, NotificationPayload } from "../types/event.js";
+import { NOTIFICATION_UNIT_LABELS } from "../types/event.js";
 import { createNotificationEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
 
+// JST is UTC+9
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 function toMinutes(notification: NotificationPayload): number {
-  switch (notification.type) {
-    case "時間前":
+  switch (notification.unit) {
+    case "hours":
       return notification.num * 60;
-    case "日前":
+    case "days":
       return notification.num * 60 * 24;
-    case "週間前":
+    case "weeks":
       return notification.num * 60 * 24 * 7;
     default:
       return notification.num;
   }
 }
+
+const SENTINEL_NOTIFICATION: NotificationPayload = {
+  key: "__start__",
+  num: 0,
+  unit: "minutes",
+};
 
 async function processNotifications(client: Client): Promise<void> {
   const now = new Date();
@@ -37,9 +45,32 @@ async function processNotifications(client: Client): Promise<void> {
 
   logger.debug({ count: events.length }, "Fetched events for notification");
 
+  if (events.length === 0) {
+    return;
+  }
+
+  const uniqueGuildIds = [...new Set(events.map((e) => e.guild_id))];
+  let settingsMap: Map<string, { channel_id: string }>;
+  try {
+    settingsMap = await getEventSettingsByGuildIds(uniqueGuildIds);
+  } catch (error) {
+    logger.error({ error }, "Failed to fetch event settings for notifications");
+    return;
+  }
+
   for (const event of events) {
     try {
-      await checkEventNotifications(client, event, nowMs);
+      const settings = settingsMap.get(event.guild_id);
+      if (!settings) {
+        continue;
+      }
+
+      const channel = client.channels.cache.get(settings.channel_id);
+      if (!channel?.isSendable()) {
+        continue;
+      }
+
+      await checkEventNotifications(channel, event, nowMs);
     } catch (error) {
       logger.error(
         { error, eventId: event.id },
@@ -50,20 +81,10 @@ async function processNotifications(client: Client): Promise<void> {
 }
 
 async function checkEventNotifications(
-  client: Client,
+  channel: SendableChannels,
   event: EventRecord,
   nowMs: number
 ): Promise<void> {
-  const settings = await getEventSettings(event.guild_id);
-  if (!settings) {
-    return;
-  }
-
-  const channel = client.channels.cache.get(settings.channel_id);
-  if (!channel?.isSendable()) {
-    return;
-  }
-
   const startDate = new Date(event.start_at);
   let startMs: number;
   if (event.is_all_day) {
@@ -77,7 +98,7 @@ async function checkEventNotifications(
 
   const notifications: NotificationPayload[] = [
     ...event.notifications,
-    { key: -1, num: 0, type: "分前" },
+    SENTINEL_NOTIFICATION,
   ];
 
   for (const notification of notifications) {
@@ -86,10 +107,10 @@ async function checkEventNotifications(
     const diff = nowMs - notifyTimeMs;
 
     if (diff >= 0 && diff < 60_000) {
-      const label =
-        notification.key === -1
-          ? "以下の予定が開催されます"
-          : `${notification.num}${notification.type.replace("前", "後")}に以下の予定が開催されます`;
+      const isSentinel = notification.key === SENTINEL_NOTIFICATION.key;
+      const label = isSentinel
+        ? "以下の予定が開催されます"
+        : `${notification.num}${NOTIFICATION_UNIT_LABELS[notification.unit]}に以下の予定が開催されます`;
 
       const embed = createNotificationEmbed(event, label);
 
@@ -103,7 +124,6 @@ async function checkEventNotifications(
         logger.warn(
           {
             error,
-            channelId: settings.channel_id,
             guildId: event.guild_id,
           },
           "Failed to send notification"

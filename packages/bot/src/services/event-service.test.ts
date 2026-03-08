@@ -9,12 +9,15 @@ const mockLt = vi.fn();
 const mockOrder = vi.fn();
 const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
+const mockUpsert = vi.fn();
+const mockIn = vi.fn();
 
 function resetChain() {
   mockSelect.mockReturnValue({
     single: mockSingle,
     eq: mockEq,
     order: mockOrder,
+    in: mockIn,
   });
   mockSingle.mockResolvedValue({ data: null, error: null });
   mockEq.mockReturnValue({
@@ -28,6 +31,8 @@ function resetChain() {
   mockOrder.mockResolvedValue({ data: [], error: null });
   mockInsert.mockReturnValue({ select: mockSelect });
   mockUpdate.mockReturnValue({ eq: mockEq });
+  mockUpsert.mockReturnValue({ select: mockSelect });
+  mockIn.mockResolvedValue({ data: [], error: null });
 }
 
 vi.mock("../services/supabase.js", () => ({
@@ -36,10 +41,12 @@ vi.mock("../services/supabase.js", () => ({
       select: mockSelect,
       insert: mockInsert,
       update: mockUpdate,
+      upsert: mockUpsert,
       eq: mockEq,
       gte: mockGte,
       lt: mockLt,
       order: mockOrder,
+      in: mockIn,
     }),
   }),
 }));

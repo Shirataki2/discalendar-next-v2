@@ -7,9 +7,10 @@ import {
   EmbedBuilder,
   SlashCommandBuilder,
 } from "discord.js";
-import type { Command } from "../bot.js";
 import { getEventsByGuildId } from "../services/event-service.js";
+import type { Command } from "../types/command.js";
 import type { EventRecord } from "../types/event.js";
+import { NOTIFICATION_UNIT_LABELS } from "../types/event.js";
 import { formatDateTime } from "../utils/datetime.js";
 
 const PER_PAGE = 4;
@@ -27,7 +28,9 @@ function buildEmbed(
 
   for (const event of pageEvents) {
     const notificationsStr =
-      event.notifications.map((n) => `${n.num}${n.type}`).join(", ") || "なし";
+      event.notifications
+        .map((n) => `${n.num}${NOTIFICATION_UNIT_LABELS[n.unit]}`)
+        .join(", ") || "なし";
 
     const value = [
       `\`開始時刻\`: ${formatDateTime(new Date(event.start_at))}`,

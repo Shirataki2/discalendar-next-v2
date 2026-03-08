@@ -74,8 +74,8 @@ describe("createEventEmbed", () => {
   it("should add notifications field when present", () => {
     const event = makeEvent({
       notifications: [
-        { key: 0, num: 5, type: "分前" },
-        { key: 1, num: 1, type: "時間前" },
+        { key: "n1", num: 5, unit: "minutes" },
+        { key: "n2", num: 1, unit: "hours" },
       ],
     });
     const embed = createEventEmbed(event);
