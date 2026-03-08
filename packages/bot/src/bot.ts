@@ -11,10 +11,9 @@ import initCommand from "./commands/init.js";
 import inviteCommand from "./commands/invite.js";
 import listCommand from "./commands/list.js";
 import { getConfig } from "./config.js";
+import { onGuildCreate, onGuildDelete, onGuildUpdate } from "./events/guild.js";
 import type { Command } from "./types/command.js";
 import { logger } from "./utils/logger.js";
-
-export type { Command } from "./types/command.js";
 
 export class DiscalendarBot extends Client {
   commands = new Collection<string, Command>();
@@ -28,7 +27,7 @@ export class DiscalendarBot extends Client {
   async setup(): Promise<void> {
     this.loadCommands();
     this.registerEventHandlers();
-    this.startTasks();
+    await this.startTasks();
     await this.registerSlashCommands();
   }
 
@@ -86,7 +85,6 @@ export class DiscalendarBot extends Client {
 
     this.on("guildCreate", async (guild) => {
       try {
-        const { onGuildCreate } = await import("./events/guild.js");
         await onGuildCreate(guild);
       } catch (error) {
         logger.error(
@@ -98,7 +96,6 @@ export class DiscalendarBot extends Client {
 
     this.on("guildDelete", async (guild) => {
       try {
-        const { onGuildDelete } = await import("./events/guild.js");
         await onGuildDelete(guild);
       } catch (error) {
         logger.error(
@@ -110,7 +107,6 @@ export class DiscalendarBot extends Client {
 
     this.on("guildUpdate", async (oldGuild, newGuild) => {
       try {
-        const { onGuildUpdate } = await import("./events/guild.js");
         await onGuildUpdate(oldGuild, newGuild);
       } catch (error) {
         logger.error(
@@ -125,24 +121,22 @@ export class DiscalendarBot extends Client {
     });
   }
 
-  private startTasks(): void {
-    import("./tasks/notify.js")
-      .then(({ startNotifyTask }) => {
-        startNotifyTask(this);
-        logger.info("Notify task started");
-      })
-      .catch((error) => {
-        logger.warn({ error }, "Notify task module not found, skipping");
-      });
+  private async startTasks(): Promise<void> {
+    try {
+      const { startNotifyTask } = await import("./tasks/notify.js");
+      startNotifyTask(this);
+      logger.info("Notify task started");
+    } catch (error) {
+      logger.warn({ error }, "Notify task module not found, skipping");
+    }
 
-    import("./tasks/presence.js")
-      .then(({ startPresenceTask }) => {
-        startPresenceTask(this);
-        logger.info("Presence task started");
-      })
-      .catch((error) => {
-        logger.warn({ error }, "Presence task module not found, skipping");
-      });
+    try {
+      const { startPresenceTask } = await import("./tasks/presence.js");
+      startPresenceTask(this);
+      logger.info("Presence task started");
+    } catch (error) {
+      logger.warn({ error }, "Presence task module not found, skipping");
+    }
   }
 
   private async registerSlashCommands(): Promise<void> {

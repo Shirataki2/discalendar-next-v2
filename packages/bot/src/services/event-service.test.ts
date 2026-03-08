@@ -105,18 +105,27 @@ describe("event-service", () => {
     mockOrder.mockResolvedValue({ data: mockEvents, error: null });
 
     const { getEventsByGuildId } = await import("./event-service.js");
-    const events = await getEventsByGuildId("guild-1", "all");
+    const result = await getEventsByGuildId("guild-1", "all");
 
-    expect(events).toHaveLength(1);
-    expect(events[0].name).toBe("Event 1");
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].name).toBe("Event 1");
+    }
   });
 
-  it("getEventsByGuildId throws on error", async () => {
-    mockOrder.mockResolvedValue({ data: null, error: { message: "DB error" } });
+  it("getEventsByGuildId returns error on failure", async () => {
+    mockOrder.mockResolvedValue({
+      data: null,
+      error: { message: "DB error" },
+    });
 
     const { getEventsByGuildId } = await import("./event-service.js");
-    await expect(getEventsByGuildId("guild-1")).rejects.toEqual({
-      message: "DB error",
-    });
+    const result = await getEventsByGuildId("guild-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.message).toBe("DB error");
+    }
   });
 });

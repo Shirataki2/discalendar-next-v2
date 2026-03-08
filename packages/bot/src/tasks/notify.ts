@@ -10,6 +10,7 @@ import { logger } from "../utils/logger.js";
 
 // JST is UTC+9
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const NOTIFY_CHECK_INTERVAL_MS = 60_000;
 
 function toMinutes(notification: NotificationPayload): number {
   switch (notification.unit) {
@@ -35,14 +36,16 @@ async function processNotifications(client: Client): Promise<void> {
   now.setSeconds(0, 0);
   const nowMs = now.getTime();
 
-  let events: EventRecord[];
-  try {
-    events = await getFutureEventsForAllGuilds(now);
-  } catch (error) {
-    logger.error({ error }, "Failed to fetch events for notifications");
+  const eventsResult = await getFutureEventsForAllGuilds(now);
+  if (!eventsResult.success) {
+    logger.error(
+      { error: eventsResult.error },
+      "Failed to fetch events for notifications"
+    );
     return;
   }
 
+  const events = eventsResult.data;
   logger.debug({ count: events.length }, "Fetched events for notification");
 
   if (events.length === 0) {
@@ -50,13 +53,16 @@ async function processNotifications(client: Client): Promise<void> {
   }
 
   const uniqueGuildIds = [...new Set(events.map((e) => e.guild_id))];
-  let settingsMap: Map<string, { channel_id: string }>;
-  try {
-    settingsMap = await getEventSettingsByGuildIds(uniqueGuildIds);
-  } catch (error) {
-    logger.error({ error }, "Failed to fetch event settings for notifications");
+  const settingsResult = await getEventSettingsByGuildIds(uniqueGuildIds);
+  if (!settingsResult.success) {
+    logger.error(
+      { error: settingsResult.error },
+      "Failed to fetch event settings for notifications"
+    );
     return;
   }
+
+  const settingsMap = settingsResult.data;
 
   for (const event of events) {
     try {
@@ -102,11 +108,11 @@ async function checkEventNotifications(
   ];
 
   for (const notification of notifications) {
-    const offsetMs = toMinutes(notification) * 60_000;
+    const offsetMs = toMinutes(notification) * NOTIFY_CHECK_INTERVAL_MS;
     const notifyTimeMs = startMs - offsetMs;
     const diff = nowMs - notifyTimeMs;
 
-    if (diff >= 0 && diff < 60_000) {
+    if (diff >= 0 && diff < NOTIFY_CHECK_INTERVAL_MS) {
       const isSentinel = notification.key === SENTINEL_NOTIFICATION.key;
       const label = isSentinel
         ? "以下の予定が開催されます"
@@ -138,5 +144,5 @@ export function startNotifyTask(client: Client): NodeJS.Timeout {
     processNotifications(client).catch((error) => {
       logger.error({ error }, "Unhandled error in notification processing");
     });
-  }, 60_000);
+  }, NOTIFY_CHECK_INTERVAL_MS);
 }

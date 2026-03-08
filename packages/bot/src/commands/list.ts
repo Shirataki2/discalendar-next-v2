@@ -12,8 +12,13 @@ import type { Command } from "../types/command.js";
 import type { EventRecord } from "../types/event.js";
 import { NOTIFICATION_UNIT_LABELS } from "../types/event.js";
 import { formatDateTime } from "../utils/datetime.js";
+import { logger } from "../utils/logger.js";
 
 const PER_PAGE = 4;
+const COLLECTOR_TIMEOUT_MS = 180_000;
+
+const VALID_RANGES = ["past", "future", "all"] as const;
+type Range = (typeof VALID_RANGES)[number];
 
 function buildEmbed(
   events: EventRecord[],
@@ -91,12 +96,23 @@ async function execute(
 
   await interaction.deferReply();
 
-  const range = (interaction.options.getString("range") ?? "future") as
-    | "past"
-    | "future"
-    | "all";
+  const rawRange = interaction.options.getString("range") ?? "future";
+  const range: Range = (VALID_RANGES as readonly string[]).includes(rawRange)
+    ? (rawRange as Range)
+    : "future";
   const guildId = interaction.guild.id;
-  const events = await getEventsByGuildId(guildId, range);
+  const result = await getEventsByGuildId(guildId, range);
+
+  if (!result.success) {
+    logger.error(
+      { error: result.error, guildId },
+      "Failed to fetch events for list"
+    );
+    await interaction.editReply("予定の取得に失敗しました");
+    return;
+  }
+
+  const events = result.data;
 
   if (events.length === 0) {
     await interaction.editReply("現在登録されている予定はありません");
@@ -117,7 +133,7 @@ async function execute(
 
   const collector = reply.createMessageComponentCollector({
     componentType: ComponentType.Button,
-    time: 180_000,
+    time: COLLECTOR_TIMEOUT_MS,
   });
 
   collector.on("collect", async (i) => {

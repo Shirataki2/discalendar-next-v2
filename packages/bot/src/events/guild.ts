@@ -5,18 +5,31 @@ import { logger } from "../utils/logger.js";
 export async function onGuildCreate(guild: Guild): Promise<void> {
   logger.info({ guildId: guild.id, guildName: guild.name }, "Joined guild");
 
-  await upsertGuild({
+  const result = await upsertGuild({
     guild_id: guild.id,
     name: guild.name,
     avatar_url: guild.iconURL(),
     locale: "ja",
   });
+
+  if (!result.success) {
+    logger.error(
+      { error: result.error, guildId: guild.id },
+      "Failed to upsert guild on join"
+    );
+  }
 }
 
 export async function onGuildDelete(guild: Guild): Promise<void> {
   logger.info({ guildId: guild.id, guildName: guild.name }, "Left guild");
 
-  await deleteGuild(guild.id);
+  const result = await deleteGuild(guild.id);
+  if (!result.success) {
+    logger.error(
+      { error: result.error, guildId: guild.id },
+      "Failed to delete guild on leave"
+    );
+  }
 }
 
 export async function onGuildUpdate(
@@ -36,10 +49,17 @@ export async function onGuildUpdate(
     "Guild updated"
   );
 
-  await upsertGuild({
+  const result = await upsertGuild({
     guild_id: newGuild.id,
     name: newGuild.name,
     avatar_url: newGuild.iconURL(),
     locale: "ja",
   });
+
+  if (!result.success) {
+    logger.error(
+      { error: result.error, guildId: newGuild.id },
+      "Failed to upsert guild on update"
+    );
+  }
 }

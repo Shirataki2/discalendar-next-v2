@@ -1,7 +1,6 @@
 import {
   type ChatInputCommandInteraction,
   type GuildMember,
-  PermissionFlagsBits,
   SlashCommandBuilder,
   type SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
@@ -11,6 +10,8 @@ import type { Command } from "../types/command.js";
 import type { NotificationUnit } from "../types/event.js";
 import { validateDate } from "../utils/datetime.js";
 import { createEventEmbed } from "../utils/embeds.js";
+import { logger } from "../utils/logger.js";
+import { hasManagementPermission } from "../utils/permissions.js";
 
 const COLOR_CHOICES = [
   { name: "白", value: "white" },
@@ -70,6 +71,9 @@ const NOTIFY_MAP: Record<string, { num: number; unit: NotificationUnit }> = {
   "7d": { num: 7, unit: "days" },
 };
 
+const MIN_YEAR = 1970;
+const MAX_YEAR = 2099;
+
 function addNotifyOption(
   cmd: SlashCommandOptionsOnlyBuilder,
   name: string,
@@ -89,70 +93,98 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
     .setName("create")
     .setDescription("予定を新たに作成します")
     .addStringOption((opt) =>
-      opt.setName("name").setDescription("予定の名称").setRequired(true)
+      opt
+        .setName("name")
+        .setDescription("予定の名称")
+        .setMaxLength(100)
+        .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("start_year")
         .setDescription("予定開始時間(年)")
+        .setMinValue(MIN_YEAR)
+        .setMaxValue(MAX_YEAR)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("start_month")
         .setDescription("予定開始時間(月)")
+        .setMinValue(1)
+        .setMaxValue(12)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("start_day")
         .setDescription("予定開始時間(日)")
+        .setMinValue(1)
+        .setMaxValue(31)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("start_hour")
         .setDescription("予定開始時間(時)")
+        .setMinValue(0)
+        .setMaxValue(23)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("start_minute")
         .setDescription("予定開始時間(分)")
+        .setMinValue(0)
+        .setMaxValue(59)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("end_year")
         .setDescription("予定終了時間(年)")
+        .setMinValue(MIN_YEAR)
+        .setMaxValue(MAX_YEAR)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("end_month")
         .setDescription("予定終了時間(月)")
+        .setMinValue(1)
+        .setMaxValue(12)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("end_day")
         .setDescription("予定終了時間(日)")
+        .setMinValue(1)
+        .setMaxValue(31)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("end_hour")
         .setDescription("予定終了時間(時)")
+        .setMinValue(0)
+        .setMaxValue(23)
         .setRequired(true)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("end_minute")
         .setDescription("予定終了時間(分)")
+        .setMinValue(0)
+        .setMaxValue(59)
         .setRequired(true)
     )
     .addStringOption((opt) =>
-      opt.setName("description").setDescription("予定の説明").setRequired(false)
+      opt
+        .setName("description")
+        .setDescription("予定の説明")
+        .setMaxLength(1024)
+        .setRequired(false)
     )
     .addBooleanOption((opt) =>
       opt
@@ -191,24 +223,28 @@ async function execute(
 
   const guildId = interaction.guild.id;
 
-  const guildConfig = await getGuildConfig(guildId);
-  if (guildConfig?.restricted) {
-    const member = interaction.member as GuildMember | null;
-    if (member) {
-      const hasPermission =
-        member.permissions.has(PermissionFlagsBits.Administrator) ||
-        member.permissions.has(PermissionFlagsBits.ManageGuild) ||
-        member.permissions.has(PermissionFlagsBits.ManageRoles) ||
-        member.permissions.has(PermissionFlagsBits.ManageMessages);
+  const guildConfigResult = await getGuildConfig(guildId);
+  if (!guildConfigResult.success) {
+    logger.error(
+      { error: guildConfigResult.error, guildId },
+      "Failed to fetch guild config"
+    );
+    await interaction.reply({
+      content: "ギルド設定の取得に失敗しました",
+      ephemeral: true,
+    });
+    return;
+  }
 
-      if (!hasPermission) {
-        await interaction.reply({
-          content:
-            "このコマンドを実行するためには「管理者」「サーバー管理」「ロールの管理」「メッセージの管理」のいずれかの権限が必要です",
-          ephemeral: true,
-        });
-        return;
-      }
+  if (guildConfigResult.data?.restricted) {
+    const member = interaction.member as GuildMember | null;
+    if (!hasManagementPermission(member)) {
+      await interaction.reply({
+        content:
+          "このコマンドを実行するためには「管理者」「サーバー管理」「ロールの管理」「メッセージの管理」のいずれかの権限が必要です",
+        ephemeral: true,
+      });
+      return;
     }
   }
 
@@ -291,7 +327,7 @@ async function execute(
     })
     .filter((n) => n !== null);
 
-  const event = await createEvent({
+  const result = await createEvent({
     guild_id: guildId,
     name,
     description,
@@ -302,7 +338,16 @@ async function execute(
     notifications,
   });
 
-  const embed = createEventEmbed(event);
+  if (!result.success) {
+    logger.error({ error: result.error, guildId }, "Failed to create event");
+    await interaction.reply({
+      content: "予定の作成に失敗しました",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const embed = createEventEmbed(result.data);
   await interaction.reply({
     content: "正常に予定を作成しました",
     embeds: [embed],

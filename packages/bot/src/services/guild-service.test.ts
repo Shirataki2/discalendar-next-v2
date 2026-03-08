@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockSingle = vi.fn();
 const mockSelectForGuild = vi.fn(() => ({ single: mockSingle }));
 const mockUpsert = vi.fn(() => ({ select: mockSelectForGuild }));
-const mockEqForDelete = vi.fn(() => ({ error: null }));
+const mockEqForDelete = vi.fn();
 const mockDelete = vi.fn(() => ({ eq: mockEqForDelete }));
 
 const mockEqForConfig = vi.fn(() => ({ single: mockSingle }));
@@ -53,13 +53,14 @@ describe("guild-service", () => {
   beforeEach(() => {
     vi.resetModules();
     mockSingle.mockResolvedValue({ data: null, error: null });
+    mockEqForDelete.mockResolvedValue({ error: null });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("upsertGuild calls supabase upsert", async () => {
+  it("upsertGuild returns success result", async () => {
     const guildRow = {
       id: 1,
       guild_id: "123",
@@ -75,16 +76,23 @@ describe("guild-service", () => {
       name: "Test Guild",
     });
 
-    expect(result.guild_id).toBe("123");
-    expect(result.name).toBe("Test Guild");
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.guild_id).toBe("123");
+      expect(result.data.name).toBe("Test Guild");
+    }
   });
 
-  it("deleteGuild does not throw on success", async () => {
+  it("deleteGuild returns success on completion", async () => {
+    mockEqForDelete.mockResolvedValue({ error: null });
+
     const { deleteGuild } = await import("./guild-service.js");
-    await expect(deleteGuild("123")).resolves.toBeUndefined();
+    const result = await deleteGuild("123");
+
+    expect(result.success).toBe(true);
   });
 
-  it("getGuildConfig returns null when not found", async () => {
+  it("getGuildConfig returns null data when not found", async () => {
     mockSingle.mockResolvedValue({
       data: null,
       error: { code: "PGRST116", message: "not found" },
@@ -93,7 +101,10 @@ describe("guild-service", () => {
     const { getGuildConfig } = await import("./guild-service.js");
     const result = await getGuildConfig("123");
 
-    expect(result).toBeNull();
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBeNull();
+    }
   });
 
   it("getGuildConfig returns config when found", async () => {
@@ -105,6 +116,9 @@ describe("guild-service", () => {
     const { getGuildConfig } = await import("./guild-service.js");
     const result = await getGuildConfig("123");
 
-    expect(result).toEqual({ guild_id: "123", restricted: true });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ guild_id: "123", restricted: true });
+    }
   });
 });

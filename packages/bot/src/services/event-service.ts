@@ -3,13 +3,15 @@ import type {
   EventRecord,
   EventSettings,
 } from "../types/event.js";
+import type { ServiceResult } from "../types/result.js";
 import { logger } from "../utils/logger.js";
+import { classifySupabaseError } from "./classify-error.js";
 import { getSupabaseClient } from "./supabase.js";
 
 export async function getEventsByGuildId(
   guildId: string,
   rangeType: "past" | "future" | "all" = "all"
-): Promise<EventRecord[]> {
+): Promise<ServiceResult<EventRecord[]>> {
   const supabase = getSupabaseClient();
   let query = supabase
     .from("events")
@@ -28,13 +30,18 @@ export async function getEventsByGuildId(
 
   if (error) {
     logger.error({ error, guildId }, "Failed to fetch events");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
   }
 
-  return data as EventRecord[];
+  return { success: true, data: data as EventRecord[] };
 }
 
-export async function createEvent(data: EventCreate): Promise<EventRecord> {
+export async function createEvent(
+  data: EventCreate
+): Promise<ServiceResult<EventRecord>> {
   const supabase = getSupabaseClient();
 
   const { data: created, error } = await supabase
@@ -45,15 +52,18 @@ export async function createEvent(data: EventCreate): Promise<EventRecord> {
 
   if (error) {
     logger.error({ error, guildId: data.guild_id }, "Failed to create event");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "create"),
+    };
   }
 
-  return created as EventRecord;
+  return { success: true, data: created as EventRecord };
 }
 
 export async function getFutureEventsForAllGuilds(
   fromTime: Date
-): Promise<EventRecord[]> {
+): Promise<ServiceResult<EventRecord[]>> {
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
@@ -64,15 +74,18 @@ export async function getFutureEventsForAllGuilds(
 
   if (error) {
     logger.error({ error }, "Failed to fetch future events for all guilds");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
   }
 
-  return data as EventRecord[];
+  return { success: true, data: data as EventRecord[] };
 }
 
 export async function getEventSettings(
   guildId: string
-): Promise<EventSettings | null> {
+): Promise<ServiceResult<EventSettings | null>> {
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
@@ -83,19 +96,22 @@ export async function getEventSettings(
 
   if (error) {
     if (error.code === "PGRST116") {
-      return null;
+      return { success: true, data: null };
     }
     logger.error({ error, guildId }, "Failed to fetch event settings");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
   }
 
-  return data as EventSettings;
+  return { success: true, data: data as EventSettings };
 }
 
 export async function upsertEventSettings(
   guildId: string,
   channelId: string
-): Promise<EventSettings> {
+): Promise<ServiceResult<EventSettings>> {
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
@@ -109,17 +125,20 @@ export async function upsertEventSettings(
 
   if (error) {
     logger.error({ error, guildId }, "Failed to upsert event settings");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "upsert"),
+    };
   }
 
-  return data as EventSettings;
+  return { success: true, data: data as EventSettings };
 }
 
 export async function getEventSettingsByGuildIds(
   guildIds: string[]
-): Promise<Map<string, EventSettings>> {
+): Promise<ServiceResult<Map<string, EventSettings>>> {
   if (guildIds.length === 0) {
-    return new Map();
+    return { success: true, data: new Map() };
   }
 
   const supabase = getSupabaseClient();
@@ -131,12 +150,15 @@ export async function getEventSettingsByGuildIds(
 
   if (error) {
     logger.error({ error }, "Failed to fetch event settings by guild IDs");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
   }
 
   const map = new Map<string, EventSettings>();
   for (const row of data as EventSettings[]) {
     map.set(row.guild_id, row);
   }
-  return map;
+  return { success: true, data: map };
 }

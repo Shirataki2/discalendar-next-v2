@@ -2,7 +2,6 @@ import {
   ChannelType,
   type ChatInputCommandInteraction,
   type GuildMember,
-  PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
 import {
@@ -10,6 +9,8 @@ import {
   upsertEventSettings,
 } from "../services/event-service.js";
 import type { Command } from "../types/command.js";
+import { logger } from "../utils/logger.js";
+import { hasManagementPermission } from "../utils/permissions.js";
 
 const data = new SlashCommandBuilder()
   .setName("init")
@@ -36,21 +37,13 @@ async function execute(
   }
 
   const member = interaction.member as GuildMember | null;
-  if (member) {
-    const hasPermission =
-      member.permissions.has(PermissionFlagsBits.Administrator) ||
-      member.permissions.has(PermissionFlagsBits.ManageGuild) ||
-      member.permissions.has(PermissionFlagsBits.ManageRoles) ||
-      member.permissions.has(PermissionFlagsBits.ManageMessages);
-
-    if (!hasPermission) {
-      await interaction.reply({
-        content:
-          "このコマンドを実行するためには「管理者」「サーバー管理」「ロールの管理」「メッセージの管理」のいずれかの権限が必要です",
-        ephemeral: true,
-      });
-      return;
-    }
+  if (!hasManagementPermission(member)) {
+    await interaction.reply({
+      content:
+        "このコマンドを実行するためには「管理者」「サーバー管理」「ロールの管理」「メッセージの管理」のいずれかの権限が必要です",
+      ephemeral: true,
+    });
+    return;
   }
 
   const channel = interaction.options.getChannel("channel");
@@ -66,12 +59,35 @@ async function execute(
   const guildId = interaction.guild.id;
   const channelId = targetChannel.id;
 
-  const existing = await getEventSettings(guildId);
-  await upsertEventSettings(guildId, channelId);
+  const existingResult = await getEventSettings(guildId);
+  if (!existingResult.success) {
+    logger.error(
+      { error: existingResult.error, guildId },
+      "Failed to fetch event settings"
+    );
+    await interaction.reply({
+      content: "設定の取得に失敗しました",
+      ephemeral: true,
+    });
+    return;
+  }
 
-  if (existing) {
+  const upsertResult = await upsertEventSettings(guildId, channelId);
+  if (!upsertResult.success) {
+    logger.error(
+      { error: upsertResult.error, guildId },
+      "Failed to upsert event settings"
+    );
+    await interaction.reply({
+      content: "設定の保存に失敗しました",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (existingResult.data) {
     await interaction.reply(
-      `イベント通知先を変更しました\n通知先: <#${existing.channel_id}> → <#${channelId}>`
+      `イベント通知先を変更しました\n通知先: <#${existingResult.data.channel_id}> → <#${channelId}>`
     );
   } else {
     await interaction.reply(

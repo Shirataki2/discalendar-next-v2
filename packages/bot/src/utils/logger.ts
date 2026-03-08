@@ -1,8 +1,9 @@
 import pino from "pino";
-import { getConfig } from "../config.js";
+
+const level = process.env.LOG_LEVEL?.toLowerCase() ?? "info";
 
 export const logger = pino({
-  level: getConfig().logLevel,
+  level,
   transport:
     process.env.NODE_ENV !== "production"
       ? { target: "pino-pretty" }

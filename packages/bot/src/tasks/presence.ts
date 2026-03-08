@@ -2,6 +2,7 @@ import { ActivityType, type Client } from "discord.js";
 import { logger } from "../utils/logger.js";
 
 const STATES = ["help", "slash_help", "servers", "url"] as const;
+const PRESENCE_ROTATION_INTERVAL_MS = 10_000;
 
 function updatePresence(client: Client, state: (typeof STATES)[number]): void {
   if (!client.user) {
@@ -48,5 +49,5 @@ export function startPresenceTask(client: Client): NodeJS.Timeout {
     } catch (error) {
       logger.error({ error }, "Failed to update presence");
     }
-  }, 10_000);
+  }, PRESENCE_ROTATION_INTERVAL_MS);
 }

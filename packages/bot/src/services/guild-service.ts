@@ -1,8 +1,12 @@
 import type { GuildConfig, GuildCreate, GuildRow } from "../types/guild.js";
+import type { ServiceResult } from "../types/result.js";
 import { logger } from "../utils/logger.js";
+import { classifySupabaseError } from "./classify-error.js";
 import { getSupabaseClient } from "./supabase.js";
 
-export async function upsertGuild(data: GuildCreate): Promise<GuildRow> {
+export async function upsertGuild(
+  data: GuildCreate
+): Promise<ServiceResult<GuildRow>> {
   const supabase = getSupabaseClient();
 
   const { data: guild, error } = await supabase
@@ -13,13 +17,18 @@ export async function upsertGuild(data: GuildCreate): Promise<GuildRow> {
 
   if (error) {
     logger.error({ error, guildId: data.guild_id }, "Failed to upsert guild");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "upsert"),
+    };
   }
 
-  return guild as GuildRow;
+  return { success: true, data: guild as GuildRow };
 }
 
-export async function deleteGuild(guildId: string): Promise<void> {
+export async function deleteGuild(
+  guildId: string
+): Promise<ServiceResult<void>> {
   const supabase = getSupabaseClient();
 
   const { error } = await supabase
@@ -29,13 +38,18 @@ export async function deleteGuild(guildId: string): Promise<void> {
 
   if (error) {
     logger.error({ error, guildId }, "Failed to delete guild");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "delete"),
+    };
   }
+
+  return { success: true, data: undefined };
 }
 
 export async function getGuildConfig(
   guildId: string
-): Promise<GuildConfig | null> {
+): Promise<ServiceResult<GuildConfig | null>> {
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
@@ -46,11 +60,14 @@ export async function getGuildConfig(
 
   if (error) {
     if (error.code === "PGRST116") {
-      return null;
+      return { success: true, data: null };
     }
     logger.error({ error, guildId }, "Failed to fetch guild config");
-    throw error;
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
   }
 
-  return data as GuildConfig;
+  return { success: true, data: data as GuildConfig };
 }
