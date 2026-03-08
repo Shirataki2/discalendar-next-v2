@@ -295,16 +295,30 @@ async function execute(
     return;
   }
 
+  // ユーザー入力はJSTとして扱い、UTC に変換する (JST = UTC+9)
+  const JST_OFFSET_HOURS = 9;
   const startAt = new Date(
-    Date.UTC(startYear, startMonth - 1, startDay, startHour, startMinute)
+    Date.UTC(
+      startYear,
+      startMonth - 1,
+      startDay,
+      startHour - JST_OFFSET_HOURS,
+      startMinute
+    )
   );
   const endAt = new Date(
-    Date.UTC(endYear, endMonth - 1, endDay, endHour, endMinute)
+    Date.UTC(
+      endYear,
+      endMonth - 1,
+      endDay,
+      endHour - JST_OFFSET_HOURS,
+      endMinute
+    )
   );
 
-  if (startAt > endAt) {
+  if (startAt >= endAt) {
     await interaction.reply({
-      content: "開始時間が終了時間より後になっています",
+      content: "開始時間が終了時間以降になっています",
       ephemeral: true,
     });
     return;

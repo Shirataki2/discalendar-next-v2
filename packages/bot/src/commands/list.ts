@@ -101,6 +101,7 @@ async function execute(
     ? (rawRange as Range)
     : "future";
   const guildId = interaction.guild.id;
+  // TODO: イベント数が多い場合はDB側でのページネーション（limit/offset）に変更する
   const result = await getEventsByGuildId(guildId, range);
 
   if (!result.success) {

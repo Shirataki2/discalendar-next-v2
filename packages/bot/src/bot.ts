@@ -12,11 +12,14 @@ import inviteCommand from "./commands/invite.js";
 import listCommand from "./commands/list.js";
 import { getConfig } from "./config.js";
 import { onGuildCreate, onGuildDelete, onGuildUpdate } from "./events/guild.js";
+import { startNotifyTask } from "./tasks/notify.js";
+import { startPresenceTask } from "./tasks/presence.js";
 import type { Command } from "./types/command.js";
 import { logger } from "./utils/logger.js";
 
 export class DiscalendarBot extends Client {
   commands = new Collection<string, Command>();
+  private taskTimers: NodeJS.Timeout[] = [];
 
   constructor() {
     super({
@@ -27,7 +30,6 @@ export class DiscalendarBot extends Client {
   async setup(): Promise<void> {
     this.loadCommands();
     this.registerEventHandlers();
-    await this.startTasks();
     await this.registerSlashCommands();
   }
 
@@ -35,6 +37,15 @@ export class DiscalendarBot extends Client {
     const config = getConfig();
     await this.login(config.botToken);
     logger.info("Bot logged in successfully");
+  }
+
+  override async destroy(): Promise<void> {
+    for (const timer of this.taskTimers) {
+      clearInterval(timer);
+    }
+    this.taskTimers = [];
+    logger.info("Cleared all task timers");
+    await super.destroy();
   }
 
   private loadCommands(): void {
@@ -118,25 +129,16 @@ export class DiscalendarBot extends Client {
 
     this.once("ready", (client) => {
       logger.info(`Ready! Logged in as ${client.user.tag}`);
+      this.startTasks();
     });
   }
 
-  private async startTasks(): Promise<void> {
-    try {
-      const { startNotifyTask } = await import("./tasks/notify.js");
-      startNotifyTask(this);
-      logger.info("Notify task started");
-    } catch (error) {
-      logger.warn({ error }, "Notify task module not found, skipping");
-    }
+  private startTasks(): void {
+    this.taskTimers.push(startNotifyTask(this));
+    logger.info("Notify task started");
 
-    try {
-      const { startPresenceTask } = await import("./tasks/presence.js");
-      startPresenceTask(this);
-      logger.info("Presence task started");
-    } catch (error) {
-      logger.warn({ error }, "Presence task module not found, skipping");
-    }
+    this.taskTimers.push(startPresenceTask(this));
+    logger.info("Presence task started");
   }
 
   private async registerSlashCommands(): Promise<void> {
