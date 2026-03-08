@@ -9,7 +9,7 @@ export async function onGuildCreate(guild: Guild): Promise<void> {
     guild_id: guild.id,
     name: guild.name,
     avatar_url: guild.iconURL(),
-    locale: "ja",
+    locale: guild.preferredLocale,
   });
 
   if (!result.success) {
@@ -53,7 +53,7 @@ export async function onGuildUpdate(
     guild_id: newGuild.id,
     name: newGuild.name,
     avatar_url: newGuild.iconURL(),
-    locale: "ja",
+    locale: newGuild.preferredLocale,
   });
 
   if (!result.success) {

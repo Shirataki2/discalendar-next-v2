@@ -17,10 +17,16 @@ async function main(): Promise<void> {
   };
 
   process.on("SIGINT", () => {
-    shutdown("SIGINT");
+    shutdown("SIGINT").catch((error) => {
+      logger.error({ error }, "Shutdown failed");
+      process.exit(1);
+    });
   });
   process.on("SIGTERM", () => {
-    shutdown("SIGTERM");
+    shutdown("SIGTERM").catch((error) => {
+      logger.error({ error }, "Shutdown failed");
+      process.exit(1);
+    });
   });
 }
 
