@@ -10,6 +10,17 @@ export function createHelpEmbed(
   invitationUrl: string,
   supportServerUrl: string
 ): EmbedBuilder {
+  const supportSection = supportServerUrl
+    ? `\n__**🌟サポートサーバー🌟**__
+　機能要望やバグなどがあった場合には
+[サポートサーバー](${supportServerUrl})へ参加し，ご連絡をお願いします！\n`
+    : "";
+
+  const inviteSection = invitationUrl
+    ? `\n__**🌟他のサーバーにも導入する場合🌟**__
+　[こちら](${invitationUrl})より導入をお願いします！`
+    : "";
+
   const description = `DisCalendarはDiscord用の__予定管理Bot__です
 
 ほとんどの操作は**Web上で行えることが特徴です！**
@@ -34,13 +45,7 @@ __**🌟初期化🌟**__
 __**🌟コマンド機能🌟**__
 　Discord上でも予定の表示と作成が行えます！
 　詳しくは\`/create\`, \`/list\`と打ってみてください！
-
-__**🌟サポートサーバー🌟**__
-　機能要望やバグなどがあった場合には
-[サポートサーバー](${supportServerUrl})へ参加し，ご連絡をお願いします！
-
-__**🌟他のサーバーにも導入する場合🌟**__
-　[こちら](${invitationUrl})より導入をお願いします！`;
+${supportSection}${inviteSection}`;
 
   const embed = new EmbedBuilder()
     .setTitle("DisCalendar - Help")

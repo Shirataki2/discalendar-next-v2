@@ -60,6 +60,26 @@ describe("createHelpEmbed", () => {
 
     expect(json.thumbnail).toBeUndefined();
   });
+
+  it("should hide support/invite sections when URLs are empty", () => {
+    const embed = createHelpEmbed(null, "", "");
+    const json = embed.toJSON();
+
+    expect(json.description).not.toContain("サポートサーバー");
+    expect(json.description).not.toContain("他のサーバーにも導入する場合");
+  });
+
+  it("should show support/invite sections when URLs are provided", () => {
+    const embed = createHelpEmbed(
+      null,
+      "https://example.com/invite",
+      "https://discord.gg/test"
+    );
+    const json = embed.toJSON();
+
+    expect(json.description).toContain("サポートサーバー");
+    expect(json.description).toContain("他のサーバーにも導入する場合");
+  });
 });
 
 describe("createEventEmbed", () => {

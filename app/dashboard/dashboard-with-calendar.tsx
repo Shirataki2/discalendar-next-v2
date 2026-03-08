@@ -460,6 +460,8 @@ export function DashboardWithCalendar({
     []
   );
 
+  // enabled: true — Bot招待後にタブ復帰した際、invitableGuilds が空でも
+  // ギルド一覧を再取得してBOT参加済みギルドへの昇格を検知する必要があるため常時有効
   const { isRefreshing } = useGuildRefresh({
     onRefresh: handleGuildRefresh,
     enabled: true,

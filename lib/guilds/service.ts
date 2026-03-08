@@ -21,6 +21,9 @@ import { toGuild } from "./types";
  * Botが未起動でもWeb側からギルドを登録できるようにする。
  * ON CONFLICT DO UPDATE で名前・アバターを最新化する。
  *
+ * NOTE: この関数はfire-and-forget で呼び出される。エラー時は captureException で
+ * 記録するのみで例外をスローしないため、呼び出し元の処理は中断されない。
+ *
  * @param guilds Discord APIから取得したギルド情報の配列
  */
 export async function ensureGuilds(

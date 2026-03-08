@@ -33,8 +33,7 @@ export function getConfig(): Config {
     supabaseUrl: requireEnv("SUPABASE_URL"),
     supabaseServiceKey: requireEnv("SUPABASE_SERVICE_KEY"),
     invitationUrl: process.env.INVITATION_URL ?? "",
-    supportServerUrl:
-      process.env.SUPPORT_SERVER_URL ?? "https://discord.gg/MyaZRuze23",
+    supportServerUrl: process.env.SUPPORT_SERVER_URL ?? "",
     logLevel: process.env.LOG_LEVEL?.toLowerCase() ?? "info",
     sentryDsn: process.env.SENTRY_DSN || undefined,
     devGuildId: process.env.DEV_GUILD_ID || undefined,

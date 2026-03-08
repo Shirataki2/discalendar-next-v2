@@ -8,7 +8,7 @@ import { NOTIFICATION_UNIT_LABELS } from "../types/event.js";
 import { createNotificationEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
 
-// JST is UTC+9
+// JST (UTC+9) 固定: 本サービスは日本国内向けのため、タイムゾーンをJSTに限定している
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const NOTIFY_CHECK_INTERVAL_MS = 60_000;
 

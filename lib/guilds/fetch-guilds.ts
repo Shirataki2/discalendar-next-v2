@@ -109,6 +109,8 @@ export async function fetchGuilds(
       // DB照合を実行
       try {
         // Discord APIから取得したギルド情報をDBに登録（Bot未起動時のフォールバック）
+        // NOTE: キャッシュ + dedup（getOrSetPendingRequest）により呼び出し頻度は制限されている。
+        // RPC ensure_guilds は ON CONFLICT DO UPDATE で冪等なため、重複呼び出しも安全。
         await ensureGuilds(
           discordResult.data.map((dg) => ({
             guildId: dg.id,
