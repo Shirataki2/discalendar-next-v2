@@ -17,7 +17,7 @@ import {
   type RecurrenceFrequency,
   type Weekday,
   buildRruleString,
-} from "@/lib/calendar/rrule-utils";
+} from "@discalendar/rrule-utils";
 
 /**
  * 繰り返しフォームデータの型定義

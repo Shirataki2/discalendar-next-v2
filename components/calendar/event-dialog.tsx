@@ -18,6 +18,7 @@
  * Requirements: 1.3, 1.5, 1.7, 3.1, 3.2, 3.4, 3.6, 5.2, 6.1, 6.2, 7.1
  */
 
+import { buildRruleString } from "@discalendar/rrule-utils";
 import { useCallback, useState } from "react";
 import {
   createRecurringEventAction,
@@ -40,7 +41,6 @@ import type {
   UpdateEventInput,
   UpdateSeriesInput,
 } from "@/lib/calendar/event-service";
-import { buildRruleString } from "@/lib/calendar/rrule-utils";
 import type { EditScope } from "@/lib/calendar/types";
 import { EventForm } from "./event-form";
 

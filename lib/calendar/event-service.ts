@@ -23,7 +23,7 @@ import {
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
-import { expandOccurrences, formatDateUTC, toSummaryText, validateRrule } from "./rrule-utils";
+import { expandOccurrences, formatDateUTC, toSummaryText, validateRrule } from "@discalendar/rrule-utils";
 
 /**
  * カレンダーエラーコードの定義
