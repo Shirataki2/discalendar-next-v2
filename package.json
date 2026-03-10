@@ -5,7 +5,7 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build -w @discalendar/rrule-utils && next build",
     "start": "next start",
     "lint": "ultracite check",
     "prepare": "husky",
