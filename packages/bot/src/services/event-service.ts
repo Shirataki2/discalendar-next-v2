@@ -97,6 +97,31 @@ export async function getFutureEventsForAllGuilds(
   return { success: true, data: data as EventRecord[] };
 }
 
+const MAX_LIST_SERIES = 100;
+
+export async function getSeriesByGuildId(
+  guildId: string
+): Promise<ServiceResult<EventSeriesRecord[]>> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("event_series")
+    .select("*")
+    .eq("guild_id", guildId)
+    .order("dtstart", { ascending: true })
+    .limit(MAX_LIST_SERIES);
+
+  if (error) {
+    logger.error({ error, guildId }, "Failed to fetch event series");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
+  }
+
+  return { success: true, data: data as EventSeriesRecord[] };
+}
+
 const MAX_NOTIFY_SERIES = 500;
 
 export async function getFutureSeriesForAllGuilds(): Promise<
