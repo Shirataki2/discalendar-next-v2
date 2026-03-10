@@ -1,6 +1,7 @@
 import type {
   EventCreate,
   EventRecord,
+  EventSeriesRecord,
   EventSettings,
 } from "../types/event.js";
 import type { ServiceResult } from "../types/result.js";
@@ -94,6 +95,30 @@ export async function getFutureEventsForAllGuilds(
   }
 
   return { success: true, data: data as EventRecord[] };
+}
+
+const MAX_NOTIFY_SERIES = 500;
+
+export async function getFutureSeriesForAllGuilds(): Promise<
+  ServiceResult<EventSeriesRecord[]>
+> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("event_series")
+    .select("*")
+    .order("created_at", { ascending: true })
+    .limit(MAX_NOTIFY_SERIES);
+
+  if (error) {
+    logger.error({ error }, "Failed to fetch event series for all guilds");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
+  }
+
+  return { success: true, data: data as EventSeriesRecord[] };
 }
 
 export async function getEventSettings(

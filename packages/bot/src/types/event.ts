@@ -44,6 +44,25 @@ export type EventCreate = {
   notifications?: NotificationPayload[];
 };
 
+export type EventSeriesRecord = {
+  id: string;
+  guild_id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  is_all_day: boolean;
+  rrule: string;
+  dtstart: string;
+  duration_minutes: number;
+  location: string | null;
+  channel_id: string | null;
+  channel_name: string | null;
+  notifications: NotificationPayload[];
+  exdates: string[];
+  created_at: string;
+  updated_at: string;
+};
+
 export type EventSettings = {
   id: number;
   guild_id: string;

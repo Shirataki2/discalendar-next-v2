@@ -127,4 +127,75 @@ describe("event-service", () => {
       expect(result.error.message).toBe("DB error");
     }
   });
+
+  describe("getFutureSeriesForAllGuilds", () => {
+    it("returns all active series records", async () => {
+      const mockSeries = [
+        {
+          id: "series-1",
+          guild_id: "guild-1",
+          name: "Weekly Meeting",
+          description: null,
+          color: "#3B82F6",
+          is_all_day: false,
+          rrule: "FREQ=WEEKLY;BYDAY=MO",
+          dtstart: "2024-06-10T10:00:00Z",
+          duration_minutes: 60,
+          location: null,
+          channel_id: null,
+          channel_name: null,
+          notifications: [{ key: "n1", num: 30, unit: "minutes" }],
+          exdates: [],
+          created_at: "2024-06-01T00:00:00Z",
+          updated_at: "2024-06-01T00:00:00Z",
+        },
+      ];
+
+      mockLimit.mockResolvedValue({ data: mockSeries, error: null });
+
+      const { getFutureSeriesForAllGuilds } = await import(
+        "./event-service.js"
+      );
+      const result = await getFutureSeriesForAllGuilds();
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].name).toBe("Weekly Meeting");
+        expect(result.data[0].rrule).toBe("FREQ=WEEKLY;BYDAY=MO");
+        expect(result.data[0].duration_minutes).toBe(60);
+      }
+    });
+
+    it("returns error on Supabase failure", async () => {
+      mockLimit.mockResolvedValue({
+        data: null,
+        error: { message: "Connection refused" },
+      });
+
+      const { getFutureSeriesForAllGuilds } = await import(
+        "./event-service.js"
+      );
+      const result = await getFutureSeriesForAllGuilds();
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe("Connection refused");
+      }
+    });
+
+    it("returns empty array when no series exist", async () => {
+      mockLimit.mockResolvedValue({ data: [], error: null });
+
+      const { getFutureSeriesForAllGuilds } = await import(
+        "./event-service.js"
+      );
+      const result = await getFutureSeriesForAllGuilds();
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).toHaveLength(0);
+      }
+    });
+  });
 });
