@@ -4,12 +4,20 @@
  * 純粋関数として実装。外部依存は `rrule` パッケージのみ。
  * Web・Bot 両方から共有パッケージとしてインポートして使用する。
  */
-import {
-  Frequency,
-  RRule,
-  RRuleSet,
-  type Weekday as RRuleWeekday,
-} from "rrule";
+import type { Weekday as RRuleWeekday } from "rrule";
+// biome-ignore lint/performance/noNamespaceImport: rrule CJS/ESM dual compatibility requires namespace import
+import * as rruleModule from "rrule";
+
+// rrule パッケージは CJS (UMD) と ESM の2形式で配布されている。
+// Node.js/tsx は CJS → module.exports を default にラップ、
+// Turbopack は ESM → 名前付きエクスポートを直接提供。
+// 両環境で動作させるため namespace import + default フォールバック。
+const rruleLib = (
+  "default" in rruleModule
+    ? (rruleModule as Record<string, unknown>).default
+    : rruleModule
+) as typeof rruleModule;
+const { Frequency, RRule, RRuleSet } = rruleLib;
 
 /** 繰り返し頻度 */
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
@@ -66,7 +74,10 @@ export type RruleValidationResult = {
 };
 
 /** 頻度文字列から rrule.js の Frequency 定数へのマッピング */
-const FREQUENCY_MAP: Record<RecurrenceFrequency, Frequency> = {
+const FREQUENCY_MAP: Record<
+  RecurrenceFrequency,
+  (typeof Frequency)[keyof typeof Frequency]
+> = {
   daily: Frequency.DAILY,
   weekly: Frequency.WEEKLY,
   monthly: Frequency.MONTHLY,
@@ -338,7 +349,7 @@ export function formatDateUTC(date: Date): string {
 
 /** Frequency 数値からキー文字列を取得する */
 function getFrequencyKey(
-  freq: Frequency | undefined
+  freq: (typeof Frequency)[keyof typeof Frequency] | undefined
 ): RecurrenceFrequency | null {
   if (freq === undefined) {
     return null;
