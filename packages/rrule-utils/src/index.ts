@@ -61,6 +61,9 @@ export type RruleBuildInput = {
   dtstart: Date;
 };
 
+/** オカレンス展開のデフォルト最大件数 */
+const DEFAULT_MAX_OCCURRENCES = 1000;
+
 /** オカレンス展開結果 */
 export type OccurrenceExpansionResult = {
   dates: Date[];
@@ -178,6 +181,7 @@ export function buildRruleString(input: RruleBuildInput): string {
  * @param rangeStart - 展開範囲の開始
  * @param rangeEnd - 展開範囲の終了
  * @param exdates - 除外日リスト
+ * @param maxOccurrences - 最大オカレンス数（デフォルト: 1000）。上限超過時は truncated: true を返す
  * @returns オカレンス展開結果
  */
 export function expandOccurrences(
@@ -185,7 +189,8 @@ export function expandOccurrences(
   dtstart: Date,
   rangeStart: Date,
   rangeEnd: Date,
-  exdates?: Date[]
+  exdates?: Date[],
+  maxOccurrences: number = DEFAULT_MAX_OCCURRENCES
 ): OccurrenceExpansionResult {
   if (!rrule || rrule.trim().length === 0) {
     return { dates: [], truncated: false };
@@ -213,6 +218,10 @@ export function expandOccurrences(
 
     // 範囲内のオカレンスのみを展開 (inc=true で境界を含む)
     const dates = rruleSet.between(rangeStart, rangeEnd, true);
+
+    if (dates.length > maxOccurrences) {
+      return { dates: dates.slice(0, maxOccurrences), truncated: true };
+    }
 
     return { dates, truncated: false };
   } catch {

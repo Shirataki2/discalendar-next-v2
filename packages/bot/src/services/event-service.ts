@@ -9,12 +9,13 @@ import { logger } from "../utils/logger.js";
 import { classifySupabaseError } from "./classify-error.js";
 import { getSupabaseClient } from "./supabase.js";
 
+const MAX_LIST_EVENTS = 100;
+
 export async function getEventsByGuildId(
   guildId: string,
   rangeType: "past" | "future" | "all" = "all"
 ): Promise<ServiceResult<EventRecord[]>> {
   const supabase = getSupabaseClient();
-  const MAX_LIST_EVENTS = 100;
 
   let query = supabase
     .from("events")

@@ -21,6 +21,7 @@ import { logger } from "../utils/logger.js";
 const PER_PAGE = 4;
 const COLLECTOR_TIMEOUT_MS = 180_000;
 const MS_PER_MINUTE = 60_000;
+const EMBED_COLOR_BLUE = 0x00_00_ff;
 
 /** オカレンス展開の最大範囲（90日） */
 const EXPANSION_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -109,7 +110,9 @@ function buildEmbed(
   page: number,
   maxPages: number
 ): EmbedBuilder {
-  const embed = new EmbedBuilder().setTitle("予定一覧").setColor(0x00_00_ff);
+  const embed = new EmbedBuilder()
+    .setTitle("予定一覧")
+    .setColor(EMBED_COLOR_BLUE);
 
   const start = page * PER_PAGE;
   const end = start + PER_PAGE;
@@ -132,7 +135,7 @@ function buildEmbed(
     }
 
     embed.addFields({
-      name: event.recurrence ? `${event.name}` : event.name,
+      name: event.name,
       value: lines.join("\n"),
       inline: false,
     });
