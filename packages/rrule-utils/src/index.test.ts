@@ -89,6 +89,20 @@ describe("buildRruleString", () => {
       expect(result).toContain("FREQ=WEEKLY");
       expect(result).toContain("INTERVAL=2");
     });
+
+    it("3ヶ月ごとの繰り返しRRULEを生成する", () => {
+      const input: RruleBuildInput = {
+        frequency: "monthly",
+        interval: 3,
+        endCondition: { type: "never" },
+        dtstart: baseDtstart,
+      };
+
+      const result = buildRruleString(input);
+
+      expect(result).toContain("FREQ=MONTHLY");
+      expect(result).toContain("INTERVAL=3");
+    });
   });
 
   describe("曜日指定", () => {
@@ -105,6 +119,20 @@ describe("buildRruleString", () => {
 
       expect(result).toContain("FREQ=WEEKLY");
       expect(result).toContain("BYDAY=TU,TH");
+    });
+
+    it("毎週月・水・金の繰り返しRRULEを生成する", () => {
+      const input: RruleBuildInput = {
+        frequency: "weekly",
+        interval: 1,
+        byDay: ["MO", "WE", "FR"],
+        endCondition: { type: "never" },
+        dtstart: baseDtstart,
+      };
+
+      const result = buildRruleString(input);
+
+      expect(result).toContain("BYDAY=MO,WE,FR");
     });
   });
 
@@ -137,6 +165,20 @@ describe("buildRruleString", () => {
 
       expect(result).toContain("FREQ=MONTHLY");
       expect(result).toMatch(/BYDAY=\+?2WE/);
+    });
+
+    it("毎月最終金曜日の繰り返しRRULEを生成する", () => {
+      const input: RruleBuildInput = {
+        frequency: "monthly",
+        interval: 1,
+        monthlyMode: { type: "nthWeekday", n: -1, weekday: "FR" },
+        endCondition: { type: "never" },
+        dtstart: baseDtstart,
+      };
+
+      const result = buildRruleString(input);
+
+      expect(result).toContain("BYDAY=-1FR");
     });
   });
 
@@ -183,6 +225,25 @@ describe("buildRruleString", () => {
       expect(result).not.toContain("UNTIL=");
     });
   });
+
+  describe("複合パターン", () => {
+    it("2週間ごと火・木、10回までの繰り返しRRULEを生成する", () => {
+      const input: RruleBuildInput = {
+        frequency: "weekly",
+        interval: 2,
+        byDay: ["TU", "TH"],
+        endCondition: { type: "count", count: 10 },
+        dtstart: baseDtstart,
+      };
+
+      const result = buildRruleString(input);
+
+      expect(result).toContain("FREQ=WEEKLY");
+      expect(result).toContain("INTERVAL=2");
+      expect(result).toContain("BYDAY=TU,TH");
+      expect(result).toContain("COUNT=10");
+    });
+  });
 });
 
 // =============================================================================
@@ -202,6 +263,17 @@ describe("expandOccurrences", () => {
 
       expect(result.dates).toHaveLength(7);
       expect(result.truncated).toBe(false);
+    });
+
+    it("毎週の繰り返しを1ヶ月分展開する", () => {
+      const rrule = "FREQ=WEEKLY;INTERVAL=1";
+      const rangeStart = new Date("2026-01-05T00:00:00Z");
+      const rangeEnd = new Date("2026-02-05T23:59:59Z");
+
+      const result = expandOccurrences(rrule, dtstart, rangeStart, rangeEnd);
+
+      expect(result.dates.length).toBeGreaterThanOrEqual(4);
+      expect(result.dates.length).toBeLessThanOrEqual(5);
     });
 
     it("展開結果のすべての日付が範囲内である", () => {
@@ -320,6 +392,18 @@ describe("expandOccurrences", () => {
     });
   });
 
+  describe("パフォーマンス", () => {
+    it("表示範囲外のオカレンスを展開しない", () => {
+      const rrule = "FREQ=DAILY;INTERVAL=1";
+      const rangeStart = new Date("2026-06-01T00:00:00Z");
+      const rangeEnd = new Date("2026-06-07T23:59:59Z");
+
+      const result = expandOccurrences(rrule, dtstart, rangeStart, rangeEnd);
+
+      expect(result.dates).toHaveLength(7);
+    });
+  });
+
   describe("曜日指定付き展開", () => {
     it("毎週火・木の繰り返しを正しく展開する", () => {
       const rrule = "FREQ=WEEKLY;INTERVAL=1;BYDAY=TU,TH";
@@ -364,8 +448,21 @@ describe("toSummaryText", () => {
     expect(result).toContain("木");
   });
 
+  it("毎月の繰り返しを「毎月」と表示する", () => {
+    expect(toSummaryText("FREQ=MONTHLY;INTERVAL=1", dtstart)).toContain("毎月");
+  });
+
+  it("毎年の繰り返しを「毎年」と表示する", () => {
+    expect(toSummaryText("FREQ=YEARLY;INTERVAL=1", dtstart)).toContain("毎年");
+  });
+
   it("不正なRRULE文字列の場合は空文字を返す", () => {
     expect(toSummaryText("INVALID", dtstart)).toBe("");
+  });
+
+  it("回数指定を含む場合に回数を表示する", () => {
+    const result = toSummaryText("FREQ=DAILY;INTERVAL=1;COUNT=10", dtstart);
+    expect(result).toContain("10");
   });
 });
 
@@ -374,22 +471,49 @@ describe("toSummaryText", () => {
 // =============================================================================
 
 describe("validateRrule", () => {
-  it("有効なRRULE文字列をvalidと判定する", () => {
-    expect(validateRrule("FREQ=DAILY;INTERVAL=1").valid).toBe(true);
-    expect(validateRrule("FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR").valid).toBe(
-      true
-    );
+  describe("有効なRRULE文字列", () => {
+    it("毎日の繰り返しを有効と判定する", () => {
+      const result = validateRrule("FREQ=DAILY;INTERVAL=1");
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it("毎週の繰り返しを有効と判定する", () => {
+      const result = validateRrule("FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR");
+      expect(result.valid).toBe(true);
+    });
+
+    it("COUNT付きの繰り返しを有効と判定する", () => {
+      const result = validateRrule("FREQ=DAILY;INTERVAL=1;COUNT=10");
+      expect(result.valid).toBe(true);
+    });
+
+    it("UNTIL付きの繰り返しを有効と判定する", () => {
+      const result = validateRrule(
+        "FREQ=DAILY;INTERVAL=1;UNTIL=20260630T235959Z"
+      );
+      expect(result.valid).toBe(true);
+    });
   });
 
-  it("空文字列を無効と判定する", () => {
-    const result = validateRrule("");
-    expect(result.valid).toBe(false);
-    expect(result.error).toBeDefined();
-  });
+  describe("無効なRRULE文字列", () => {
+    it("空文字列を無効と判定する", () => {
+      const result = validateRrule("");
+      expect(result.valid).toBe(false);
+      expect(result.error).toBeDefined();
+    });
 
-  it("FREQがないRRULE文字列を無効と判定する", () => {
-    const result = validateRrule("INTERVAL=1");
-    expect(result.valid).toBe(false);
+    it("FREQがないRRULE文字列を無効と判定する", () => {
+      const result = validateRrule("INTERVAL=1");
+      expect(result.valid).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it("不正な文字列を無効と判定する", () => {
+      const result = validateRrule("NOT_A_RRULE");
+      expect(result.valid).toBe(false);
+      expect(result.error).toBeDefined();
+    });
   });
 });
 
