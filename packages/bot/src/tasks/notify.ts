@@ -193,6 +193,10 @@ async function processSeriesNotifications(
         exdates
       );
 
+      if (result.truncated) {
+        logger.warn({ seriesId: s.id }, "Occurrence expansion was truncated");
+      }
+
       logger.debug(
         { seriesId: s.id, occurrenceCount: result.dates.length },
         "Expanded occurrences"

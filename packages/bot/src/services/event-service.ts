@@ -107,7 +107,9 @@ export async function getSeriesByGuildId(
 
   const { data, error } = await supabase
     .from("event_series")
-    .select("*")
+    .select(
+      "id, guild_id, name, description, color, is_all_day, rrule, dtstart, duration_minutes, location, channel_id, channel_name, notifications, exdates, created_at, updated_at"
+    )
     .eq("guild_id", guildId)
     .order("dtstart", { ascending: true })
     .limit(MAX_LIST_SERIES);
@@ -132,7 +134,9 @@ export async function getFutureSeriesForAllGuilds(): Promise<
 
   const { data, error } = await supabase
     .from("event_series")
-    .select("*")
+    .select(
+      "id, guild_id, name, description, color, is_all_day, rrule, dtstart, duration_minutes, location, channel_id, channel_name, notifications, exdates, created_at, updated_at"
+    )
     .order("created_at", { ascending: true })
     .limit(MAX_NOTIFY_SERIES);
 

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --env-file=.env --watch src/index.ts",
-    "build": "tsc",
+    "build": "npm run build -w @discalendar/rrule-utils && tsc",
     "start": "node --env-file=.env dist/index.js",
     "test": "vitest run",
     "type-check": "tsc --noEmit",

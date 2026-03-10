@@ -197,6 +197,8 @@ async function execute(
     : "future";
   const guildId = interaction.guild.id;
 
+  const now = new Date();
+
   const [eventsResult, seriesResult] = await Promise.all([
     getEventsByGuildId(guildId, range),
     getSeriesByGuildId(guildId),
@@ -216,7 +218,6 @@ async function execute(
   // シリーズ取得に失敗しても単発イベントは表示する
   let seriesEvents: ListEvent[] = [];
   if (seriesResult.success) {
-    const now = new Date();
     const { rangeStart, rangeEnd } = getExpansionRange(range, now);
     seriesEvents = expandSeriesToEvents(
       seriesResult.data,
