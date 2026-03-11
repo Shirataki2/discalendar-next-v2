@@ -7,7 +7,29 @@ on:
     branches: [main, master]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      bot: ${{ steps.filter.outputs.bot }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - '!(packages/bot/**)'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+            bot:
+              - 'packages/bot/**'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+
   quality:
+    needs: [changes]
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +62,8 @@ jobs:
         run: npm run test:unit
 
   bot-quality:
+    needs: [changes]
+    if: needs.changes.outputs.bot == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
