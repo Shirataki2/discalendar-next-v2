@@ -1,6 +1,7 @@
 import type {
   EventCreate,
   EventRecord,
+  EventSeriesRecord,
   EventSettings,
 } from "../types/event.js";
 import type { ServiceResult } from "../types/result.js";
@@ -8,12 +9,14 @@ import { logger } from "../utils/logger.js";
 import { classifySupabaseError } from "./classify-error.js";
 import { getSupabaseClient } from "./supabase.js";
 
+/** /list コマンドで取得する単発イベントの最大件数 */
+const MAX_LIST_EVENTS = 100;
+
 export async function getEventsByGuildId(
   guildId: string,
   rangeType: "past" | "future" | "all" = "all"
 ): Promise<ServiceResult<EventRecord[]>> {
   const supabase = getSupabaseClient();
-  const MAX_LIST_EVENTS = 100;
 
   let query = supabase
     .from("events")
@@ -94,6 +97,61 @@ export async function getFutureEventsForAllGuilds(
   }
 
   return { success: true, data: data as EventRecord[] };
+}
+
+/** /list コマンドで取得するシリーズの最大件数 */
+const MAX_LIST_SERIES = 100;
+
+export async function getSeriesByGuildId(
+  guildId: string
+): Promise<ServiceResult<EventSeriesRecord[]>> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("event_series")
+    .select(
+      "id, guild_id, name, description, color, is_all_day, rrule, dtstart, duration_minutes, location, channel_id, channel_name, notifications, exdates, created_at, updated_at"
+    )
+    .eq("guild_id", guildId)
+    .order("dtstart", { ascending: true })
+    .limit(MAX_LIST_SERIES);
+
+  if (error) {
+    logger.error({ error, guildId }, "Failed to fetch event series");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
+  }
+
+  return { success: true, data: data as EventSeriesRecord[] };
+}
+
+/** 通知タスクで取得するシリーズの最大件数（全ギルド横断のため大きめ） */
+const MAX_NOTIFY_SERIES = 500;
+
+export async function getFutureSeriesForAllGuilds(): Promise<
+  ServiceResult<EventSeriesRecord[]>
+> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("event_series")
+    .select(
+      "id, guild_id, name, description, color, is_all_day, rrule, dtstart, duration_minutes, location, channel_id, channel_name, notifications, exdates, created_at, updated_at"
+    )
+    .order("created_at", { ascending: true })
+    .limit(MAX_NOTIFY_SERIES);
+
+  if (error) {
+    logger.error({ error }, "Failed to fetch event series for all guilds");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
+  }
+
+  return { success: true, data: data as EventSeriesRecord[] };
 }
 
 export async function getEventSettings(

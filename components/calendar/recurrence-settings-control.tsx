@@ -15,6 +15,13 @@
  * Contracts: RecurrenceSettingsControl
  */
 
+import {
+  type EndCondition,
+  isWeekday,
+  type MonthlyMode,
+  type RecurrenceFrequency,
+  type Weekday,
+} from "@discalendar/rrule-utils";
 import { Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -29,13 +36,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { UseRecurrenceFormReturn } from "@/hooks/calendar/use-recurrence-form";
-import {
-  type EndCondition,
-  isWeekday,
-  type MonthlyMode,
-  type RecurrenceFrequency,
-  type Weekday,
-} from "@/lib/calendar/rrule-utils";
 import { cn } from "@/lib/utils";
 
 export type RecurrenceSettingsControlProps = {

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * 繰り返し設定フォームの状態管理フック
  *
@@ -17,7 +19,7 @@ import {
   type RecurrenceFrequency,
   type Weekday,
   buildRruleString,
-} from "@/lib/calendar/rrule-utils";
+} from "@discalendar/rrule-utils";
 
 /**
  * 繰り返しフォームデータの型定義
@@ -59,13 +61,13 @@ export interface UseRecurrenceFormReturn {
   /** バリデーションエラー */
   errors: RecurrenceValidationErrors;
   /** フィールドがタッチされたかどうか */
-  touched: Record<string, boolean>;
+  touched: Record<TouchField, boolean>;
   /** フォーム全体が有効かどうか */
   isValid: boolean;
   /** フィールドの値を変更する */
   handleChange: <F extends keyof RecurrenceFormData>(field: F, value: RecurrenceFormData[F]) => void;
   /** フィールドのフォーカスが外れたときに呼び出す */
-  handleBlur: (field: string) => void;
+  handleBlur: (field: TouchField) => void;
   /** フォーム全体をバリデーションする（dtstartはuntilバリデーションに使用） */
   validate: (dtstart?: Date) => boolean;
   /** フォームの状態をリセットする */
@@ -189,7 +191,7 @@ export function useRecurrenceForm(
   );
 
   const handleBlur = useCallback(
-    (field: string) => {
+    (field: TouchField) => {
       setTouched((prev) => ({ ...prev, [field]: true }));
 
       const newErrors = validateForm(values, lastDtstart);

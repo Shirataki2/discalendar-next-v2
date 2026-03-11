@@ -1,9 +1,16 @@
+import { expandOccurrences } from "@discalendar/rrule-utils";
 import type { Client, SendableChannels } from "discord.js";
 import {
   getEventSettingsByGuildIds,
   getFutureEventsForAllGuilds,
+  getFutureSeriesForAllGuilds,
 } from "../services/event-service.js";
-import type { EventRecord, NotificationPayload } from "../types/event.js";
+import type {
+  EventRecord,
+  EventSeriesRecord,
+  EventSettings,
+  NotificationPayload,
+} from "../types/event.js";
 import { NOTIFICATION_UNIT_LABELS } from "../types/event.js";
 import { createNotificationEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
@@ -12,6 +19,7 @@ import { logger } from "../utils/logger.js";
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const MS_PER_MINUTE = 60_000;
 const NOTIFY_CHECK_INTERVAL_MS = MS_PER_MINUTE;
+const MAX_NOTIFY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function toMinutes(notification: NotificationPayload): number {
   switch (notification.unit) {
@@ -32,12 +40,40 @@ const SENTINEL_NOTIFICATION: NotificationPayload = {
   unit: "minutes",
 };
 
+export function toEventRecord(
+  series: EventSeriesRecord,
+  occurrenceDate: Date
+): EventRecord {
+  return {
+    id: `series:${series.id}:occ:${occurrenceDate.toISOString()}`,
+    guild_id: series.guild_id,
+    name: series.name,
+    description: series.description,
+    color: series.color,
+    is_all_day: series.is_all_day,
+    start_at: occurrenceDate.toISOString(),
+    end_at: new Date(
+      occurrenceDate.getTime() + series.duration_minutes * MS_PER_MINUTE
+    ).toISOString(),
+    location: series.location,
+    channel_id: series.channel_id,
+    channel_name: series.channel_name,
+    notifications: series.notifications,
+    created_at: series.created_at,
+    updated_at: series.updated_at,
+  };
+}
+
 async function processNotifications(client: Client): Promise<void> {
   const now = new Date();
   now.setSeconds(0, 0);
   const nowMs = now.getTime();
 
-  const eventsResult = await getFutureEventsForAllGuilds(now);
+  const [eventsResult, seriesResult] = await Promise.all([
+    getFutureEventsForAllGuilds(now),
+    getFutureSeriesForAllGuilds(),
+  ]);
+
   if (!eventsResult.success) {
     logger.error(
       { error: eventsResult.error },
@@ -47,13 +83,30 @@ async function processNotifications(client: Client): Promise<void> {
   }
 
   const events = eventsResult.data;
-  logger.debug({ count: events.length }, "Fetched events for notification");
+  const series = seriesResult.success ? seriesResult.data : [];
 
-  if (events.length === 0) {
+  if (!seriesResult.success) {
+    logger.error(
+      { error: seriesResult.error },
+      "Failed to fetch event series for notifications"
+    );
+  }
+
+  logger.debug(
+    { eventCount: events.length, seriesCount: series.length },
+    "Fetched events and series for notification"
+  );
+
+  if (events.length === 0 && series.length === 0) {
     return;
   }
 
-  const uniqueGuildIds = [...new Set(events.map((e) => e.guild_id))];
+  const uniqueGuildIds = [
+    ...new Set([
+      ...events.map((e) => e.guild_id),
+      ...series.map((s) => s.guild_id),
+    ]),
+  ];
   const settingsResult = await getEventSettingsByGuildIds(uniqueGuildIds);
   if (!settingsResult.success) {
     logger.error(
@@ -90,6 +143,73 @@ async function processNotifications(client: Client): Promise<void> {
       logger.error(
         { error, eventId: event.id },
         "Failed to process notifications for event"
+      );
+    }
+  }
+
+  await processSeriesNotifications({ client, series, settingsMap, now, nowMs });
+}
+
+type SeriesNotificationContext = {
+  client: Client;
+  series: EventSeriesRecord[];
+  settingsMap: Map<string, EventSettings>;
+  now: Date;
+  nowMs: number;
+};
+
+async function processSeriesNotifications(
+  ctx: SeriesNotificationContext
+): Promise<void> {
+  const { client, series, settingsMap, now, nowMs } = ctx;
+  const rangeEnd = new Date(now.getTime() + MAX_NOTIFY_WINDOW_MS);
+
+  for (const s of series) {
+    try {
+      const settings = settingsMap.get(s.guild_id);
+      if (!settings) {
+        logger.warn(
+          { guildId: s.guild_id },
+          "No event settings found for guild, skipping series notifications"
+        );
+        continue;
+      }
+
+      const channel = client.channels.cache.get(settings.channel_id);
+      if (!channel?.isSendable()) {
+        logger.warn(
+          { guildId: s.guild_id, channelId: settings.channel_id },
+          "Notification channel not found or not sendable"
+        );
+        continue;
+      }
+
+      const exdates = s.exdates.map((d) => new Date(d));
+      const result = expandOccurrences(
+        s.rrule,
+        new Date(s.dtstart),
+        now,
+        rangeEnd,
+        exdates
+      );
+
+      if (result.truncated) {
+        logger.warn({ seriesId: s.id }, "Occurrence expansion was truncated");
+      }
+
+      logger.debug(
+        { seriesId: s.id, occurrenceCount: result.dates.length },
+        "Expanded occurrences"
+      );
+
+      for (const occDate of result.dates) {
+        const pseudoEvent = toEventRecord(s, occDate);
+        await checkEventNotifications(channel, pseudoEvent, nowMs);
+      }
+    } catch (error) {
+      logger.error(
+        { error, seriesId: s.id },
+        "Failed to process notifications for series"
       );
     }
   }

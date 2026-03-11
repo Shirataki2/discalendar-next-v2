@@ -1,16 +1,23 @@
 /**
- * rrule-utils - RRULE 文字列の生成・パース・オカレンス展開・人間可読テキスト変換
+ * @discalendar/rrule-utils - RRULE 文字列の生成・パース・オカレンス展開・人間可読テキスト変換
  *
  * 純粋関数として実装。外部依存は `rrule` パッケージのみ。
- * Supabase や React に依存しない。
- *
- * タスク2.1: buildRruleString - RRULE文字列生成
- * タスク2.2: expandOccurrences - オカレンス展開
- * タスク2.3: toSummaryText, validateRrule - 要約テキスト変換・バリデーション
- *
- * Requirements: 1.2, 2.4, 3.2, 3.3, 3.4, 4.1, 4.3, 4.5, 8.1, 8.3, 8.4
+ * Web・Bot 両方から共有パッケージとしてインポートして使用する。
  */
-import { Frequency, RRule, RRuleSet, Weekday as RRuleWeekday } from "rrule";
+import type { Weekday as RRuleWeekday } from "rrule";
+// biome-ignore lint/performance/noNamespaceImport: rrule CJS/ESM dual compatibility requires namespace import
+import * as rruleModule from "rrule";
+
+// rrule パッケージは CJS (UMD) と ESM の2形式で配布されている。
+// Node.js/tsx は CJS → module.exports を default にラップ、
+// Turbopack は ESM → 名前付きエクスポートを直接提供。
+// 両環境で動作させるため namespace import + default フォールバック。
+const rruleLib = (
+  "default" in rruleModule
+    ? (rruleModule as Record<string, unknown>).default
+    : rruleModule
+) as typeof rruleModule;
+const { Frequency, RRule, RRuleSet } = rruleLib;
 
 /** 繰り返し頻度 */
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
@@ -18,7 +25,15 @@ export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 /** 曜日 (RFC 5545 準拠) */
 export type Weekday = "MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU";
 
-const WEEKDAY_VALUES: readonly string[] = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+const WEEKDAY_VALUES: readonly string[] = [
+  "MO",
+  "TU",
+  "WE",
+  "TH",
+  "FR",
+  "SA",
+  "SU",
+];
 
 /** 値が有効な Weekday かどうかを判定する型ガード */
 export function isWeekday(value: string): value is Weekday {
@@ -37,29 +52,35 @@ export type EndCondition =
   | { type: "until"; until: Date };
 
 /** RRULE 生成入力 */
-export interface RruleBuildInput {
+export type RruleBuildInput = {
   frequency: RecurrenceFrequency;
   interval: number;
   byDay?: Weekday[];
   monthlyMode?: MonthlyMode;
   endCondition: EndCondition;
   dtstart: Date;
-}
+};
+
+/** オカレンス展開のデフォルト最大件数 */
+const DEFAULT_MAX_OCCURRENCES = 1000;
 
 /** オカレンス展開結果 */
-export interface OccurrenceExpansionResult {
+export type OccurrenceExpansionResult = {
   dates: Date[];
   truncated: boolean;
-}
+};
 
 /** RRULE バリデーション結果 */
-export interface RruleValidationResult {
+export type RruleValidationResult = {
   valid: boolean;
   error?: string;
-}
+};
 
 /** 頻度文字列から rrule.js の Frequency 定数へのマッピング */
-const FREQUENCY_MAP: Record<RecurrenceFrequency, Frequency> = {
+const FREQUENCY_MAP: Record<
+  RecurrenceFrequency,
+  (typeof Frequency)[keyof typeof Frequency]
+> = {
   daily: Frequency.DAILY,
   weekly: Frequency.WEEKLY,
   monthly: Frequency.MONTHLY,
@@ -96,8 +117,11 @@ const FREQUENCY_JP: Record<RecurrenceFrequency, string> = {
   yearly: "年",
 };
 
+/** RRULE プレフィックスのパターン */
+const RRULE_PREFIX_RE = /^RRULE:/;
+
 /**
- * RRULE 文字列を生成する (Task 2.1)
+ * RRULE 文字列を生成する
  *
  * @param input - RRULE 生成入力
  * @returns RFC 5545 準拠の RRULE 文字列
@@ -143,20 +167,21 @@ export function buildRruleString(input: RruleBuildInput): string {
     .split("\n")
     .find((line) => line.startsWith("RRULE:"));
   if (rruleLine) {
-    return rruleLine.replace(/^RRULE:/, "");
+    return rruleLine.replace(RRULE_PREFIX_RE, "");
   }
   // RRULE: プレフィックスのみの場合（DTSTART なし）
-  return output.replace(/^RRULE:/, "");
+  return output.replace(RRULE_PREFIX_RE, "");
 }
 
 /**
- * RRULE 文字列 + EXDATE から範囲内のオカレンスを展開する (Task 2.2)
+ * RRULE 文字列 + EXDATE から範囲内のオカレンスを展開する
  *
  * @param rrule - RRULE 文字列
  * @param dtstart - シリーズ開始日時
  * @param rangeStart - 展開範囲の開始
  * @param rangeEnd - 展開範囲の終了
  * @param exdates - 除外日リスト
+ * @param maxOccurrences - 最大オカレンス数（デフォルト: 1000）。上限超過時は truncated: true を返す
  * @returns オカレンス展開結果
  */
 export function expandOccurrences(
@@ -165,6 +190,7 @@ export function expandOccurrences(
   rangeStart: Date,
   rangeEnd: Date,
   exdates?: Date[],
+  maxOccurrences: number = DEFAULT_MAX_OCCURRENCES
 ): OccurrenceExpansionResult {
   if (!rrule || rrule.trim().length === 0) {
     return { dates: [], truncated: false };
@@ -193,6 +219,10 @@ export function expandOccurrences(
     // 範囲内のオカレンスのみを展開 (inc=true で境界を含む)
     const dates = rruleSet.between(rangeStart, rangeEnd, true);
 
+    if (dates.length > maxOccurrences) {
+      return { dates: dates.slice(0, maxOccurrences), truncated: true };
+    }
+
     return { dates, truncated: false };
   } catch {
     return { dates: [], truncated: false };
@@ -200,7 +230,7 @@ export function expandOccurrences(
 }
 
 /**
- * RRULE 文字列を人間可読テキストに変換する (Task 2.3)
+ * RRULE 文字列を人間可読テキストに変換する
  *
  * @param rrule - RRULE 文字列
  * @param dtstart - シリーズ開始日時
@@ -223,7 +253,9 @@ export function toSummaryText(rrule: string, dtstart: Date): string {
 
     // 頻度と間隔
     const freq = getFrequencyKey(options.freq);
-    if (!freq) return "";
+    if (!freq) {
+      return "";
+    }
 
     const interval = options.interval ?? 1;
 
@@ -262,7 +294,7 @@ export function toSummaryText(rrule: string, dtstart: Date): string {
     if (options.until) {
       const until = options.until;
       parts.push(
-        `${until.getUTCFullYear()}/${String(until.getUTCMonth() + 1).padStart(2, "0")}/${String(until.getUTCDate()).padStart(2, "0")}まで`,
+        `${until.getUTCFullYear()}/${String(until.getUTCMonth() + 1).padStart(2, "0")}/${String(until.getUTCDate()).padStart(2, "0")}まで`
       );
     }
 
@@ -273,7 +305,7 @@ export function toSummaryText(rrule: string, dtstart: Date): string {
 }
 
 /**
- * RRULE 文字列の妥当性を検証する (Task 2.3)
+ * RRULE 文字列の妥当性を検証する
  *
  * @param rrule - RRULE 文字列
  * @returns バリデーション結果
@@ -286,7 +318,10 @@ export function validateRrule(rrule: string): RruleValidationResult {
   }
 
   if (rrule.length > MAX_RRULE_LENGTH) {
-    return { valid: false, error: `RRULE文字列が長すぎます（最大${MAX_RRULE_LENGTH}文字）。` };
+    return {
+      valid: false,
+      error: `RRULE文字列が長すぎます（最大${MAX_RRULE_LENGTH}文字）。`,
+    };
   }
 
   // FREQ が含まれていることを確認
@@ -323,11 +358,15 @@ export function formatDateUTC(date: Date): string {
 
 /** Frequency 数値からキー文字列を取得する */
 function getFrequencyKey(
-  freq: Frequency | undefined,
+  freq: (typeof Frequency)[keyof typeof Frequency] | undefined
 ): RecurrenceFrequency | null {
-  if (freq === undefined) return null;
+  if (freq === undefined) {
+    return null;
+  }
   for (const [key, value] of Object.entries(FREQUENCY_MAP)) {
-    if (value === freq) return key as RecurrenceFrequency;
+    if (value === freq) {
+      return key as RecurrenceFrequency;
+    }
   }
   return null;
 }
@@ -347,9 +386,7 @@ function numberToWeekday(n: number): Weekday | null {
 }
 
 /** rrule.js の Weekday オブジェクトから Weekday 文字列を抽出する */
-function extractWeekdayStr(
-  wd: unknown,
-): Weekday | null {
+function extractWeekdayStr(wd: unknown): Weekday | null {
   if (typeof wd === "number") {
     return numberToWeekday(wd);
   }

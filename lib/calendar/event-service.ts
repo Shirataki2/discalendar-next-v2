@@ -23,7 +23,7 @@ import {
   toCalendarEvent,
   toCalendarEvents,
 } from "./types";
-import { expandOccurrences, formatDateUTC, toSummaryText, validateRrule } from "./rrule-utils";
+import { expandOccurrences, formatDateUTC, toSummaryText, validateRrule } from "@discalendar/rrule-utils";
 
 /**
  * カレンダーエラーコードの定義
@@ -440,6 +440,12 @@ function classifyException(
   return "FETCH_FAILED";
 }
 
+/** タイトルの最大文字数 */
+const MAX_TITLE_LENGTH = 255;
+
+/** デフォルトのイベントカラー */
+const DEFAULT_EVENT_COLOR = "#3B82F6";
+
 /**
  * EventServiceのファクトリ関数
  *
@@ -513,7 +519,7 @@ export function createEventService(
         endAt,
         description,
         isAllDay = false,
-        color = "#3B82F6",
+        color = DEFAULT_EVENT_COLOR,
         location,
         channelId,
         channelName,
@@ -533,13 +539,13 @@ export function createEventService(
           };
         }
 
-        if (title.length > 255) {
+        if (title.length > MAX_TITLE_LENGTH) {
           return {
             success: false,
             error: {
               code: "VALIDATION_ERROR",
               message: getCalendarErrorMessage("VALIDATION_ERROR"),
-              details: "タイトルは255文字以内で入力してください。",
+              details: `タイトルは${MAX_TITLE_LENGTH}文字以内で入力してください。`,
             },
           };
         }
@@ -641,13 +647,13 @@ export function createEventService(
             };
           }
 
-          if (title.length > 255) {
+          if (title.length > MAX_TITLE_LENGTH) {
             return {
               success: false,
               error: {
                 code: "VALIDATION_ERROR",
                 message: getCalendarErrorMessage("VALIDATION_ERROR"),
-                details: "タイトルは255文字以内で入力してください。",
+                details: `タイトルは${MAX_TITLE_LENGTH}文字以内で入力してください。`,
               },
             };
           }
@@ -748,7 +754,7 @@ export function createEventService(
         endAt,
         description,
         isAllDay = false,
-        color = "#3B82F6",
+        color = DEFAULT_EVENT_COLOR,
         location,
         channelId,
         channelName,
@@ -769,13 +775,13 @@ export function createEventService(
           };
         }
 
-        if (title.length > 255) {
+        if (title.length > MAX_TITLE_LENGTH) {
           return {
             success: false,
             error: {
               code: "VALIDATION_ERROR",
               message: getCalendarErrorMessage("VALIDATION_ERROR"),
-              details: "タイトルは255文字以内で入力してください。",
+              details: `タイトルは${MAX_TITLE_LENGTH}文字以内で入力してください。`,
             },
           };
         }
@@ -1102,13 +1108,13 @@ export function createEventService(
             };
           }
 
-          if (title.length > 255) {
+          if (title.length > MAX_TITLE_LENGTH) {
             return {
               success: false,
               error: {
                 code: "VALIDATION_ERROR",
                 message: getCalendarErrorMessage("VALIDATION_ERROR"),
-                details: "タイトルは255文字以内で入力してください。",
+                details: `タイトルは${MAX_TITLE_LENGTH}文字以内で入力してください。`,
               },
             };
           }
@@ -1359,13 +1365,13 @@ export function createEventService(
             };
           }
 
-          if (title.length > 255) {
+          if (title.length > MAX_TITLE_LENGTH) {
             return {
               success: false,
               error: {
                 code: "VALIDATION_ERROR",
                 message: getCalendarErrorMessage("VALIDATION_ERROR"),
-                details: "タイトルは255文字以内で入力してください。",
+                details: `タイトルは${MAX_TITLE_LENGTH}文字以内で入力してください。`,
               },
             };
           }
