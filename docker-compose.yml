@@ -1,0 +1,16 @@
+services:
+  bot:
+    build: .
+    container_name: discalendar-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-region: "${AWS_REGION:-ap-northeast-1}"
+        awslogs-group: "${AWS_CLOUDWATCH_LOG_GROUP}"
+        awslogs-stream: "discalendar-bot"
+        awslogs-create-group: "false"

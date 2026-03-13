@@ -16,8 +16,8 @@
   - Bot のみの変更で `quality` ジョブがスキップされ、Web のみの変更で `bot-quality` ジョブがスキップされることを検証する
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 2. Bot の Docker コンテナビルド環境を構築する
-- [ ] 2.1 (P) マルチステージビルドの Dockerfile を作成する
+- [x] 2. Bot の Docker コンテナビルド環境を構築する
+- [x] 2.1 (P) マルチステージビルドの Dockerfile を作成する
   - モノレポ対応のマルチステージビルドで Bot の Docker イメージを定義する
   - Builder ステージでルートの `package.json`、`package-lock.json`、各パッケージの `package.json` をコピーして依存をインストールする
   - `@discalendar/rrule-utils` を先行ビルドし、その後 Bot をビルドする
@@ -25,12 +25,12 @@
   - non-root ユーザーでアプリケーションを実行する
   - _Requirements: 3.4_
 
-- [ ] 2.2 (P) .dockerignore を作成する
+- [x] 2.2 (P) .dockerignore を作成する
   - `node_modules`、`.git`、`.next`、`e2e_tests`、`.kiro`、`.cursor` 等の不要なファイルを除外する
   - ビルドコンテキストを最小化してビルド時間を短縮する
   - _Requirements: 3.4_
 
-- [ ] 2.3 Docker Compose 構成を定義する
+- [x] 2.3 Docker Compose 構成を定義する
   - Bot コンテナの起動・停止・再起動管理を定義する
   - `awslogs` ドライバーで CloudWatch Logs にログを転送する設定を含める
   - `.env` ファイルから環境変数を読み込む
