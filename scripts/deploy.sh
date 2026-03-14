@@ -103,7 +103,20 @@ echo "==> Starting new containers..."
 docker compose up -d
 
 echo "==> Waiting for container to start..."
-sleep 5
+for i in 1 2 3 4 5 6; do
+  STATUS=\$(docker compose ps --format json | head -1 | grep -o '"State":"[^"]*"' | grep -o '[^"]*$' || echo "unknown")
+  if [ "\$STATUS" = "running" ]; then
+    echo "    Container is running"
+    break
+  fi
+  if [ "\$i" -eq 6 ]; then
+    echo "Error: Container failed to start (status: \$STATUS)"
+    docker compose logs --tail=30
+    exit 1
+  fi
+  echo "    Waiting... (attempt \$i/6, status: \$STATUS)"
+  sleep 5
+done
 
 echo "==> Container status:"
 docker compose ps

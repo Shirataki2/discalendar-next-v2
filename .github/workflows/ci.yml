@@ -19,7 +19,8 @@ jobs:
         with:
           filters: |
             web:
-              - '!(packages/bot/**)'
+              - '**'
+              - '!packages/bot/**'
               - 'package-lock.json'
               - 'tsconfig.json'
             bot:
@@ -88,3 +89,5 @@ jobs:
         run: npm run build
       - name: Unit tests
         run: npm run test
+      - name: Deploy script tests
+        run: bash ../../scripts/deploy.test.sh
