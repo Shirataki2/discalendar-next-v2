@@ -32,9 +32,9 @@ echo "==> Deploying Bot to $HOST"
 SSH_USER="ubuntu"
 SSH_KEY="${SSH_KEY_PATH:-$HOME/.ssh/lightsail_key}"
 APP_DIR="/opt/discalendar-next"
-REPO_URL="https://github.com/${GITHUB_REPOSITORY:-Shirataki2/discalendar-next}.git"
+REPO_URL="https://github.com/${GITHUB_REPOSITORY:-Shirataki2/discalendar-next-v2}.git"
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=60"
+SSH_OPTS="-o ServerAliveInterval=60"
 
 ssh -i "$SSH_KEY" $SSH_OPTS "${SSH_USER}@${HOST}" <<REMOTE_SCRIPT
 set -e
@@ -91,6 +91,7 @@ SENTRY_DSN=${SENTRY_DSN:-}
 AWS_REGION=${AWS_REGION:-ap-northeast-1}
 AWS_CLOUDWATCH_LOG_GROUP=${CLOUDWATCH_LOG_GROUP:-}
 ENVFILE
+chmod 600 .env
 
 echo "==> Stopping existing containers..."
 docker compose down || true

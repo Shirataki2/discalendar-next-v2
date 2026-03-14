@@ -1,7 +1,9 @@
 name: Deploy Bot
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -18,6 +20,7 @@ env:
 
 jobs:
   changes:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       bot: ${{ steps.filter.outputs.bot }}
@@ -29,6 +32,7 @@ jobs:
           filters: |
             bot:
               - 'packages/bot/**'
+              - 'packages/rrule-utils/**'
               - 'package-lock.json'
               - 'Dockerfile'
               - 'docker-compose.yml'
@@ -53,11 +57,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}" > ~/.ssh/lightsail_key
           chmod 600 ~/.ssh/lightsail_key
+          ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Test SSH connection
         run: |
           ssh -i ~/.ssh/lightsail_key \
-            -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             ubuntu@${{ secrets.LIGHTSAIL_HOST }} \
             "echo 'SSH connection successful'"

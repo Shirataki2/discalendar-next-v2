@@ -24,6 +24,7 @@ jobs:
               - 'tsconfig.json'
             bot:
               - 'packages/bot/**'
+              - 'packages/rrule-utils/**'
               - 'package-lock.json'
               - 'tsconfig.json'
 
