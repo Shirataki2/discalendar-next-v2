@@ -39,8 +39,8 @@
   - 2.1 の Dockerfile 完成後に実施（ビルドコンテキストの参照が必要）
   - _Requirements: 5.1, 5.2_
 
-- [ ] 3. デプロイスクリプトを作成する
-- [ ] 3.1 SSH 経由のデプロイスクリプトを実装する
+- [x] 3. デプロイスクリプトを作成する
+- [x] 3.1 SSH 経由のデプロイスクリプトを実装する
   - ホスト引数と必須環境変数（`BOT_TOKEN`, `APPLICATION_ID`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`）の検証を冒頭で行う
   - 未設定時は明確なエラーメッセージとともにスクリプトを終了する
   - SSH 接続でリモートコマンドを実行する: リポジトリクローン/更新、AWS 認証情報設定、`.env` ファイル生成
@@ -51,22 +51,22 @@
   - 秘密情報をログに出力しない
   - _Requirements: 3.2, 3.4, 3.5, 4.4, 4.5, 5.4_
 
-- [ ] 4. Bot デプロイワークフローを構築する
-- [ ] 4.1 デプロイワークフローの基本構造を定義する
+- [x] 4. Bot デプロイワークフローを構築する
+- [x] 4.1 デプロイワークフローの基本構造を定義する
   - `deploy-bot.yml` を新規作成し、`main` ブランチへの push と `workflow_dispatch` でトリガーする
   - `id-token: write` パーミッションを設定する
   - `concurrency` で同時デプロイを防止する
   - path filter で Bot ファイルの変更検知を行い、変更がない場合はデプロイをスキップする
   - _Requirements: 3.1, 3.3_
 
-- [ ] 4.2 AWS OIDC 認証と SSH 接続を設定する
+- [x] 4.2 AWS OIDC 認証と SSH 接続を設定する
   - `aws-actions/configure-aws-credentials@v4` で OIDC による一時的な AWS 認証情報を取得する
   - GitHub Secrets から SSH 秘密鍵を取得し、適切なパーミッション（`chmod 600`）で配置する
   - デプロイ前に SSH 接続テストを実行し、失敗時は明確なエラーメッセージを出力する
   - 秘密情報がログやアーティファクトに出力されないことを確認する
   - _Requirements: 3.5, 4.2, 4.3, 4.5_
 
-- [ ] 4.3 デプロイジョブで Bot 環境変数を管理する
+- [x] 4.3 デプロイジョブで Bot 環境変数を管理する
   - GitHub Actions Secrets を通じて `BOT_TOKEN`, `APPLICATION_ID`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` をデプロイスクリプトに渡す
   - CloudWatch 用の `CLOUDWATCH_ACCESS_KEY_ID`, `CLOUDWATCH_SECRET_ACCESS_KEY`, `CLOUDWATCH_LOG_GROUP` も Secrets から取得する
   - Secrets が未設定の場合にワークフローが明確なエラーで失敗することを確認する

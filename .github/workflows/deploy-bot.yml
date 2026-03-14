@@ -1,0 +1,82 @@
+name: Deploy Bot
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-bot
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      bot: ${{ steps.filter.outputs.bot }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            bot:
+              - 'packages/bot/**'
+              - 'package-lock.json'
+              - 'Dockerfile'
+              - 'docker-compose.yml'
+              - 'scripts/deploy.sh'
+
+  deploy:
+    needs: [changes]
+    if: needs.changes.outputs.bot == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}" > ~/.ssh/lightsail_key
+          chmod 600 ~/.ssh/lightsail_key
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/lightsail_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            ubuntu@${{ secrets.LIGHTSAIL_HOST }} \
+            "echo 'SSH connection successful'"
+
+      - name: Deploy application
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh ${{ secrets.LIGHTSAIL_HOST }}
+        env:
+          SSH_KEY_PATH: ~/.ssh/lightsail_key
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
+          INVITATION_URL: ${{ secrets.INVITATION_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          CLOUDWATCH_ACCESS_KEY_ID: ${{ secrets.CLOUDWATCH_ACCESS_KEY_ID }}
+          CLOUDWATCH_SECRET_ACCESS_KEY: ${{ secrets.CLOUDWATCH_SECRET_ACCESS_KEY }}
+          CLOUDWATCH_LOG_GROUP: ${{ secrets.CLOUDWATCH_LOG_GROUP }}
+          AWS_REGION: ${{ env.AWS_REGION }}

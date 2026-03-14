@@ -1,0 +1,116 @@
+#!/bin/bash
+set -e
+
+# Deploy Discord Bot to AWS Lightsail instance via SSH
+# Usage: ./scripts/deploy.sh <host>
+
+HOST=$1
+
+if [ -z "$HOST" ]; then
+  echo "Usage: $0 <host>"
+  exit 1
+fi
+
+# Validate required environment variables
+MISSING_VARS=()
+for var in BOT_TOKEN APPLICATION_ID SUPABASE_URL SUPABASE_SERVICE_KEY; do
+  if [ -z "${!var}" ]; then
+    MISSING_VARS+=("$var")
+  fi
+done
+
+if [ ${#MISSING_VARS[@]} -gt 0 ]; then
+  echo "Error: Required environment variables are not set:"
+  for var in "${MISSING_VARS[@]}"; do
+    echo "  - $var"
+  done
+  exit 1
+fi
+
+echo "==> Deploying Bot to $HOST"
+
+SSH_USER="ubuntu"
+SSH_KEY="${SSH_KEY_PATH:-$HOME/.ssh/lightsail_key}"
+APP_DIR="/opt/discalendar-next"
+REPO_URL="https://github.com/${GITHUB_REPOSITORY:-Shirataki2/discalendar-next}.git"
+
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=60"
+
+ssh -i "$SSH_KEY" $SSH_OPTS "${SSH_USER}@${HOST}" <<REMOTE_SCRIPT
+set -e
+
+echo "==> Cloning/updating repository..."
+if [ -d "$APP_DIR/.git" ]; then
+  cd $APP_DIR
+  git fetch origin
+  git reset --hard origin/main
+  git clean -fd
+else
+  sudo rm -rf $APP_DIR
+  sudo mkdir -p $APP_DIR
+  sudo chown $SSH_USER:$SSH_USER $APP_DIR
+  git clone $REPO_URL $APP_DIR
+  cd $APP_DIR
+fi
+
+echo "==> Configuring AWS credentials for CloudWatch Logs..."
+mkdir -p ~/.aws
+cat > ~/.aws/credentials <<AWSCRED
+[default]
+aws_access_key_id = ${CLOUDWATCH_ACCESS_KEY_ID}
+aws_secret_access_key = ${CLOUDWATCH_SECRET_ACCESS_KEY}
+AWSCRED
+chmod 600 ~/.aws/credentials
+
+cat > ~/.aws/config <<AWSCONF
+[default]
+region = ${AWS_REGION:-ap-northeast-1}
+AWSCONF
+chmod 644 ~/.aws/config
+
+sudo mkdir -p /root/.aws
+echo "[default]" | sudo tee /root/.aws/credentials > /dev/null
+echo "aws_access_key_id = ${CLOUDWATCH_ACCESS_KEY_ID}" | sudo tee -a /root/.aws/credentials > /dev/null
+echo "aws_secret_access_key = ${CLOUDWATCH_SECRET_ACCESS_KEY}" | sudo tee -a /root/.aws/credentials > /dev/null
+sudo chmod 600 /root/.aws/credentials
+
+echo "[default]" | sudo tee /root/.aws/config > /dev/null
+echo "region = ${AWS_REGION:-ap-northeast-1}" | sudo tee -a /root/.aws/config > /dev/null
+sudo chmod 644 /root/.aws/config
+echo "    AWS credentials configured for ubuntu and root users"
+
+echo "==> Creating .env file..."
+cat > .env <<ENVFILE
+BOT_TOKEN=${BOT_TOKEN}
+APPLICATION_ID=${APPLICATION_ID}
+INVITATION_URL=${INVITATION_URL:-}
+SUPABASE_URL=${SUPABASE_URL}
+SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+LOG_LEVEL=${LOG_LEVEL:-INFO}
+SENTRY_DSN=${SENTRY_DSN:-}
+AWS_REGION=${AWS_REGION:-ap-northeast-1}
+AWS_CLOUDWATCH_LOG_GROUP=${CLOUDWATCH_LOG_GROUP:-}
+ENVFILE
+
+echo "==> Stopping existing containers..."
+docker compose down || true
+
+echo "==> Building Docker image..."
+docker compose build --no-cache
+
+echo "==> Starting new containers..."
+docker compose up -d
+
+echo "==> Waiting for container to start..."
+sleep 5
+
+echo "==> Container status:"
+docker compose ps
+
+echo "==> Recent logs:"
+docker compose logs --tail=20
+
+echo "==> Deployment completed successfully!"
+REMOTE_SCRIPT
+
+echo "==> Bot deployed to $HOST"
