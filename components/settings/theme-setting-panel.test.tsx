@@ -12,15 +12,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeSettingPanel } from "./theme-setting-panel";
 
+let storageKeyCounter = 0;
+
 /**
  * ThemeProvider でラップするヘルパー
+ * テスト間の localStorage 干渉を防ぐため、各呼び出しで固有の storageKey を使用
  */
 function renderWithThemeProvider(
   ui: React.ReactElement,
   defaultTheme = "system"
 ) {
+  storageKeyCounter += 1;
+  const storageKey = `theme-test-${storageKeyCounter}`;
   return render(
-    <ThemeProvider attribute="class" defaultTheme={defaultTheme}>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme={defaultTheme}
+      storageKey={storageKey}
+    >
       {ui}
     </ThemeProvider>
   );
