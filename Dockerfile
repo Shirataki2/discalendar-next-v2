@@ -39,6 +39,7 @@ COPY packages/bot/package.json packages/bot/package.json
 COPY packages/rrule-utils/package.json packages/rrule-utils/package.json
 
 # Install production dependencies only
+ENV NODE_ENV=production
 RUN npm ci --omit=dev --ignore-scripts
 
 # Copy build artifacts from builder
