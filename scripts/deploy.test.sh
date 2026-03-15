@@ -58,6 +58,8 @@ echo "Test 2: Missing BOT_TOKEN"
   export APPLICATION_ID="test-app-id"
   export SUPABASE_URL="https://test.supabase.co"
   export SUPABASE_SERVICE_KEY="test-service-key"
+  export GHCR_TOKEN="test-ghcr-token"
+  export IMAGE_TAG="ghcr.io/test/image:latest"
   bash "$DEPLOY_SCRIPT" "1.2.3.4" > /dev/null 2>&1
 ) && exit_code=0 || exit_code=$?
 assert_exit_code "exits with non-zero code when BOT_TOKEN missing" 1 "$exit_code"
@@ -66,6 +68,8 @@ output=$(
   export APPLICATION_ID="test-app-id"
   export SUPABASE_URL="https://test.supabase.co"
   export SUPABASE_SERVICE_KEY="test-service-key"
+  export GHCR_TOKEN="test-ghcr-token"
+  export IMAGE_TAG="ghcr.io/test/image:latest"
   bash "$DEPLOY_SCRIPT" "1.2.3.4" 2>&1 || true
 )
 assert_output_contains "mentions BOT_TOKEN in error" "BOT_TOKEN" "$output"
@@ -79,6 +83,8 @@ echo "Test 3: Missing APPLICATION_ID"
   unset APPLICATION_ID
   export SUPABASE_URL="https://test.supabase.co"
   export SUPABASE_SERVICE_KEY="test-service-key"
+  export GHCR_TOKEN="test-ghcr-token"
+  export IMAGE_TAG="ghcr.io/test/image:latest"
   bash "$DEPLOY_SCRIPT" "1.2.3.4" > /dev/null 2>&1
 ) && exit_code=0 || exit_code=$?
 assert_exit_code "exits with non-zero code when APPLICATION_ID missing" 1 "$exit_code"
@@ -92,6 +98,8 @@ echo "Test 4: Missing SUPABASE_URL"
   export APPLICATION_ID="test-app-id"
   unset SUPABASE_URL
   export SUPABASE_SERVICE_KEY="test-service-key"
+  export GHCR_TOKEN="test-ghcr-token"
+  export IMAGE_TAG="ghcr.io/test/image:latest"
   bash "$DEPLOY_SCRIPT" "1.2.3.4" > /dev/null 2>&1
 ) && exit_code=0 || exit_code=$?
 assert_exit_code "exits with non-zero code when SUPABASE_URL missing" 1 "$exit_code"
@@ -105,22 +113,76 @@ echo "Test 5: Missing SUPABASE_SERVICE_KEY"
   export APPLICATION_ID="test-app-id"
   export SUPABASE_URL="https://test.supabase.co"
   unset SUPABASE_SERVICE_KEY
+  export GHCR_TOKEN="test-ghcr-token"
+  export IMAGE_TAG="ghcr.io/test/image:latest"
   bash "$DEPLOY_SCRIPT" "1.2.3.4" > /dev/null 2>&1
 ) && exit_code=0 || exit_code=$?
 assert_exit_code "exits with non-zero code when SUPABASE_SERVICE_KEY missing" 1 "$exit_code"
 
 echo ""
 
-# Test 6: All required env vars missing -> lists all missing vars
-echo "Test 6: All required env vars missing"
+# Test 6: Missing required GHCR_TOKEN
+echo "Test 6: Missing GHCR_TOKEN"
+(
+  export BOT_TOKEN="test-bot-token"
+  export APPLICATION_ID="test-app-id"
+  export SUPABASE_URL="https://test.supabase.co"
+  export SUPABASE_SERVICE_KEY="test-service-key"
+  unset GHCR_TOKEN
+  export IMAGE_TAG="ghcr.io/test/image:latest"
+  bash "$DEPLOY_SCRIPT" "1.2.3.4" > /dev/null 2>&1
+) && exit_code=0 || exit_code=$?
+assert_exit_code "exits with non-zero code when GHCR_TOKEN missing" 1 "$exit_code"
 output=$(
-  unset BOT_TOKEN APPLICATION_ID SUPABASE_URL SUPABASE_SERVICE_KEY
+  export BOT_TOKEN="test-bot-token"
+  export APPLICATION_ID="test-app-id"
+  export SUPABASE_URL="https://test.supabase.co"
+  export SUPABASE_SERVICE_KEY="test-service-key"
+  unset GHCR_TOKEN
+  export IMAGE_TAG="ghcr.io/test/image:latest"
+  bash "$DEPLOY_SCRIPT" "1.2.3.4" 2>&1 || true
+)
+assert_output_contains "mentions GHCR_TOKEN in error" "GHCR_TOKEN" "$output"
+
+echo ""
+
+# Test 7: Missing required IMAGE_TAG
+echo "Test 7: Missing IMAGE_TAG"
+(
+  export BOT_TOKEN="test-bot-token"
+  export APPLICATION_ID="test-app-id"
+  export SUPABASE_URL="https://test.supabase.co"
+  export SUPABASE_SERVICE_KEY="test-service-key"
+  export GHCR_TOKEN="test-ghcr-token"
+  unset IMAGE_TAG
+  bash "$DEPLOY_SCRIPT" "1.2.3.4" > /dev/null 2>&1
+) && exit_code=0 || exit_code=$?
+assert_exit_code "exits with non-zero code when IMAGE_TAG missing" 1 "$exit_code"
+output=$(
+  export BOT_TOKEN="test-bot-token"
+  export APPLICATION_ID="test-app-id"
+  export SUPABASE_URL="https://test.supabase.co"
+  export SUPABASE_SERVICE_KEY="test-service-key"
+  export GHCR_TOKEN="test-ghcr-token"
+  unset IMAGE_TAG
+  bash "$DEPLOY_SCRIPT" "1.2.3.4" 2>&1 || true
+)
+assert_output_contains "mentions IMAGE_TAG in error" "IMAGE_TAG" "$output"
+
+echo ""
+
+# Test 8: All required env vars missing -> lists all missing vars
+echo "Test 8: All required env vars missing"
+output=$(
+  unset BOT_TOKEN APPLICATION_ID SUPABASE_URL SUPABASE_SERVICE_KEY GHCR_TOKEN IMAGE_TAG
   bash "$DEPLOY_SCRIPT" "1.2.3.4" 2>&1 || true
 )
 assert_output_contains "mentions BOT_TOKEN" "BOT_TOKEN" "$output"
 assert_output_contains "mentions APPLICATION_ID" "APPLICATION_ID" "$output"
 assert_output_contains "mentions SUPABASE_URL" "SUPABASE_URL" "$output"
 assert_output_contains "mentions SUPABASE_SERVICE_KEY" "SUPABASE_SERVICE_KEY" "$output"
+assert_output_contains "mentions GHCR_TOKEN" "GHCR_TOKEN" "$output"
+assert_output_contains "mentions IMAGE_TAG" "IMAGE_TAG" "$output"
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

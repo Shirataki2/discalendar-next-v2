@@ -2,6 +2,7 @@
 set -e
 
 # Deploy Discord Bot to AWS Lightsail instance via SSH
+# Pulls pre-built image from GHCR instead of building on the instance.
 # Usage: ./scripts/deploy.sh <host>
 
 HOST=$1
@@ -13,7 +14,7 @@ fi
 
 # Validate required environment variables
 MISSING_VARS=()
-for var in BOT_TOKEN APPLICATION_ID SUPABASE_URL SUPABASE_SERVICE_KEY; do
+for var in BOT_TOKEN APPLICATION_ID SUPABASE_URL SUPABASE_SERVICE_KEY GHCR_TOKEN IMAGE_TAG; do
   if [ -z "${!var}" ]; then
     MISSING_VARS+=("$var")
   fi
@@ -27,42 +28,38 @@ if [ ${#MISSING_VARS[@]} -gt 0 ]; then
   exit 1
 fi
 
-echo "==> Deploying Bot to $HOST"
+echo "==> Deploying Bot to $HOST (image: $IMAGE_TAG)"
 
 SSH_USER="ubuntu"
 SSH_KEY="${SSH_KEY_PATH:-$HOME/.ssh/lightsail_key}"
 APP_DIR="/opt/discalendar-next"
-REPO_URL="https://github.com/${GITHUB_REPOSITORY:-Shirataki2/discalendar-next-v2}.git"
 
 SSH_OPTS="-o ServerAliveInterval=60"
 
 ssh -i "$SSH_KEY" $SSH_OPTS "${SSH_USER}@${HOST}" <<REMOTE_SCRIPT
 set -e
 
-echo "==> Cloning/updating repository..."
-if [ -d "$APP_DIR/.git" ]; then
-  cd $APP_DIR
-  git fetch origin
-  git reset --hard origin/main
-  git clean -fd
-else
-  sudo rm -rf $APP_DIR
-  sudo mkdir -p $APP_DIR
-  sudo chown $SSH_USER:$SSH_USER $APP_DIR
-  git clone $REPO_URL $APP_DIR
-  cd $APP_DIR
-fi
+echo "==> Logging in to GHCR..."
+echo "${GHCR_TOKEN}" | docker login ghcr.io -u github-actions --password-stdin
+
+echo "==> Pulling image: ${IMAGE_TAG}..."
+docker pull "${IMAGE_TAG}"
+
+echo "==> Preparing application directory..."
+sudo mkdir -p $APP_DIR
+sudo chown $SSH_USER:$SSH_USER $APP_DIR
+cd $APP_DIR
 
 echo "==> Configuring AWS credentials for CloudWatch Logs..."
 mkdir -p ~/.aws
-cat > ~/.aws/credentials <<AWSCRED
+cat > ~/.aws/credentials <<'AWSCRED'
 [default]
 aws_access_key_id = ${CLOUDWATCH_ACCESS_KEY_ID}
 aws_secret_access_key = ${CLOUDWATCH_SECRET_ACCESS_KEY}
 AWSCRED
 chmod 600 ~/.aws/credentials
 
-cat > ~/.aws/config <<AWSCONF
+cat > ~/.aws/config <<'AWSCONF'
 [default]
 region = ${AWS_REGION:-ap-northeast-1}
 AWSCONF
@@ -80,7 +77,7 @@ sudo chmod 644 /root/.aws/config
 echo "    AWS credentials configured for ubuntu and root users"
 
 echo "==> Creating .env file..."
-cat > .env <<ENVFILE
+cat > .env <<'ENVFILE'
 BOT_TOKEN=${BOT_TOKEN}
 APPLICATION_ID=${APPLICATION_ID}
 INVITATION_URL=${INVITATION_URL:-}
@@ -94,24 +91,21 @@ ENVFILE
 chmod 600 .env
 
 echo "==> Stopping existing containers..."
-docker compose down || true
-
-echo "==> Building Docker image..."
-docker compose build --no-cache
+docker compose -f docker-compose.prod.yml down || true
 
 echo "==> Starting new containers..."
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 
 echo "==> Waiting for container to start..."
 for i in 1 2 3 4 5 6; do
-  STATUS=\$(docker compose ps --format json | head -1 | grep -o '"State":"[^"]*"' | grep -o '[^"]*$' || echo "unknown")
+  STATUS=\$(docker compose -f docker-compose.prod.yml ps --format json | head -1 | grep -o '"State":"[^"]*"' | grep -o '[^"]*$' || echo "unknown")
   if [ "\$STATUS" = "running" ]; then
     echo "    Container is running"
     break
   fi
   if [ "\$i" -eq 6 ]; then
     echo "Error: Container failed to start (status: \$STATUS)"
-    docker compose logs --tail=30
+    docker compose -f docker-compose.prod.yml logs --tail=30
     exit 1
   fi
   echo "    Waiting... (attempt \$i/6, status: \$STATUS)"
@@ -119,10 +113,13 @@ for i in 1 2 3 4 5 6; do
 done
 
 echo "==> Container status:"
-docker compose ps
+docker compose -f docker-compose.prod.yml ps
 
 echo "==> Recent logs:"
-docker compose logs --tail=20
+docker compose -f docker-compose.prod.yml logs --tail=20
+
+echo "==> Cleaning up old images..."
+docker image prune -f
 
 echo "==> Deployment completed successfully!"
 REMOTE_SCRIPT
