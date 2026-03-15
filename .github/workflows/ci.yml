@@ -7,7 +7,31 @@ on:
     branches: [main, master]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      bot: ${{ steps.filter.outputs.bot }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - '**'
+              - '!packages/bot/**'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+            bot:
+              - 'packages/bot/**'
+              - 'packages/rrule-utils/**'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+
   quality:
+    needs: [changes]
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +48,8 @@ jobs:
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+      - name: Build rrule-utils
+        run: npm run build -w @discalendar/rrule-utils
       - name: Lint
         run: npm run lint
       - name: Type check
@@ -40,6 +66,8 @@ jobs:
         run: npm run test:unit
 
   bot-quality:
+    needs: [changes]
+    if: needs.changes.outputs.bot == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -61,3 +89,5 @@ jobs:
         run: npm run build
       - name: Unit tests
         run: npm run test
+      - name: Deploy script tests
+        run: bash ../../scripts/deploy.test.sh
