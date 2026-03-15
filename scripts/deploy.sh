@@ -43,7 +43,7 @@ echo "==> Logging in to GHCR..."
 echo "${GHCR_TOKEN}" | docker login ghcr.io -u github-actions --password-stdin
 
 echo "==> Pulling image: ${IMAGE_TAG}..."
-docker pull ${IMAGE_TAG}
+docker pull "${IMAGE_TAG}"
 
 echo "==> Preparing application directory..."
 sudo mkdir -p $APP_DIR
@@ -52,14 +52,14 @@ cd $APP_DIR
 
 echo "==> Configuring AWS credentials for CloudWatch Logs..."
 mkdir -p ~/.aws
-cat > ~/.aws/credentials <<AWSCRED
+cat > ~/.aws/credentials <<'AWSCRED'
 [default]
 aws_access_key_id = ${CLOUDWATCH_ACCESS_KEY_ID}
 aws_secret_access_key = ${CLOUDWATCH_SECRET_ACCESS_KEY}
 AWSCRED
 chmod 600 ~/.aws/credentials
 
-cat > ~/.aws/config <<AWSCONF
+cat > ~/.aws/config <<'AWSCONF'
 [default]
 region = ${AWS_REGION:-ap-northeast-1}
 AWSCONF
@@ -77,7 +77,7 @@ sudo chmod 644 /root/.aws/config
 echo "    AWS credentials configured for ubuntu and root users"
 
 echo "==> Creating .env file..."
-cat > .env <<ENVFILE
+cat > .env <<'ENVFILE'
 BOT_TOKEN=${BOT_TOKEN}
 APPLICATION_ID=${APPLICATION_ID}
 INVITATION_URL=${INVITATION_URL:-}
