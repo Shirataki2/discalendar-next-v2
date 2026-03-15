@@ -98,7 +98,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 echo "==> Waiting for container to start..."
 for i in 1 2 3 4 5 6; do
-  STATUS=\$(docker compose -f docker-compose.prod.yml ps --format json | head -1 | grep -o '"State":"[^"]*"' | grep -o '[^"]*$' || echo "unknown")
+  STATUS=\$(docker inspect --format='{{.State.Status}}' discalendar-bot 2>/dev/null || echo "not_found")
   if [ "\$STATUS" = "running" ]; then
     echo "    Container is running"
     break
