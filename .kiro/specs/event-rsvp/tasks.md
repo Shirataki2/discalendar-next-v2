@@ -16,14 +16,14 @@
   - `claim_rsvp_ownership()` SECURITY DEFINER 関数を作成し、Bot 経由で作成された `user_id = NULL` のレコードを Web ユーザーが引き取れるようにする
   - _Requirements: 1.5, 1.6_
 
-- [ ] 2. Web RSVP サービス層を実装する
-- [ ] 2.1 RSVP 型定義と Discord ユーザー情報ヘルパーを実装する
+- [x] 2. Web RSVP サービス層を実装する
+- [x] 2.1 RSVP 型定義と Discord ユーザー情報ヘルパーを実装する
   - `RsvpStatus`、`AttendeeRecord`、`AttendeeSummary`、`AttendeeData` の型を定義する
   - Supabase の `user_metadata` から Discord ユーザー情報（ID、ユーザー名、アバターURL）を抽出するヘルパー関数を実装する
   - _Requirements: 1.1_
   - _Contracts: RsvpService インターフェース_
 
-- [ ] 2.2 RsvpService を実装する（出欠データの取得・登録・削除）
+- [x] 2.2 RsvpService を実装する（出欠データの取得・登録・削除）
   - 出欠データ取得: 指定イベントまたはオカレンスの参加者一覧を取得し、ステータス別サマリーと現在ユーザーのステータスを算出する
   - 出欠登録: upsert パターンでステータスを挿入または更新し、`responded_at` を現在時刻に設定する
   - 出欠削除: 指定イベントにおける自分のレコードを削除する（トグル解除用）
