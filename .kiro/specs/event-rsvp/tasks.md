@@ -10,7 +10,7 @@
   - _Requirements: 1.1, 1.2, 1.4, 6.1, 6.2_
   - _Contracts: event_attendees テーブル_
 
-- [ ] 1.2 RLS ポリシーと ownership 取得関数を作成する
+- [x] 1.2 RLS ポリシーと ownership 取得関数を作成する
   - SELECT ポリシー: 認証済みユーザーが同一ギルドの出欠データを参照できるようにする（`user_guild_ids()` でフィルタ）
   - INSERT / UPDATE / DELETE ポリシー: `user_id = auth.uid()` で自分のレコードのみ操作可とする
   - `claim_rsvp_ownership()` SECURITY DEFINER 関数を作成し、Bot 経由で作成された `user_id = NULL` のレコードを Web ユーザーが引き取れるようにする
