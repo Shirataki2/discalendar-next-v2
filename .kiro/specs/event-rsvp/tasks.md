@@ -32,7 +32,7 @@
   - _Requirements: 1.3, 6.3_
   - _Contracts: RsvpServiceInterface_
 
-- [ ] 3. Web RSVP Server Actions を実装する
+- [x] 3. Web RSVP Server Actions を実装する
   - `upsertRsvpAction`: 認証チェック → Discord 情報抽出 → ownership 取得 → upsert の一連の処理を実装する
   - `deleteRsvpAction`: 認証チェック → 出欠レコード削除を実装する
   - `fetchAttendeesAction`: 認証チェック → 参加者データ取得を実装する
@@ -42,7 +42,7 @@
   - _Contracts: Server Actions インターフェース_
 
 - [ ] 4. RsvpButtons コンポーネントを実装する
-- [ ] 4.1 RSVP ボタン群と楽観的更新を実装する
+- [x] 4.1 RSVP ボタン群と楽観的更新を実装する
   - 参加 / 未定 / 不参加 の3つのボタンを表示し、現在のステータスに対応するボタンを選択状態で表示する
   - ボタンクリック時に楽観的更新で即座にUIを反映し、Server Action の結果を待つ
   - 同じステータスのボタンを再クリックした場合はレコードを削除し、未回答状態に戻す（トグル動作）
@@ -51,7 +51,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
   - _Contracts: RsvpButtonsProps, State Management_
 
-- [ ] 4.2 未認証ユーザーの RSVP 制御を実装する
+- [x] 4.2 未認証ユーザーの RSVP 制御を実装する
   - 未ログイン時は全ボタンを disabled 状態で表示する
   - 無効化されたボタンにホバーまたはクリック時、ログインを促すツールチップを表示する
   - _Requirements: 4.1, 4.2_
