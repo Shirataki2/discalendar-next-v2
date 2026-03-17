@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. event_attendees テーブルとデータ基盤を作成する
+- [x] 1. event_attendees テーブルとデータ基盤を作成する
 - [x] 1.1 テーブル・制約・インデックスを作成する
   - `event_attendees` テーブルを作成し、going / maybe / not_going の3ステータスを CHECK 制約で管理する
   - 単発イベント（`event_id`）と繰り返しイベント（`event_series_id` + `occurrence_date`）の排他的参照を CHECK 制約で保証する
@@ -41,7 +41,7 @@
   - _Requirements: 1.3, 2.2, 2.4_
   - _Contracts: Server Actions インターフェース_
 
-- [ ] 4. RsvpButtons コンポーネントを実装する
+- [x] 4. RsvpButtons コンポーネントを実装する
 - [x] 4.1 RSVP ボタン群と楽観的更新を実装する
   - 参加 / 未定 / 不参加 の3つのボタンを表示し、現在のステータスに対応するボタンを選択状態で表示する
   - ボタンクリック時に楽観的更新で即座にUIを反映し、Server Action の結果を待つ
@@ -92,17 +92,17 @@
   - _Requirements: 5.1, 5.3, 5.4_
   - _Contracts: RsvpCommand_
 
-- [ ] 8. テストを実装する
-- [ ] 8.1 (P) Web サービス・Server Action のテスト
+- [x] 8. テストを実装する
+- [x] 8.1 (P) Web サービス・Server Action のテスト
   - RsvpService のユニットテスト: upsert、トグル削除、サマリー集計、空データ、繰り返しイベント
   - Server Action のテスト: 認証チェック、エラーサニタイズ、ownership 取得フロー
   - _Requirements: 1.3, 2.2, 2.4, 6.3_
 
-- [ ] 8.2 (P) UI コンポーネントのテスト
+- [x] 8.2 (P) UI コンポーネントのテスト
   - RsvpButtons: ボタンクリックでステータス変更、トグル動作、ローディング状態、disabled 状態、エラーロールバック
   - AttendeeList: ステータス別グループ表示、空状態メッセージ、アバター表示
   - _Requirements: 2.1, 2.3, 2.5, 2.6, 3.1, 3.2, 3.3, 4.1, 4.2_
 
-- [ ] 8.3 (P) Bot attendee-service のテスト
+- [x] 8.3 (P) Bot attendee-service のテスト
   - upsert、トグル削除、サマリー取得、イベント名検索のユニットテスト
   - _Requirements: 5.2, 5.5_
