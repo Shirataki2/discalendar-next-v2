@@ -83,6 +83,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         working-directory: .
+      - name: Build rrule-utils
+        run: pnpm --filter @discalendar/rrule-utils run build
+        working-directory: .
       - name: Lint
         run: pnpm run lint
       - name: Type check
