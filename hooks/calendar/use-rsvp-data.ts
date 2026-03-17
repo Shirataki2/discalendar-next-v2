@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchAttendeesAction } from "@/app/dashboard/actions";
 import type { AttendeeData } from "@/lib/calendar/rsvp-types";
 import type { CalendarEvent } from "@/lib/calendar/types";
-import { getRsvpIdentifiers } from "./use-rsvp-identifiers";
+import { getRsvpIdentifiers } from "@/lib/calendar/rsvp-identifiers";
 
 export function useRsvpData(
   event: CalendarEvent | null,

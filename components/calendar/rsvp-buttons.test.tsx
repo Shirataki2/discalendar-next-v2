@@ -23,7 +23,7 @@ vi.mock("@/app/dashboard/actions", () => ({
   deleteRsvpAction: (...args: unknown[]) => mockDeleteRsvpAction(...args),
 }));
 
-import { RsvpButtons } from "@/components/calendar/rsvp-buttons";
+import { RsvpButtons } from "./rsvp-buttons";
 
 // ──────────────────────────────────────────────
 // テスト用定数・ヘルパー
