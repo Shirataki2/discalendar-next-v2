@@ -10,6 +10,7 @@ import helpCommand from "./commands/help.js";
 import initCommand from "./commands/init.js";
 import inviteCommand from "./commands/invite.js";
 import listCommand from "./commands/list.js";
+import rsvpCommand from "./commands/rsvp.js";
 import { getConfig } from "./config.js";
 import { onGuildCreate, onGuildDelete, onGuildUpdate } from "./events/guild.js";
 import { startNotifyTask } from "./tasks/notify.js";
@@ -55,6 +56,7 @@ export class DiscalendarBot extends Client {
       initCommand,
       inviteCommand,
       listCommand,
+      rsvpCommand,
     ];
 
     for (const command of commands) {
