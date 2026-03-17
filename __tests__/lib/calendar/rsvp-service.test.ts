@@ -295,7 +295,7 @@ describe("RsvpService", () => {
 
     it("Supabase エラー時に CREATE_FAILED を返す", async () => {
       mockFrom.mockReturnValue(
-        createQueryBuilder(null, { message: "RLS violation", code: "42501" })
+        createQueryBuilder(null, { message: "Insert failed" })
       );
 
       const service = createRsvpService(
@@ -362,7 +362,7 @@ describe("RsvpService", () => {
 
     it("Supabase エラー時に DELETE_FAILED を返す", async () => {
       mockFrom.mockReturnValue(
-        createQueryBuilder(null, { message: "Delete failed", code: "42501" })
+        createQueryBuilder(null, { message: "Delete failed" })
       );
 
       const service = createRsvpService(

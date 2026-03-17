@@ -171,7 +171,14 @@ async function execute(
 
   const guildId = interaction.guild.id;
   const eventName = interaction.options.getString("event", true);
-  const status = interaction.options.getString("status", true) as RsvpStatus;
+  const rawStatus = interaction.options.getString("status", true);
+  if (!["going", "maybe", "not_going"].includes(rawStatus)) {
+    await interaction.editReply({
+      embeds: [createErrorEmbed("エラー", "無効なステータスです")],
+    });
+    return;
+  }
+  const status = rawStatus as RsvpStatus;
   const discordUserId = interaction.user.id;
   const discordUsername = interaction.user.username;
   const discordAvatarUrl = interaction.user.avatarURL() ?? null;

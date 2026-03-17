@@ -361,7 +361,7 @@ export interface EventServiceInterface {
  * @param operation - 操作タイプ（fetch/create/update/delete）
  * @returns 適切なカレンダーエラーコード
  */
-function classifySupabaseError(
+export function classifySupabaseError(
   error: { message: string; code?: string; details?: string; hint?: string },
   operation: "fetch" | "create" | "update" | "delete" = "fetch"
 ): CalendarErrorCode {

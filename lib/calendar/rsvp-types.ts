@@ -11,6 +11,19 @@
  */
 export type RsvpStatus = "going" | "maybe" | "not_going";
 
+export const VALID_RSVP_STATUSES: RsvpStatus[] = [
+  "going",
+  "maybe",
+  "not_going",
+];
+
+export function isValidRsvpStatus(value: unknown): value is RsvpStatus {
+  return (
+    typeof value === "string" &&
+    VALID_RSVP_STATUSES.includes(value as RsvpStatus)
+  );
+}
+
 /**
  * event_attendees テーブルのレコード型（snake_case）
  */

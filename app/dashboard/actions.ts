@@ -31,6 +31,7 @@ import {
   type AttendeeData,
   type AttendeeRecord,
   extractDiscordInfo,
+  isValidRsvpStatus,
   type RsvpStatus,
 } from "@/lib/calendar/rsvp-types";
 import type {
@@ -947,6 +948,16 @@ export async function upsertRsvpAction(
       error: {
         code: "VALIDATION_ERROR",
         message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  if (!isValidRsvpStatus(input.status)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "無効なRSVPステータスです。",
       },
     };
   }

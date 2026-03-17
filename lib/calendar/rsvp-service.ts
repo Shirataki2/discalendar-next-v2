@@ -9,7 +9,11 @@
  * Requirements: 1.3, 6.3
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CalendarError, MutationResult } from "./event-service";
+import {
+  type CalendarError,
+  classifySupabaseError,
+  type MutationResult,
+} from "./event-service";
 import {
   type AttendeeData,
   type AttendeeRecord,
@@ -27,7 +31,6 @@ interface FetchAttendeesParams {
   seriesId?: string;
   occurrenceDate?: string;
   currentDiscordUserId: string;
-  signal?: AbortSignal;
 }
 
 interface UpsertRsvpParams {
@@ -65,7 +68,21 @@ export function createRsvpService(supabase: SupabaseClient) {
     async fetchAttendees(
       params: FetchAttendeesParams,
     ): Promise<MutationResult<AttendeeData>> {
-      let query = supabase.from("event_attendees").select("*");
+      if (!params.eventId && !(params.seriesId && params.occurrenceDate)) {
+        return {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message:
+              "eventId または seriesId + occurrenceDate を指定してください。",
+          },
+        };
+      }
+
+      let query = supabase
+        .from("event_attendees")
+        .select("*")
+        .eq("guild_id", params.guildId);
 
       if (params.eventId) {
         query = query.eq("event_id", params.eventId);
@@ -78,10 +95,11 @@ export function createRsvpService(supabase: SupabaseClient) {
       const { data, error } = await query;
 
       if (error) {
+        const code = classifySupabaseError(error, "fetch");
         return {
           success: false,
           error: {
-            code: "FETCH_FAILED",
+            code,
             message: "出欠データの取得に失敗しました。",
             details: error.message,
           },
@@ -139,10 +157,11 @@ export function createRsvpService(supabase: SupabaseClient) {
         .single();
 
       if (error) {
+        const code = classifySupabaseError(error, "create");
         return {
           success: false,
           error: {
-            code: "CREATE_FAILED",
+            code,
             message: "出欠の登録に失敗しました。",
             details: error.message,
           },
@@ -160,6 +179,17 @@ export function createRsvpService(supabase: SupabaseClient) {
     async deleteRsvp(
       params: DeleteRsvpParams,
     ): Promise<MutationResult<void>> {
+      if (!params.eventId && !(params.seriesId && params.occurrenceDate)) {
+        return {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message:
+              "eventId または seriesId + occurrenceDate を指定してください。",
+          },
+        };
+      }
+
       let query = supabase
         .from("event_attendees")
         .delete()
@@ -176,10 +206,11 @@ export function createRsvpService(supabase: SupabaseClient) {
       const { error } = await query;
 
       if (error) {
+        const code = classifySupabaseError(error, "delete");
         return {
           success: false,
           error: {
-            code: "DELETE_FAILED",
+            code,
             message: "出欠の削除に失敗しました。",
             details: error.message,
           },

@@ -52,6 +52,10 @@ type DeleteRsvpParams = {
 
 const MAX_SEARCH_RESULTS = 10;
 
+function escapeIlike(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
 // ──────────────────────────────────────────────
 // 関数
 // ──────────────────────────────────────────────
@@ -184,7 +188,7 @@ export async function findEventByName(
     .from("events")
     .select("*")
     .eq("guild_id", guildId)
-    .ilike("name", `%${eventName}%`)
+    .ilike("name", `%${escapeIlike(eventName)}%`)
     .order("start_at", { ascending: false })
     .limit(MAX_SEARCH_RESULTS);
 
