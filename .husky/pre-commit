@@ -1,4 +1,4 @@
-npm test
+pnpm test
 
 #!/bin/sh
 # Exit on any error
@@ -23,7 +23,7 @@ git stash push --quiet --keep-index --message "pre-commit-stash" || true
 STASHED=$?
 
 # Run formatter on the staged files
-npx ultracite fix
+pnpm exec ultracite fix
 FORMAT_EXIT_CODE=$?
 
 # Restore working directory state

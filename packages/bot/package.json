@@ -4,13 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --env-file=.env --watch src/index.ts",
-    "build": "npm run build -w @discalendar/rrule-utils && tsc",
+    "build": "pnpm --filter @discalendar/rrule-utils run build && tsc",
     "start": "node --env-file=.env dist/index.js",
     "test": "vitest run",
     "type-check": "tsc --noEmit",
     "lint": "ultracite check"
   },
   "dependencies": {
+    "@discalendar/rrule-utils": "workspace:*",
     "@supabase/supabase-js": "^2.86.0",
     "discord.js": "^14.18.0",
     "pino": "^9.6.0"

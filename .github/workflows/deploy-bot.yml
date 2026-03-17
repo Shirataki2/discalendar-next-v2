@@ -37,7 +37,7 @@ jobs:
             bot:
               - 'packages/bot/**'
               - 'packages/rrule-utils/**'
-              - 'package-lock.json'
+              - 'pnpm-lock.yaml'
               - 'Dockerfile'
               - 'docker-compose.yml'
               - 'docker-compose.prod.yml'
