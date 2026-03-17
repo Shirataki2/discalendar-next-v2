@@ -6,6 +6,7 @@
  * Task 6.1: ギルド設定更新の Server Action
  * Task 6.2: イベント操作の Server Actions に権限チェックを追加
  * Task 4.1 (bot-invite-flow): ギルド再取得の Server Action
+ * Task 3 (event-rsvp): RSVP Server Actions
  *
  * セキュリティ: クライアントから送信された permissionsBitfield を信頼せず、
  * サーバー側で Discord API / キャッシュから権限を解決する。
@@ -25,6 +26,14 @@ import {
   type UpdateSeriesInput,
 } from "@/lib/calendar/event-service";
 import { checkEventPermission } from "@/lib/calendar/permission-check";
+import { createRsvpService } from "@/lib/calendar/rsvp-service";
+import {
+  type AttendeeData,
+  type AttendeeRecord,
+  extractDiscordInfo,
+  isValidRsvpStatus,
+  type RsvpStatus,
+} from "@/lib/calendar/rsvp-types";
 import type {
   CalendarEvent,
   EditScope,
@@ -846,4 +855,221 @@ export async function updateNotificationChannel(
   }
 
   return result;
+}
+
+// ──────────────────────────────────────────────
+// Task 3 (event-rsvp): RSVP Server Actions
+// ──────────────────────────────────────────────
+
+type UpsertRsvpActionInput = {
+  guildId: string;
+  eventId: string | null;
+  seriesId: string | null;
+  occurrenceDate: string | null;
+  status: RsvpStatus;
+};
+
+type DeleteRsvpActionInput = {
+  guildId: string;
+  eventId: string | null;
+  seriesId: string | null;
+  occurrenceDate: string | null;
+};
+
+type FetchAttendeesActionInput = {
+  guildId: string;
+  eventId: string | null;
+  seriesId: string | null;
+  occurrenceDate: string | null;
+};
+
+/**
+ * RSVP 認証ヘルパー
+ *
+ * resolveServerAuth でギルドメンバーシップを検証した上で、
+ * Discord ユーザー情報を抽出して返す。
+ */
+async function resolveRsvpAuth(guildId: string): Promise<
+  | {
+      success: true;
+      auth: ResolvedAuth;
+      discordUserId: string;
+      discordUsername: string;
+      discordAvatarUrl: string | null;
+    }
+  | { success: false; error: CalendarError }
+> {
+  const authResult = await resolveServerAuth(guildId);
+  if (!authResult.success) {
+    return authResult;
+  }
+
+  const {
+    data: { user },
+  } = await authResult.auth.supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: UNAUTHORIZED_ERROR };
+  }
+
+  try {
+    const discordInfo = extractDiscordInfo(user);
+    return {
+      success: true,
+      auth: authResult.auth,
+      discordUserId: discordInfo.discordUserId,
+      discordUsername: discordInfo.discordUsername,
+      discordAvatarUrl: discordInfo.discordAvatarUrl,
+    };
+  } catch {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message:
+          "Discordユーザー情報の取得に失敗しました。再度ログインしてください。",
+      },
+    };
+  }
+}
+
+/**
+ * RSVP 出欠登録（upsert） Server Action
+ *
+ * 認証チェック → Discord 情報抽出 → ownership 取得 → upsert
+ *
+ * Requirements: 1.3, 2.2
+ */
+export async function upsertRsvpAction(
+  input: UpsertRsvpActionInput
+): Promise<MutationResult<AttendeeRecord>> {
+  if (!GUILD_ID_PATTERN.test(input.guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  if (!isValidRsvpStatus(input.status)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "無効なRSVPステータスです。",
+      },
+    };
+  }
+
+  const rsvpAuth = await resolveRsvpAuth(input.guildId);
+  if (!rsvpAuth.success) {
+    return { success: false, error: rsvpAuth.error };
+  }
+
+  const { auth } = rsvpAuth;
+
+  // Bot 経由で作成された user_id = NULL のレコードの ownership を取得
+  const { error: rpcError } = await auth.supabase.rpc("claim_rsvp_ownership", {
+    p_discord_user_id: rsvpAuth.discordUserId,
+    p_user_id: auth.userId,
+  });
+  if (rpcError) {
+    captureException(
+      new Error(
+        `[upsertRsvpAction] claim_rsvp_ownership failed: ${rpcError.message}`
+      )
+    );
+  }
+
+  const rsvpService = createRsvpService(auth.supabase);
+  const result = await rsvpService.upsertRsvp({
+    guildId: input.guildId,
+    eventId: input.eventId ?? undefined,
+    seriesId: input.seriesId ?? undefined,
+    occurrenceDate: input.occurrenceDate ?? undefined,
+    userId: auth.userId,
+    discordUserId: rsvpAuth.discordUserId,
+    discordUsername: rsvpAuth.discordUsername,
+    discordAvatarUrl: rsvpAuth.discordAvatarUrl,
+    status: input.status,
+  });
+
+  return sanitizeResult(result);
+}
+
+/**
+ * RSVP 出欠削除 Server Action
+ *
+ * 認証チェック → 出欠レコード削除（トグル解除用）
+ *
+ * Requirements: 2.4
+ */
+export async function deleteRsvpAction(
+  input: DeleteRsvpActionInput
+): Promise<MutationResult<void>> {
+  if (!GUILD_ID_PATTERN.test(input.guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(input.guildId);
+  if (!authResult.success) {
+    return { success: false, error: authResult.error };
+  }
+
+  const { auth } = authResult;
+  const rsvpService = createRsvpService(auth.supabase);
+  const result = await rsvpService.deleteRsvp({
+    guildId: input.guildId,
+    eventId: input.eventId ?? undefined,
+    seriesId: input.seriesId ?? undefined,
+    occurrenceDate: input.occurrenceDate ?? undefined,
+    userId: auth.userId,
+  });
+
+  return sanitizeResult(result);
+}
+
+/**
+ * RSVP 参加者データ取得 Server Action
+ *
+ * 認証チェック → 参加者一覧・サマリー・現在ユーザーステータスを取得
+ *
+ * Requirements: 3.1, 3.2
+ */
+export async function fetchAttendeesAction(
+  input: FetchAttendeesActionInput
+): Promise<MutationResult<AttendeeData>> {
+  if (!GUILD_ID_PATTERN.test(input.guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const rsvpAuth = await resolveRsvpAuth(input.guildId);
+  if (!rsvpAuth.success) {
+    return { success: false, error: rsvpAuth.error };
+  }
+
+  const { auth } = rsvpAuth;
+  const rsvpService = createRsvpService(auth.supabase);
+  const result = await rsvpService.fetchAttendees({
+    guildId: input.guildId,
+    eventId: input.eventId ?? undefined,
+    seriesId: input.seriesId ?? undefined,
+    occurrenceDate: input.occurrenceDate ?? undefined,
+    currentDiscordUserId: rsvpAuth.discordUserId,
+  });
+
+  return sanitizeResult(result);
 }

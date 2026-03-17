@@ -519,6 +519,8 @@ export function CalendarContainer({
       {/* Task 7.2: onEditとonDeleteコールバックを追加 */}
       <EventPopover
         event={selectedEvent}
+        guildId={guildId}
+        isAuthenticated
         onClose={closePopover}
         onDelete={popoverDeleteHandler}
         onEdit={popoverEditHandler}

@@ -312,3 +312,57 @@ export const WithDeleteButtonOnly: Story = {
     onDelete: fn(),
   },
 };
+
+/**
+ * RSVP 機能付き (Task 6.1)
+ * guildId が提供された場合の RSVP ボタンと参加者一覧
+ */
+export const WithRsvp: Story = {
+  args: {
+    event: fullEvent,
+    open: true,
+    onClose: fn(),
+    onEdit: fn(),
+    onDelete: fn(),
+    guildId: "123456789012345678",
+    isAuthenticated: true,
+  },
+};
+
+/**
+ * RSVP 未認証 (Task 6.1)
+ * 未認証ユーザーの RSVP ボタン（disabled 状態）
+ */
+export const WithRsvpUnauthenticated: Story = {
+  args: {
+    event: basicEvent,
+    open: true,
+    onClose: fn(),
+    guildId: "123456789012345678",
+    isAuthenticated: false,
+  },
+};
+
+/**
+ * RSVP 繰り返しイベント (Task 6.2)
+ * 繰り返しイベントの RSVP
+ */
+export const WithRsvpRecurring: Story = {
+  args: {
+    event: {
+      id: "9",
+      title: "週次チームミーティング",
+      start: new Date(2026, 2, 17, 10, 0),
+      end: new Date(2026, 2, 17, 11, 0),
+      allDay: false,
+      color: "#22c55e",
+      isRecurring: true,
+      seriesId: "series-1",
+      rruleSummary: "毎週火曜日",
+    } as CalendarEvent,
+    open: true,
+    onClose: fn(),
+    guildId: "123456789012345678",
+    isAuthenticated: true,
+  },
+};
