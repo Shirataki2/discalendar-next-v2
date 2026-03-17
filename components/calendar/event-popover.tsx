@@ -2,17 +2,11 @@
  * EventPopover - イベント詳細ポップオーバーコンポーネント
  *
  * タスク7.1: EventPopoverコンポーネントの作成
- * - shadcn/ui Dialogをベースにイベント詳細表示を実装する
- * - イベント名、開始/終了日時、説明文を表示する
- * - 終日イベントの場合は時刻ではなく「終日」と表示する
- * - 場所情報とDiscordチャンネル情報を条件付きで表示する
- *
  * タスク7.2: ダイアログの表示位置と閉じ動作
- * - ダイアログを画面中央に表示する
- * - ダイアログ外クリックで閉じる動作を実装する
- * - Escキー押下で閉じる動作を実装する
+ * タスク6.1: RsvpButtons と AttendeeList を EventPopover に組み込む
+ * タスク6.2: 繰り返しイベントの RSVP に対応する
  *
- * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 9.5
+ * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 9.5, 2.1, 3.1, 3.2, 6.1, 6.2, 6.3
  */
 "use client";
 
@@ -36,7 +30,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useRsvpData } from "@/hooks/calendar/use-rsvp-data";
 import type { CalendarEvent } from "@/lib/calendar/types";
+import { AttendeeList } from "./attendee-list";
+import { RsvpButtons } from "./rsvp-buttons";
 
 /**
  * EventPopoverのProps
@@ -54,6 +51,10 @@ export type EventPopoverProps = {
   onEdit?: (event: CalendarEvent) => void;
   /** 削除ハンドラー（オプション） */
   onDelete?: (event: CalendarEvent) => void;
+  /** ギルドID（RSVP 機能用） */
+  guildId?: string | null;
+  /** 認証済みかどうか（RSVP 機能用） */
+  isAuthenticated?: boolean;
 };
 
 /**
@@ -134,25 +135,21 @@ function formatEventDateTime(event: CalendarEvent): React.ReactNode {
  * EventPopover コンポーネント
  *
  * イベント詳細情報をダイアログで表示する。
- *
- * @param props - コンポーネントのProps
- *
- * @example
- * ```tsx
- * <EventPopover
- *   event={selectedEvent}
- *   open={isPopoverOpen}
- *   onClose={() => setIsPopoverOpen(false)}
- * />
- * ```
+ * guildId が提供された場合、RSVP 機能（出欠ボタン・参加者一覧）を表示する。
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: EventPopover renders multiple optional sections (recurrence, location, channel, description, RSVP, edit/delete) with inherent conditional complexity
 export function EventPopover({
   event,
   open,
   onClose,
   onEdit,
   onDelete,
+  guildId,
+  isAuthenticated = false,
 }: EventPopoverProps) {
+  const { attendeeData, showRsvp, rsvpIds, handleRsvpStatusChange } =
+    useRsvpData(event, guildId, open);
+
   /**
    * 編集ボタンクリック時のハンドラー
    */
@@ -254,6 +251,36 @@ export function EventPopover({
             <div className="border-t pt-3">
               <p className="text-muted-foreground text-sm">説明:</p>
               <p className="mt-1 text-sm">{event.description}</p>
+            </div>
+          ) : null}
+
+          {/* RSVP セクション (Task 6.1, 6.2) */}
+          {/* biome-ignore lint/nursery/noLeakedRender: guildId and rsvpIds are string/object, checked via showRsvp boolean */}
+          {showRsvp && guildId && rsvpIds ? (
+            <div className="border-t pt-3" data-testid="rsvp-section">
+              <RsvpButtons
+                currentStatus={attendeeData?.currentUserStatus ?? null}
+                eventId={rsvpIds.eventId}
+                guildId={guildId}
+                isAuthenticated={isAuthenticated}
+                key={attendeeData?.currentUserStatus ?? "none"}
+                occurrenceDate={rsvpIds.occurrenceDate}
+                onStatusChange={handleRsvpStatusChange}
+                seriesId={rsvpIds.seriesId}
+              />
+              <div className="mt-3">
+                <AttendeeList
+                  attendees={attendeeData?.attendees ?? []}
+                  summary={
+                    attendeeData?.summary ?? {
+                      going: 0,
+                      maybe: 0,
+                      notGoing: 0,
+                      total: 0,
+                    }
+                  }
+                />
+              </div>
             </div>
           ) : null}
 

@@ -64,14 +64,14 @@
   - _Requirements: 3.1, 3.2, 3.3_
   - _Contracts: AttendeeList_
 
-- [ ] 6. EventPopover に RSVP 機能を統合する
-- [ ] 6.1 RsvpButtons と AttendeeList を EventPopover に組み込む
+- [x] 6. EventPopover に RSVP 機能を統合する
+- [x] 6.1 RsvpButtons と AttendeeList を EventPopover に組み込む
   - EventPopover の説明セクションの後、編集/削除ボタンの前に RSVP セクションを配置する
   - EventPopover 表示時に参加者データをフェッチし、RsvpButtons と AttendeeList に渡す
   - RSVP ステータス変更時に参加者一覧を再取得して表示を更新する
   - _Requirements: 2.1, 3.1, 3.2_
 
-- [ ] 6.2 繰り返しイベントの RSVP に対応する
+- [x] 6.2 繰り返しイベントの RSVP に対応する
   - 繰り返しイベントのオカレンスを表示する際、`event_series_id` と `occurrence_date` を RSVP コンポーネントに渡す
   - 各オカレンスで独立した参加者一覧と RSVP ステータスを表示する
   - _Requirements: 6.1, 6.2, 6.3_
