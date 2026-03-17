@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Discordコミュニティ向けカレンダー予定管理サービス。npm workspacesによるモノレポ構成。
+Discordコミュニティ向けカレンダー予定管理サービス。pnpm workspacesによるモノレポ構成。
 
 ## Monorepo Structure
 
@@ -35,35 +35,35 @@ Discordコミュニティ向けカレンダー予定管理サービス。npm wor
 ### Web (ルートで実行)
 
 ```bash
-npm run dev              # 開発サーバー起動
-npm run build            # プロダクションビルド
-npm run storybook        # Storybook起動 (port 6006)
+pnpm run dev              # 開発サーバー起動
+pnpm run build            # プロダクションビルド
+pnpm run storybook        # Storybook起動 (port 6006)
 
 # テスト
-npm run test:unit                        # Vitest全テスト実行
-npx vitest run path/to/file.test.ts      # 単一テストファイル実行
-npx vitest run --testNamePattern="name"  # テスト名でフィルタ
-npm run test:e2e                         # Playwright E2E (devサーバー自動起動)
-npx playwright test e2e_tests/file.spec.ts  # 単一E2Eテスト実行
+pnpm run test:unit                        # Vitest全テスト実行
+pnpm vitest run path/to/file.test.ts      # 単一テストファイル実行
+pnpm vitest run --testNamePattern="name"  # テスト名でフィルタ
+pnpm run test:e2e                         # Playwright E2E (devサーバー自動起動)
+pnpm playwright test e2e_tests/file.spec.ts  # 単一E2Eテスト実行
 
 # コード品質
-npx ultracite check      # lint + format チェック
-npx ultracite fix        # 自動修正
-npm run type-check       # TypeScript型チェック (tsconfig.type-check.json使用)
+pnpm ultracite check      # lint + format チェック
+pnpm ultracite fix        # 自動修正
+pnpm run type-check       # TypeScript型チェック (tsconfig.type-check.json使用)
 
 # データベース
-npx supabase db push     # マイグレーション適用
+pnpm supabase db push     # マイグレーション適用
 ```
 
 ### Bot (`packages/bot` で実行)
 
 ```bash
-npm run dev              # 開発サーバー起動 (tsx --watch)
-npm run build            # TypeScriptビルド
-npm run start            # プロダクション実行
-npm run test             # Vitest全テスト実行
-npm run type-check       # TypeScript型チェック
-npm run lint             # Biome lint + format チェック
+pnpm run dev              # 開発サーバー起動 (tsx --watch)
+pnpm run build            # TypeScriptビルド
+pnpm run start            # プロダクション実行
+pnpm run test             # Vitest全テスト実行
+pnpm run type-check       # TypeScript型チェック
+pnpm run lint             # Biome lint + format チェック
 ```
 
 ## Development Guidelines
