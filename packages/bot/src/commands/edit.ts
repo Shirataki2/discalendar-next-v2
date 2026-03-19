@@ -3,12 +3,17 @@ import {
   type EmbedBuilder,
   type GuildMember,
   SlashCommandBuilder,
+  type SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
 import { findEventByName } from "../services/attendee-service.js";
 import { getEventsByGuildId, updateEvent } from "../services/event-service.js";
 import { getGuildConfig } from "../services/guild-service.js";
 import type { Command } from "../types/command.js";
-import type { EventRecord, EventUpdate } from "../types/event.js";
+import type {
+  EventRecord,
+  EventUpdate,
+  NotificationPayload,
+} from "../types/event.js";
 import { validateDate } from "../utils/datetime.js";
 import { createErrorEmbed, createEventEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
@@ -17,12 +22,12 @@ import {
   addNotifyOption,
   COLOR_CHOICES,
   COLOR_MAP,
+  JST_OFFSET_HOURS,
   MAX_YEAR,
   MIN_YEAR,
   NOTIFY_MAP,
 } from "./constants.js";
 
-const JST_OFFSET_HOURS = 9;
 const MAX_RECENT_EVENTS = 5;
 
 type DateTimeParts = {
@@ -99,7 +104,7 @@ function mergeDateTime(
   return { iso: jstPartsToUtcIso(merged), valid, parts: merged };
 }
 
-function hasAnyValue(...values: (unknown | null)[]): boolean {
+function hasAnyValue(...values: unknown[]): boolean {
   return values.some((v) => v !== null);
 }
 
@@ -173,7 +178,9 @@ function parseEditOptions(
 }
 
 /** 通知オプションから重複排除済みペイロードを構築する */
-function buildNotifications(notifyValues: (string | null)[]) {
+function buildNotifications(
+  notifyValues: (string | null)[]
+): NotificationPayload[] {
   const seen = new Set<string>();
   return notifyValues
     .map((value, index) => {
@@ -291,7 +298,7 @@ async function buildEventNotFoundMessage(
   );
 }
 
-function buildCommandData() {
+function buildCommandData(): SlashCommandOptionsOnlyBuilder {
   const builder = new SlashCommandBuilder()
     .setName("edit")
     .setDescription("既存の予定を編集します（時刻はJST/日本標準時）")
@@ -516,4 +523,4 @@ async function execute(
 
 export default { data, execute } satisfies Command;
 
-export { isoToJstParts, jstPartsToUtcIso, mergeDateTime };
+export { mergeDateTime };

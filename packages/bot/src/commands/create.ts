@@ -15,6 +15,7 @@ import {
   addNotifyOption,
   COLOR_CHOICES,
   COLOR_MAP,
+  JST_OFFSET_HOURS,
   MAX_YEAR,
   MIN_YEAR,
   NOTIFY_MAP,
@@ -227,8 +228,6 @@ async function execute(
     return;
   }
 
-  // ユーザー入力はJSTとして扱い、UTC に変換する (JST = UTC+9)
-  const JST_OFFSET_HOURS = 9;
   const startAt = new Date(
     Date.UTC(
       startYear,

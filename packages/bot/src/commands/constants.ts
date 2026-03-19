@@ -65,6 +65,9 @@ export const NOTIFY_MAP: Record<
 export const MIN_YEAR = 1970;
 export const MAX_YEAR = 2099;
 
+/** ユーザー入力はJSTとして扱い、UTC に変換する (JST = UTC+9) */
+export const JST_OFFSET_HOURS = 9;
+
 export function addNotifyOption(
   cmd: SlashCommandOptionsOnlyBuilder,
   name: string,
