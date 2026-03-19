@@ -6,6 +6,7 @@ import {
   Routes,
 } from "discord.js";
 import createCommand from "./commands/create.js";
+import editCommand from "./commands/edit.js";
 import helpCommand from "./commands/help.js";
 import initCommand from "./commands/init.js";
 import inviteCommand from "./commands/invite.js";
@@ -52,6 +53,7 @@ export class DiscalendarBot extends Client {
   private loadCommands(): void {
     const commands: Command[] = [
       createCommand,
+      editCommand,
       helpCommand,
       initCommand,
       inviteCommand,
