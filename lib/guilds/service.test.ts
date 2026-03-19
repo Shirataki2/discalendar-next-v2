@@ -75,6 +75,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
         name: "Test Server",
         avatar_url: "https://cdn.discordapp.com/icons/123456789012345678/abc.png",
         locale: "ja",
+        is_public: false,
+        public_slug: null,
       },
     ];
 
@@ -94,6 +96,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
       name: "Test Server",
       avatarUrl: "https://cdn.discordapp.com/icons/123456789012345678/abc.png",
       locale: "ja",
+      isPublic: false,
+      publicSlug: null,
     });
     expect(mockSupabaseClient.from).toHaveBeenCalledWith("guilds");
     expect(mockSupabaseClient.in).toHaveBeenCalledWith("guild_id", guildIds);
@@ -113,6 +117,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
         name: "Server One",
         avatar_url: null,
         locale: "ja",
+        is_public: false,
+        public_slug: null,
       },
       {
         id: 2,
@@ -120,6 +126,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
         name: "Server Three",
         avatar_url: "https://cdn.discordapp.com/icons/345678901234567890/def.png",
         locale: "en",
+        is_public: false,
+        public_slug: null,
       },
     ];
 
@@ -171,6 +179,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
         name: "Only This Server",
         avatar_url: null,
         locale: "ja",
+        is_public: false,
+        public_slug: null,
       },
     ];
 
@@ -198,6 +208,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
         name: "Conversion Test",
         avatar_url: "https://example.com/icon.png",
         locale: "en-US",
+        is_public: false,
+        public_slug: null,
       },
     ];
 
@@ -216,6 +228,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
       name: "Conversion Test",
       avatarUrl: "https://example.com/icon.png",
       locale: "en-US",
+      isPublic: false,
+      publicSlug: null,
     });
   });
 
@@ -229,6 +243,8 @@ describe("Task 4.1: ギルドサービス - getJoinedGuilds", () => {
         name: "No Icon Server",
         avatar_url: null,
         locale: "ja",
+        is_public: false,
+        public_slug: null,
       },
     ];
 

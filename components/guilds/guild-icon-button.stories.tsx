@@ -25,6 +25,8 @@ const mockGuildWithAvatar: Guild = {
   name: "テストサーバー",
   avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
   locale: "ja",
+  isPublic: false,
+  publicSlug: null,
 };
 
 const mockGuildWithoutAvatar: Guild = {
@@ -33,6 +35,8 @@ const mockGuildWithoutAvatar: Guild = {
   name: "アイコンなしサーバー",
   avatarUrl: null,
   locale: "ja",
+  isPublic: false,
+  publicSlug: null,
 };
 
 export const Default: Story = {
