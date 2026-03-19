@@ -9,6 +9,7 @@ const mockLt = vi.fn();
 const mockOrder = vi.fn();
 const mockInsert = vi.fn();
 const mockUpsert = vi.fn();
+const mockUpdate = vi.fn();
 const mockIn = vi.fn();
 const mockLimit = vi.fn();
 
@@ -32,6 +33,7 @@ function resetChain() {
   mockLimit.mockResolvedValue({ data: [], error: null });
   mockInsert.mockReturnValue({ select: mockSelect });
   mockUpsert.mockReturnValue({ select: mockSelect });
+  mockUpdate.mockReturnValue({ eq: mockEq });
   mockIn.mockResolvedValue({ data: [], error: null });
 }
 
@@ -41,6 +43,7 @@ vi.mock("../services/supabase.js", () => ({
       select: mockSelect,
       insert: mockInsert,
       upsert: mockUpsert,
+      update: mockUpdate,
       eq: mockEq,
       gte: mockGte,
       lt: mockLt,
@@ -195,6 +198,117 @@ describe("event-service", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toHaveLength(0);
+      }
+    });
+  });
+
+  describe("getEventById", () => {
+    it("returns event when found", async () => {
+      const mockEvent: EventRecord = {
+        id: "evt-1",
+        guild_id: "guild-1",
+        name: "Test Event",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2024-06-15T03:00:00Z",
+        end_at: "2024-06-15T05:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2024-06-01T00:00:00Z",
+        updated_at: "2024-06-01T00:00:00Z",
+      };
+
+      mockSingle.mockResolvedValue({ data: mockEvent, error: null });
+
+      const { getEventById } = await import("./event-service.js");
+      const result = await getEventById("evt-1", "guild-1");
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data?.name).toBe("Test Event");
+      }
+    });
+
+    it("returns null when not found (PGRST116)", async () => {
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: { code: "PGRST116", message: "Not found" },
+      });
+
+      const { getEventById } = await import("./event-service.js");
+      const result = await getEventById("nonexistent", "guild-1");
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).toBeNull();
+      }
+    });
+
+    it("returns error on failure", async () => {
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: { message: "DB error" },
+      });
+
+      const { getEventById } = await import("./event-service.js");
+      const result = await getEventById("evt-1", "guild-1");
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe("DB error");
+      }
+    });
+  });
+
+  describe("updateEvent", () => {
+    it("returns updated event on success", async () => {
+      const updatedEvent: EventRecord = {
+        id: "evt-1",
+        guild_id: "guild-1",
+        name: "Updated Event",
+        description: null,
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2024-06-15T03:00:00Z",
+        end_at: "2024-06-15T05:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2024-06-01T00:00:00Z",
+        updated_at: "2024-06-02T00:00:00Z",
+      };
+
+      mockSingle.mockResolvedValue({ data: updatedEvent, error: null });
+
+      const { updateEvent } = await import("./event-service.js");
+      const result = await updateEvent("evt-1", "guild-1", {
+        name: "Updated Event",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.name).toBe("Updated Event");
+      }
+    });
+
+    it("returns error on failure", async () => {
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: { message: "Update failed" },
+      });
+
+      const { updateEvent } = await import("./event-service.js");
+      const result = await updateEvent("evt-1", "guild-1", {
+        name: "Updated",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe("Update failed");
       }
     });
   });

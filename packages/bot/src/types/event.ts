@@ -30,6 +30,16 @@ export type EventRecord = {
   updated_at: string;
 };
 
+export type EventUpdate = {
+  name?: string;
+  description?: string | null;
+  start_at?: string;
+  end_at?: string;
+  is_all_day?: boolean;
+  color?: string;
+  notifications?: NotificationPayload[];
+};
+
 export type EventCreate = {
   guild_id: string;
   name: string;

@@ -3,6 +3,7 @@ import type {
   EventRecord,
   EventSeriesRecord,
   EventSettings,
+  EventUpdate,
 } from "../types/event.js";
 import type { ServiceResult } from "../types/result.js";
 import { logger } from "../utils/logger.js";
@@ -203,6 +204,59 @@ export async function upsertEventSettings(
   }
 
   return { success: true, data: data as EventSettings };
+}
+
+export async function getEventById(
+  eventId: string,
+  guildId: string
+): Promise<ServiceResult<EventRecord | null>> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", eventId)
+    .eq("guild_id", guildId)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return { success: true, data: null };
+    }
+    logger.error({ error, eventId, guildId }, "Failed to fetch event by ID");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "fetch"),
+    };
+  }
+
+  return { success: true, data: data as EventRecord };
+}
+
+export async function updateEvent(
+  eventId: string,
+  guildId: string,
+  updateData: EventUpdate
+): Promise<ServiceResult<EventRecord>> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("events")
+    .update(updateData)
+    .eq("id", eventId)
+    .eq("guild_id", guildId)
+    .select()
+    .single();
+
+  if (error) {
+    logger.error({ error, eventId, guildId }, "Failed to update event");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "update"),
+    };
+  }
+
+  return { success: true, data: data as EventRecord };
 }
 
 export async function getEventSettingsByGuildIds(
