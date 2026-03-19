@@ -26,6 +26,7 @@ import {
   MAX_YEAR,
   MIN_YEAR,
   NOTIFY_MAP,
+  NOTIFY_NONE_VALUE,
 } from "./constants.js";
 
 const MAX_RECENT_EVENTS = 5;
@@ -177,10 +178,13 @@ function parseEditOptions(
   };
 }
 
-/** 通知オプションから重複排除済みペイロードを構築する */
+/** 通知オプションから重複排除済みペイロードを構築する（"none"指定時は空配列） */
 function buildNotifications(
   notifyValues: (string | null)[]
 ): NotificationPayload[] {
+  if (notifyValues.some((v) => v === NOTIFY_NONE_VALUE)) {
+    return [];
+  }
   const seen = new Set<string>();
   return notifyValues
     .map((value, index) => {
@@ -215,7 +219,8 @@ function buildUpdatePayload(
     payload.name = opts.newName;
   }
   if (opts.newDescription !== null) {
-    payload.description = opts.newDescription;
+    payload.description =
+      opts.newDescription === "" ? null : opts.newDescription;
   }
   if (opts.newIsAllDay !== null) {
     payload.is_all_day = opts.newIsAllDay;
@@ -257,17 +262,21 @@ function buildUpdatePayload(
     payload.end_at = result.iso;
   }
 
-  if (
-    (opts.hasStartOverride || opts.hasEndOverride) &&
-    new Date(finalStartIso) >= new Date(finalEndIso)
-  ) {
-    return {
-      success: false,
-      error: createErrorEmbed(
-        "日時エラー",
-        "開始時間が終了時間以降になっています"
-      ),
-    };
+  if (opts.hasStartOverride || opts.hasEndOverride) {
+    const effectiveIsAllDay = opts.newIsAllDay ?? event.is_all_day;
+    const startGteEnd = effectiveIsAllDay
+      ? new Date(finalStartIso) > new Date(finalEndIso)
+      : new Date(finalStartIso) >= new Date(finalEndIso);
+
+    if (startGteEnd) {
+      return {
+        success: false,
+        error: createErrorEmbed(
+          "日時エラー",
+          "開始時間が終了時間以降になっています"
+        ),
+      };
+    }
   }
 
   if (opts.hasNotifyOverride) {
@@ -398,7 +407,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
     .addStringOption((opt) =>
       opt
         .setName("description")
-        .setDescription("新しい予定の説明")
+        .setDescription("新しい予定の説明（空文字で削除）")
         .setMaxLength(1024)
         .setRequired(false)
     )
@@ -416,10 +425,10 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setRequired(false)
     );
 
-  addNotifyOption(builder, "notify_1", "予定の事前通知");
-  addNotifyOption(builder, "notify_2", "予定の事前通知");
-  addNotifyOption(builder, "notify_3", "予定の事前通知");
-  addNotifyOption(builder, "notify_4", "予定の事前通知");
+  addNotifyOption(builder, "notify_1", "事前通知1");
+  addNotifyOption(builder, "notify_2", "事前通知2");
+  addNotifyOption(builder, "notify_3", "事前通知3");
+  addNotifyOption(builder, "notify_4", "事前通知4");
 
   return builder;
 }

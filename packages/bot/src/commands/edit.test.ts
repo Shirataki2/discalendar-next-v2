@@ -404,6 +404,83 @@ describe("edit command", () => {
     });
   });
 
+  it("allows start === end for all-day events", async () => {
+    const allDayEvent = {
+      ...MOCK_EVENT,
+      is_all_day: true,
+      // JST 2026-03-20 00:00 → UTC 2026-03-19 15:00
+      start_at: "2026-03-19T15:00:00.000Z",
+      end_at: "2026-03-19T15:00:00.000Z",
+    };
+    mockFindEventByName.mockResolvedValue({
+      success: true,
+      data: allDayEvent,
+    });
+    mockUpdateEvent.mockResolvedValue({
+      success: true,
+      data: {
+        ...allDayEvent,
+        start_at: "2026-03-20T15:00:00.000Z",
+        end_at: "2026-03-20T15:00:00.000Z",
+      },
+    });
+
+    const interaction = createMockInteraction({
+      guildId: "guild-1",
+      optionValues: {
+        strings: { event: "テスト" },
+        integers: { start_day: 21, end_day: 21 },
+      },
+    });
+
+    const editCommand = (await import("./edit.js")).default;
+    await editCommand.execute(interaction as never);
+
+    expect(mockUpdateEvent).toHaveBeenCalled();
+  });
+
+  it("clears notifications with none value", async () => {
+    mockUpdateEvent.mockResolvedValue({
+      success: true,
+      data: { ...MOCK_EVENT, notifications: [] },
+    });
+
+    const interaction = createMockInteraction({
+      guildId: "guild-1",
+      optionValues: {
+        strings: { event: "テスト", notify_1: "none" },
+      },
+    });
+
+    const editCommand = (await import("./edit.js")).default;
+    await editCommand.execute(interaction as never);
+
+    expect(mockUpdateEvent).toHaveBeenCalledWith("evt-1", "guild-1", {
+      notifications: [],
+    });
+  });
+
+  it("clears description with empty string", async () => {
+    mockUpdateEvent.mockResolvedValue({
+      success: true,
+      data: { ...MOCK_EVENT, description: null },
+    });
+
+    const interaction = createMockInteraction({
+      guildId: "guild-1",
+      optionValues: {
+        strings: { event: "テスト", description: "" },
+      },
+    });
+
+    const editCommand = (await import("./edit.js")).default;
+    await editCommand.execute(interaction as never);
+
+    expect(mockUpdateEvent).toHaveBeenCalledWith("evt-1", "guild-1", {
+      description: null,
+    });
+  });
+
   it("shows success embed on update", async () => {
     const updatedEvent = { ...MOCK_EVENT, name: "更新済み" };
     mockUpdateEvent.mockResolvedValue({

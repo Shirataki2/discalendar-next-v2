@@ -133,10 +133,10 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setRequired(false)
     );
 
-  addNotifyOption(builder, "notify_1", "予定の事前通知");
-  addNotifyOption(builder, "notify_2", "予定の事前通知");
-  addNotifyOption(builder, "notify_3", "予定の事前通知");
-  addNotifyOption(builder, "notify_4", "予定の事前通知");
+  addNotifyOption(builder, "notify_1", "事前通知1");
+  addNotifyOption(builder, "notify_2", "事前通知2");
+  addNotifyOption(builder, "notify_3", "事前通知3");
+  addNotifyOption(builder, "notify_4", "事前通知4");
 
   return builder;
 }

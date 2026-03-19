@@ -28,6 +28,7 @@ export const COLOR_MAP: Record<string, string> = {
 };
 
 export const NOTIFICATION_CHOICES = [
+  { name: "なし", value: "none" },
   { name: "5分前", value: "5m" },
   { name: "10分前", value: "10m" },
   { name: "15分前", value: "15m" },
@@ -42,6 +43,8 @@ export const NOTIFICATION_CHOICES = [
   { name: "3日前", value: "3d" },
   { name: "7日前", value: "7d" },
 ] as const;
+
+export const NOTIFY_NONE_VALUE = "none";
 
 export const NOTIFY_MAP: Record<
   string,
