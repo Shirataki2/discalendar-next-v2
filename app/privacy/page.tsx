@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { StaticPageLayout } from "@/components/static-page-layout";
 
 export const metadata: Metadata = {
-  title: "プライバシーポリシー | Discalendar",
+  title: "プライバシーポリシー",
   description:
     "Discalendarのプライバシーポリシーです。個人情報の取り扱いについて説明します。",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPage() {

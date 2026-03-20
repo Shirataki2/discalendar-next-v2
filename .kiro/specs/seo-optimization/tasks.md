@@ -11,8 +11,8 @@
   - _Requirements: 1.6, 1.7, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 7.3_
   - _Contracts: RootLayoutMetadata State_
 
-- [ ] 2. 各公開ページのメタデータを統一する
-- [ ] 2.1 (P) ランディングページのメタデータとJSON-LD構造化データを設定する
+- [x] 2. 各公開ページのメタデータを統一する
+- [x] 2.1 (P) ランディングページのメタデータとJSON-LD構造化データを設定する
   - title.absoluteでブランドファースト形式（テンプレート上書き）を維持する
   - description、keywordsを充実させる
   - canonical URLを設定する
@@ -22,20 +22,20 @@
   - _Requirements: 1.1, 5.1, 5.2, 5.3, 5.4, 5.5_
   - _Contracts: LandingPageMetadata State, JsonLdScript State_
 
-- [ ] 2.2 (P) 利用規約・プライバシーポリシーページのメタデータを更新する
+- [x] 2.2 (P) 利用規約・プライバシーポリシーページのメタデータを更新する
   - titleをページ名のみの短縮形に変更する（ルートtemplateが「| Discalendar」を自動付与）
   - descriptionは既存の値を維持する
   - canonical URLを各ページに追加する
   - _Requirements: 1.2, 1.3_
   - _Contracts: TermsPageMetadata State, PrivacyPageMetadata State_
 
-- [ ] 2.3 (P) ドキュメントページの動的メタデータを拡張する
+- [x] 2.3 (P) ドキュメントページの動的メタデータを拡張する
   - generateMetadata内のtitleをドキュメントタイトルのみに変更する（ルートtemplateが「| Discalendar」を自動付与）
   - canonical URLを各ドキュメントスラッグに基づいて動的に設定する
   - _Requirements: 1.4_
   - _Contracts: DocsPageMetadata State_
 
-- [ ] 2.4 (P) ログインページにメタデータ付きlayoutを追加する
+- [x] 2.4 (P) ログインページにメタデータ付きlayoutを追加する
   - ログインページがClient Componentのためmetadata exportが使えない制約を、Server Component layoutの新規作成で解決する
   - title（「ログイン」）、description、canonical URLを設定する
   - layoutはchildrenをそのままパススルーし、UIに変更を加えない

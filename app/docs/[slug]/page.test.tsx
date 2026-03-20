@@ -52,8 +52,7 @@ describe("Task 4.1: ドキュメントページの動的ルーティングとレ
         const metadata = await generateMetadata({
           params: Promise.resolve({ slug: entry.slug }),
         });
-        expect(metadata.title).toContain(entry.title);
-        expect(metadata.title).toContain("Discalendar");
+        expect(metadata.title).toBe(entry.title);
       }
     });
 
