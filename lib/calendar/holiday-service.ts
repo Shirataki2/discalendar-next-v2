@@ -7,6 +7,13 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
  */
 import holiday_jp from "@holiday-jp/holiday_jp";
+import type { CalendarEvent } from "./types";
+
+/** 祝日イベントIDのプレフィックス */
+export const HOLIDAY_EVENT_ID_PREFIX = "holiday-";
+
+/** 祝日イベントの表示色 */
+export const HOLIDAY_COLOR = "#ef4444";
 
 /**
  * 祝日情報
@@ -19,17 +26,10 @@ export interface HolidayInfo {
 }
 
 /**
- * react-big-calendar の backgroundEvent 形式
+ * イベントが祝日イベントかどうかを判定する
  */
-export interface BackgroundCalendarEvent {
-  /** 祝日の日付（開始） */
-  start: Date;
-  /** 祝日の日付（終了、終日のため開始と同日） */
-  end: Date;
-  /** 祝日名 */
-  title: string;
-  /** 終日フラグ（常に true） */
-  allDay: true;
+export function isHolidayEvent(event: CalendarEvent): boolean {
+  return event.id.startsWith(HOLIDAY_EVENT_ID_PREFIX);
 }
 
 /**
@@ -63,18 +63,25 @@ export function getHolidayName(date: Date): string | null {
 }
 
 /**
- * 祝日データを react-big-calendar の backgroundEvent 形式に変換する
+ * 祝日データを CalendarEvent 形式に変換する
+ * 通常の終日イベントと同じ形式で表示される
  *
  * @param holidays - 祝日情報の配列
- * @returns BackgroundCalendarEvent の配列
+ * @returns CalendarEvent の配列
  */
-export function toBackgroundEvents(
-  holidays: HolidayInfo[]
-): BackgroundCalendarEvent[] {
-  return holidays.map((h) => ({
-    start: h.date,
-    end: h.date,
-    title: h.name,
-    allDay: true as const,
-  }));
+export function toHolidayEvents(holidays: HolidayInfo[]): CalendarEvent[] {
+  return holidays.map((h) => {
+    // holiday_jpの日付はUTC midnightのため、ローカルタイムゾーンに正規化
+    const y = h.date.getFullYear();
+    const m = h.date.getMonth();
+    const d = h.date.getDate();
+    return {
+      id: `${HOLIDAY_EVENT_ID_PREFIX}${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+      title: h.name,
+      start: new Date(y, m, d),
+      end: new Date(y, m, d + 1), // react-big-calendarは排他的終了日を使用
+      allDay: true,
+      color: HOLIDAY_COLOR,
+    };
+  });
 }

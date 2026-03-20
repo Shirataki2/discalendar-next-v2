@@ -51,7 +51,7 @@ import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
-import type { BackgroundCalendarEvent } from "@/lib/calendar/holiday-service";
+import { isHolidayEvent } from "@/lib/calendar/holiday-service";
 import {
   calendarFormats,
   calendarLocalizer,
@@ -187,8 +187,6 @@ export type CalendarGridProps = {
   onEventResize?: (args: EventInteractionArgs<CalendarEvent>) => void;
   /** リサイズ可能かどうか（デフォルト: true） */
   resizable?: boolean;
-  /** 祝日の背景イベント（react-big-calendar backgroundEvents） */
-  backgroundEvents?: BackgroundCalendarEvent[];
   /** 日付→祝日名のMap（dayPropGetter用） */
   holidayMap?: Map<string, string>;
 };
@@ -271,7 +269,6 @@ export function CalendarGrid({
   onEventDrop,
   onEventResize,
   resizable = true,
-  backgroundEvents,
   holidayMap,
 }: CalendarGridProps) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -404,7 +401,7 @@ export function CalendarGrid({
       }
 
       // Task 3.2: 祝日セルに背景色クラスを適用
-      if (holidayMap && holidayMap.has(formatDateKey(date))) {
+      if (holidayMap?.has(formatDateKey(date))) {
         classNames.push("rbc-holiday");
       }
 
@@ -442,6 +439,14 @@ export function CalendarGrid({
     []
   );
 
+  /**
+   * 祝日イベントのドラッグ＆ドロップ・リサイズを防止する
+   */
+  const draggableAccessor = useCallback(
+    (event: RBCEvent) => !isHolidayEvent(event as CalendarEvent),
+    []
+  );
+
   return (
     <section
       aria-label="カレンダー"
@@ -451,12 +456,10 @@ export function CalendarGrid({
     >
       <div className="flex h-full flex-1 flex-col">
         <DnDCalendar
-          backgroundEvents={
-            backgroundEvents as unknown as CalendarEvent[] | undefined
-          }
           components={calendarComponents}
           date={selectedDate}
           dayPropGetter={dayPropGetter}
+          draggableAccessor={draggableAccessor}
           eventPropGetter={eventStyleGetter}
           events={events}
           formats={calendarFormats}
@@ -472,6 +475,7 @@ export function CalendarGrid({
           }}
           popup
           resizable={resizable}
+          resizableAccessor={draggableAccessor}
           selectable
           slotPropGetter={slotPropGetter}
           style={{ flex: "1 1 0%", height: "100%", width: "100%" }}

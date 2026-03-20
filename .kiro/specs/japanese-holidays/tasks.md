@@ -59,7 +59,7 @@
   - モバイルビューでもアクセス可能なレイアウトにする
   - _Requirements: 5.1_
 
-- [ ] 5. CalendarContainer の統合
+- [x] 5. CalendarContainer の統合
   - useUserPreferences から showHolidays と setShowHolidays を取得する
   - useHolidays フックを呼び出して、現在のビューモード・日付・表示設定に基づく祝日データを取得する
   - 祝日 backgroundEvents と holidayMap を CalendarGrid に渡す
@@ -68,21 +68,21 @@
   - 祝日表示 ON 時に全ビューに祝日ラベルと背景色が再表示されることを確認する
   - _Requirements: 5.2, 5.3_
 
-- [ ] 6. テスト
-- [ ] 6.1 (P) useHolidays フックと useUserPreferences 拡張のテスト
+- [x] 6. テスト
+- [x] 6.1 (P) useHolidays フックと useUserPreferences 拡張のテスト
   - useHolidays が表示期間に基づく祝日データを正しく返すことをテストする
   - showHolidays が false の場合に空データが返却されることをテストする
   - 期間変更時に祝日データが再計算されることをテストする
   - useUserPreferences の showHolidays が localStorage に保存・復元されることをテストする
   - _Requirements: 1.1, 5.4_
 
-- [ ] 6.2 (P) CalendarGrid と CalendarToolbar のコンポーネントテスト
+- [x] 6.2 (P) CalendarGrid と CalendarToolbar のコンポーネントテスト
   - CalendarGrid に backgroundEvents を渡した場合に祝日ラベルが表示されることをテストする
   - dayPropGetter が祝日セルに rbc-holiday クラスを適用することをテストする
   - CalendarToolbar の祝日トグルクリックで onToggleHolidays が呼ばれることをテストする
   - _Requirements: 2.1, 2.2, 4.1, 4.2, 5.1_
 
-- [ ] 6.3 CalendarContainer 統合テスト
+- [x] 6.3 CalendarContainer 統合テスト
   - CalendarContainer 経由で祝日が表示されることをテストする
   - 祝日トグル操作で表示→非表示→再表示のフローが正しく動作することをテストする
   - _Requirements: 5.2, 5.3_

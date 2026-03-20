@@ -116,15 +116,17 @@ vi.mock("./calendar-grid", () => ({
     viewMode,
     onSlotSelect,
   }: {
-    events: unknown[];
+    events: Array<{ id: string }>;
     viewMode: string;
     onSlotSelect?: (slotInfo: SlotSelectInfo) => void;
   }) => {
     // onSlotSelectをキャプチャ
     capturedOnSlotSelect = onSlotSelect;
+    // 祝日イベント（holiday-プレフィックス）を除外してユーザーイベントのみカウント
+    const userEvents = events.filter((e) => !e.id.startsWith("holiday-"));
     return (
       <div data-testid="calendar-grid">
-        Grid: {viewMode} - {events.length} events
+        Grid: {viewMode} - {userEvents.length} events
       </div>
     );
   },

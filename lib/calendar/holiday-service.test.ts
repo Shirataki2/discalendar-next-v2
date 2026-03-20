@@ -6,11 +6,13 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  type BackgroundCalendarEvent,
+  HOLIDAY_COLOR,
+  HOLIDAY_EVENT_ID_PREFIX,
   type HolidayInfo,
   getHolidayName,
   getHolidaysInRange,
-  toBackgroundEvents,
+  isHolidayEvent,
+  toHolidayEvents,
 } from "./holiday-service";
 
 describe("getHolidaysInRange", () => {
@@ -182,14 +184,14 @@ describe("getHolidayName", () => {
   });
 });
 
-describe("toBackgroundEvents", () => {
-  it("HolidayInfo 配列を BackgroundCalendarEvent 配列に変換する", () => {
+describe("toHolidayEvents", () => {
+  it("HolidayInfo 配列を CalendarEvent 配列に変換する", () => {
     const holidays: HolidayInfo[] = [
       { date: new Date(2026, 0, 1), name: "元日" },
       { date: new Date(2026, 0, 12), name: "成人の日" },
     ];
 
-    const events = toBackgroundEvents(holidays);
+    const events = toHolidayEvents(holidays);
 
     expect(events).toHaveLength(2);
   });
@@ -199,17 +201,19 @@ describe("toBackgroundEvents", () => {
       { date: new Date(2026, 0, 1), name: "元日" },
     ];
 
-    const events = toBackgroundEvents(holidays);
+    const events = toHolidayEvents(holidays);
     const event = events[0];
 
+    expect(event.id).toBe(`${HOLIDAY_EVENT_ID_PREFIX}2026-01-01`);
     expect(event.start).toEqual(new Date(2026, 0, 1));
-    expect(event.end).toEqual(new Date(2026, 0, 1));
+    expect(event.end).toEqual(new Date(2026, 0, 2)); // 排他的終了日（翌日）
     expect(event.title).toBe("元日");
     expect(event.allDay).toBe(true);
+    expect(event.color).toBe(HOLIDAY_COLOR);
   });
 
   it("空配列に対しては空配列を返す", () => {
-    const events = toBackgroundEvents([]);
+    const events = toHolidayEvents([]);
 
     expect(events).toEqual([]);
   });
@@ -221,7 +225,7 @@ describe("toBackgroundEvents", () => {
       { date: new Date(2026, 1, 11), name: "建国記念の日" },
     ];
 
-    const events = toBackgroundEvents(holidays);
+    const events = toHolidayEvents(holidays);
 
     expect(events).toHaveLength(3);
     for (const event of events) {
@@ -229,7 +233,32 @@ describe("toBackgroundEvents", () => {
       expect(event.start).toBeInstanceOf(Date);
       expect(event.end).toBeInstanceOf(Date);
       expect(typeof event.title).toBe("string");
+      expect(event.id.startsWith(HOLIDAY_EVENT_ID_PREFIX)).toBe(true);
     }
+  });
+});
+
+describe("isHolidayEvent", () => {
+  it("祝日イベントに対して true を返す", () => {
+    const holidays: HolidayInfo[] = [
+      { date: new Date(2026, 0, 1), name: "元日" },
+    ];
+    const event = toHolidayEvents(holidays)[0];
+
+    expect(isHolidayEvent(event)).toBe(true);
+  });
+
+  it("通常イベントに対して false を返す", () => {
+    const event = {
+      id: "regular-event-1",
+      title: "ミーティング",
+      start: new Date(2026, 0, 1),
+      end: new Date(2026, 0, 1),
+      allDay: false,
+      color: "#3b82f6",
+    };
+
+    expect(isHolidayEvent(event)).toBe(false);
   });
 });
 

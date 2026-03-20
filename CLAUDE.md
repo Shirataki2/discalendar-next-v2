@@ -46,6 +46,11 @@ pnpm vitest run --testNamePattern="name"  # テスト名でフィルタ
 pnpm run test:e2e                         # Playwright E2E (devサーバー自動起動)
 pnpm playwright test e2e_tests/file.spec.ts  # 単一E2Eテスト実行
 
+# Known Flaky Tests
+# event-dialog.test.tsx:390 "ローディング中はボタンが無効" が
+# 全テスト一括実行時にタイムアウトすることがある（worktree環境で顕著）。
+# 単独実行では再現しない。pre-commit hookでの誤検知の原因となる。
+
 # コード品質
 pnpm ultracite check      # lint + format チェック
 pnpm ultracite fix        # 自動修正

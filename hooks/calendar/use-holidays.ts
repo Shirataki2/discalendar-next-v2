@@ -2,23 +2,23 @@
 
 import { useMemo } from "react";
 import {
-  type BackgroundCalendarEvent,
   getHolidaysInRange,
-  toBackgroundEvents,
+  toHolidayEvents,
 } from "@/lib/calendar/holiday-service";
+import type { CalendarEvent } from "@/lib/calendar/types";
 import type { ViewMode } from "./use-calendar-state";
 
 /**
  * useHolidays フックの戻り値
  */
 export interface UseHolidaysReturn {
-  /** backgroundEvents 形式の祝日データ（CalendarGrid に渡す） */
-  holidayEvents: BackgroundCalendarEvent[];
+  /** CalendarEvent 形式の祝日データ（events 配列にマージして使用） */
+  holidayEvents: CalendarEvent[];
   /** 日付文字列(YYYY-MM-DD) → 祝日名の Map（dayPropGetter でのルックアップ用） */
   holidayMap: Map<string, string>;
 }
 
-const EMPTY_EVENTS: BackgroundCalendarEvent[] = [];
+const EMPTY_EVENTS: CalendarEvent[] = [];
 const EMPTY_MAP = new Map<string, string>();
 
 /**
@@ -86,12 +86,12 @@ function getHolidayDateRange(
 }
 
 /**
- * 表示期間に基づいて祝日データを取得し、CalendarGrid に渡す形式に変換するフック
+ * 表示期間に基づいて祝日データを取得し、CalendarEvent 形式に変換するフック
  *
  * @param viewMode - 現在のビューモード
  * @param selectedDate - 選択中の日付
  * @param showHolidays - 祝日表示ON/OFF
- * @returns holidayEvents（backgroundEvents形式）と holidayMap（日付→祝日名のMap）
+ * @returns holidayEvents（CalendarEvent形式）と holidayMap（日付→祝日名のMap）
  *
  * Requirements: 1.1, 2.1, 3.1, 3.2
  */
@@ -107,7 +107,7 @@ export function useHolidays(
 
     const { start, end } = getHolidayDateRange(viewMode, selectedDate);
     const holidays = getHolidaysInRange(start, end);
-    const holidayEvents = toBackgroundEvents(holidays);
+    const holidayEvents = toHolidayEvents(holidays);
 
     const holidayMap = new Map<string, string>();
     for (const h of holidays) {

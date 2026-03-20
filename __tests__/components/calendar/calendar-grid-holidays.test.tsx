@@ -2,16 +2,21 @@
  * CalendarGrid 祝日表示のテスト
  *
  * Task 3.2: CalendarGrid コンポーネントの祝日表示対応
- * - backgroundEvents を react-big-calendar に渡す
+ * - 祝日イベントが events に含まれて react-big-calendar に渡される
  * - dayPropGetter で holidayMap を参照し祝日セルに rbc-holiday クラスを適用する
  * - 既存の今日ハイライト・月外セル・土日色分けと共存する
+ * - 祝日イベントはドラッグ＆ドロップ不可
  *
  * Requirements: 2.1, 2.2, 2.3, 3.1, 3.2
  */
 
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { BackgroundCalendarEvent } from "@/lib/calendar/holiday-service";
+import {
+  HOLIDAY_COLOR,
+  HOLIDAY_EVENT_ID_PREFIX,
+} from "@/lib/calendar/holiday-service";
+import type { CalendarEvent } from "@/lib/calendar/types";
 
 // Store captured props for assertions
 let capturedProps: Record<string, unknown> = {};
@@ -46,8 +51,17 @@ vi.mock("@/components/calendar/event-block", () => ({
 
 import { CalendarGrid } from "@/components/calendar/calendar-grid";
 
+const holidayEvent: CalendarEvent = {
+  id: `${HOLIDAY_EVENT_ID_PREFIX}2026-01-01`,
+  title: "元日",
+  start: new Date(2026, 0, 1),
+  end: new Date(2026, 0, 2),
+  allDay: true,
+  color: HOLIDAY_COLOR,
+};
+
 const defaultProps = {
-  events: [],
+  events: [] as CalendarEvent[],
   viewMode: "month" as const,
   selectedDate: new Date(2026, 0, 15),
   onEventClick: vi.fn(),
@@ -60,37 +74,48 @@ type DayPropGetterFn = (date: Date) => {
   style: React.CSSProperties;
 };
 
+type DraggableAccessorFn = (event: unknown) => boolean;
+
 describe("CalendarGrid - 祝日表示", () => {
   beforeEach(() => {
     capturedProps = {};
   });
 
-  describe("Task 3.2: backgroundEvents の受け渡し", () => {
-    it("backgroundEvents を react-big-calendar に渡す", () => {
-      const holidayEvents: BackgroundCalendarEvent[] = [
-        {
-          start: new Date(2026, 0, 1),
-          end: new Date(2026, 0, 1),
-          title: "元日",
-          allDay: true,
-        },
-      ];
+  describe("祝日イベントの受け渡し", () => {
+    it("祝日イベントが events に含まれて渡される", () => {
+      render(<CalendarGrid {...defaultProps} events={[holidayEvent]} />);
 
-      render(
-        <CalendarGrid {...defaultProps} backgroundEvents={holidayEvents} />
-      );
-
-      expect(capturedProps.backgroundEvents).toEqual(holidayEvents);
+      const events = capturedProps.events as CalendarEvent[];
+      expect(events).toContainEqual(holidayEvent);
     });
 
-    it("backgroundEvents が未指定の場合、undefined を渡す", () => {
-      render(<CalendarGrid {...defaultProps} />);
+    it("祝日イベントはドラッグ不可", () => {
+      render(<CalendarGrid {...defaultProps} events={[holidayEvent]} />);
 
-      expect(capturedProps.backgroundEvents).toBeUndefined();
+      const draggableAccessor =
+        capturedProps.draggableAccessor as DraggableAccessorFn;
+      expect(draggableAccessor(holidayEvent)).toBe(false);
+    });
+
+    it("通常イベントはドラッグ可能", () => {
+      const regularEvent: CalendarEvent = {
+        id: "regular-1",
+        title: "ミーティング",
+        start: new Date(2026, 0, 1, 10),
+        end: new Date(2026, 0, 1, 11),
+        allDay: false,
+        color: "#3b82f6",
+      };
+
+      render(<CalendarGrid {...defaultProps} events={[regularEvent]} />);
+
+      const draggableAccessor =
+        capturedProps.draggableAccessor as DraggableAccessorFn;
+      expect(draggableAccessor(regularEvent)).toBe(true);
     });
   });
 
-  describe("Task 3.2: dayPropGetter の祝日クラス適用", () => {
+  describe("dayPropGetter の祝日クラス適用", () => {
     it("祝日の日付に rbc-holiday クラスを適用する", () => {
       const holidayMap = new Map<string, string>([["2026-01-01", "元日"]]);
 
