@@ -67,7 +67,8 @@ export function PublicCalendarContainer({
     const result = await serviceRef.current.fetchPublicEvents(
       guildId,
       startDate,
-      endDate
+      endDate,
+      abortControllerRef.current.signal
     );
 
     if (result.success) {

@@ -60,25 +60,22 @@ export interface PublicCalendarServiceInterface {
     guildId: string,
     startDate: Date,
     endDate: Date,
+    signal?: AbortSignal,
   ): Promise<PublicCalendarResult<PublicCalendarEvent[]>>;
 
   enablePublicCalendar(
-    supabase: SupabaseClient,
     guildId: string,
   ): Promise<PublicCalendarResult<{ slug: string }>>;
 
   disablePublicCalendar(
-    supabase: SupabaseClient,
     guildId: string,
   ): Promise<PublicCalendarResult<void>>;
 
   regeneratePublicSlug(
-    supabase: SupabaseClient,
     guildId: string,
   ): Promise<PublicCalendarResult<{ slug: string }>>;
 
   getPublicSettings(
-    supabase: SupabaseClient,
     guildId: string,
   ): Promise<PublicCalendarResult<{ isPublic: boolean; publicSlug: string | null }>>;
 }
@@ -86,10 +83,13 @@ export interface PublicCalendarServiceInterface {
 /** スラッグ生成のリトライ上限 */
 const MAX_SLUG_RETRIES = 3;
 
+/** スラッグの長さ（hex 文字数） */
+const SLUG_LENGTH = 12;
+
 /** crypto.randomUUID から12文字の hex スラッグを生成する */
 function generateSlug(): string {
   const uuid = crypto.randomUUID();
-  return uuid.replace(/-/g, "").slice(0, 12);
+  return uuid.replace(/-/g, "").slice(0, SLUG_LENGTH);
 }
 
 /**
@@ -134,16 +134,33 @@ export function createPublicCalendarService(
       };
     },
 
-    async fetchPublicEvents(guildId, startDate, endDate) {
+    async fetchPublicEvents(guildId, startDate, endDate, signal) {
       try {
+        // Step 0: ギルドが公開状態であることを確認（多層防御）
+        let guildQuery = supabase
+          .from("guilds")
+          .select("is_public")
+          .eq("guild_id", guildId);
+        if (signal) guildQuery = guildQuery.abortSignal(signal);
+        const { data: guildData, error: guildError } = await guildQuery.single();
+
+        if (guildError || !guildData?.is_public) {
+          return {
+            success: false,
+            error: { code: "GUILD_NOT_PUBLIC" as const, message: "このギルドのカレンダーは公開されていません。" },
+          };
+        }
+
         // Step 1: 単発イベントを取得（series_id IS NULL）
-        const { data: singleEventsData, error: singleEventsError } = await supabase
+        let singleEventsQuery = supabase
           .from("events")
           .select("*")
           .eq("guild_id", guildId)
           .lte("start_at", endDate.toISOString())
           .gte("end_at", startDate.toISOString())
           .is("series_id", null);
+        if (signal) singleEventsQuery = singleEventsQuery.abortSignal(signal);
+        const { data: singleEventsData, error: singleEventsError } = await singleEventsQuery;
 
         if (singleEventsError) {
           return {
@@ -153,10 +170,12 @@ export function createPublicCalendarService(
         }
 
         // Step 2: イベントシリーズを取得
-        const { data: seriesData, error: seriesError } = await supabase
+        let seriesQuery = supabase
           .from("event_series")
           .select("*")
           .eq("guild_id", guildId);
+        if (signal) seriesQuery = seriesQuery.abortSignal(signal);
+        const { data: seriesData, error: seriesError } = await seriesQuery;
 
         if (seriesError) {
           return {
@@ -166,7 +185,7 @@ export function createPublicCalendarService(
         }
 
         // Step 3: 例外レコードを取得（series_id IS NOT NULL）
-        const { data: exceptionData, error: exceptionError } = await supabase
+        let exceptionQuery = supabase
           .from("events")
           .select("*")
           .eq("guild_id", guildId)
@@ -174,6 +193,8 @@ export function createPublicCalendarService(
           .or(
             `and(original_date.gte.${startDate.toISOString()},original_date.lte.${endDate.toISOString()}),and(start_at.lte.${endDate.toISOString()},end_at.gte.${startDate.toISOString()})`,
           );
+        if (signal) exceptionQuery = exceptionQuery.abortSignal(signal);
+        const { data: exceptionData, error: exceptionError } = await exceptionQuery;
 
         if (exceptionError) {
           return {
@@ -282,11 +303,11 @@ export function createPublicCalendarService(
       }
     },
 
-    async enablePublicCalendar(authSupabase, guildId) {
+    async enablePublicCalendar(guildId) {
       for (let attempt = 0; attempt < MAX_SLUG_RETRIES; attempt++) {
         const slug = generateSlug();
 
-        const { data, error } = await authSupabase
+        const { data, error } = await supabase
           .from("guilds")
           .update({ is_public: true, public_slug: slug })
           .eq("guild_id", guildId)
@@ -319,8 +340,8 @@ export function createPublicCalendarService(
       };
     },
 
-    async disablePublicCalendar(authSupabase, guildId) {
-      const { error } = await authSupabase
+    async disablePublicCalendar(guildId) {
+      const { error } = await supabase
         .from("guilds")
         .update({ is_public: false })
         .eq("guild_id", guildId)
@@ -337,11 +358,11 @@ export function createPublicCalendarService(
       return { success: true, data: undefined };
     },
 
-    async regeneratePublicSlug(authSupabase, guildId) {
+    async regeneratePublicSlug(guildId) {
       for (let attempt = 0; attempt < MAX_SLUG_RETRIES; attempt++) {
         const slug = generateSlug();
 
-        const { data, error } = await authSupabase
+        const { data, error } = await supabase
           .from("guilds")
           .update({ public_slug: slug })
           .eq("guild_id", guildId)
@@ -373,8 +394,8 @@ export function createPublicCalendarService(
       };
     },
 
-    async getPublicSettings(authSupabase, guildId) {
-      const { data, error } = await authSupabase
+    async getPublicSettings(guildId) {
+      const { data, error } = await supabase
         .from("guilds")
         .select("is_public, public_slug")
         .eq("guild_id", guildId)

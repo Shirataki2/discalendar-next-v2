@@ -174,21 +174,34 @@ describe("Task 6.1: ミドルウェアとRLSポリシーの統合テスト", () 
         fromCallCount += 1;
         const thenableKey = "th".concat("en");
         if (fromCallCount === 1) {
+          // Step 0: ギルド公開チェック
+          const chain: Record<string, unknown> = {};
+          chain[thenableKey] = (resolve: (v: unknown) => void) =>
+            resolve({ data: { is_public: true }, error: null });
+          for (const m of ["select", "eq"]) {
+            chain[m] = vi.fn().mockReturnValue(chain);
+          }
+          chain.single = vi
+            .fn()
+            .mockResolvedValue({ data: { is_public: true }, error: null });
+          return chain;
+        }
+        if (fromCallCount === 2) {
           // 単発イベントクエリ
           const chain: Record<string, unknown> = {};
           chain[thenableKey] = (resolve: (v: unknown) => void) =>
             resolve({ data: [], error: null });
-          for (const m of ["select", "eq", "lte", "gte", "is"]) {
+          for (const m of ["select", "eq", "lte", "gte", "is", "abortSignal"]) {
             chain[m] = vi.fn().mockReturnValue(chain);
           }
           return chain;
         }
-        if (fromCallCount === 2) {
+        if (fromCallCount === 3) {
           // シリーズクエリ
           const chain: Record<string, unknown> = {};
           chain[thenableKey] = (resolve: (v: unknown) => void) =>
             resolve({ data: [], error: null });
-          for (const m of ["select", "eq"]) {
+          for (const m of ["select", "eq", "abortSignal"]) {
             chain[m] = vi.fn().mockReturnValue(chain);
           }
           return chain;
@@ -197,7 +210,7 @@ describe("Task 6.1: ミドルウェアとRLSポリシーの統合テスト", () 
         const chain: Record<string, unknown> = {};
         chain[thenableKey] = (resolve: (v: unknown) => void) =>
           resolve({ data: [], error: null });
-        for (const m of ["select", "eq", "not", "or"]) {
+        for (const m of ["select", "eq", "not", "or", "abortSignal"]) {
           chain[m] = vi.fn().mockReturnValue(chain);
         }
         return chain;
@@ -218,8 +231,9 @@ describe("Task 6.1: ミドルウェアとRLSポリシーの統合テスト", () 
       );
 
       expect(result.success).toBe(true);
-      // 3回の from() 呼び出し: events（単発）, event_series, events（例外）
-      expect(mockFrom).toHaveBeenCalledTimes(3);
+      // 4回の from() 呼び出し: guilds（公開チェック）, events（単発）, event_series, events（例外）
+      expect(mockFrom).toHaveBeenCalledTimes(4);
+      expect(mockFrom).toHaveBeenCalledWith("guilds");
       expect(mockFrom).toHaveBeenCalledWith("events");
       expect(mockFrom).toHaveBeenCalledWith("event_series");
     });
@@ -283,14 +297,38 @@ describe("Task 6.1: ミドルウェアとRLSポリシーの統合テスト", () 
       const insertCalls: unknown[] = [];
       const deleteCalls: unknown[] = [];
 
+      let fromCallCount = 0;
       const mockFrom = vi.fn().mockImplementation(() => {
+        fromCallCount += 1;
         const thenableKey = "th".concat("en");
         const chain: Record<string, unknown> = {};
-        chain[thenableKey] = (resolve: (v: unknown) => void) =>
-          resolve({ data: [], error: null });
-        for (const m of ["select", "eq", "lte", "gte", "is", "not", "or"]) {
+        // 最初の from() はギルド公開チェック（single() で is_public を返す）
+        if (fromCallCount === 1) {
+          chain[thenableKey] = (resolve: (v: unknown) => void) =>
+            resolve({ data: { is_public: true }, error: null });
+        } else {
+          chain[thenableKey] = (resolve: (v: unknown) => void) =>
+            resolve({ data: [], error: null });
+        }
+        for (const m of [
+          "select",
+          "eq",
+          "lte",
+          "gte",
+          "is",
+          "not",
+          "or",
+          "abortSignal",
+        ]) {
           chain[m] = vi.fn().mockReturnValue(chain);
         }
+        chain.single = vi
+          .fn()
+          .mockResolvedValue(
+            fromCallCount === 1
+              ? { data: { is_public: true }, error: null }
+              : { data: [], error: null }
+          );
         chain.update = vi.fn().mockImplementation((...args: unknown[]) => {
           updateCalls.push(args);
           return chain;
@@ -325,33 +363,11 @@ describe("Task 6.1: ミドルウェアとRLSポリシーの統合テスト", () 
       expect(deleteCalls).toHaveLength(0);
     });
 
-    it("enablePublicCalendar は認証済みクライアントを要求し、UPDATE を実行する", async () => {
+    it("enablePublicCalendar は認証済みクライアントで UPDATE を実行する", async () => {
       const { createPublicCalendarService } = await import(
         "@/lib/calendar/public-calendar-service"
       );
 
-      const anonSupabase = {
-        from: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: null,
-                  error: null,
-                }),
-              }),
-            }),
-          }),
-        }),
-      };
-
-      const service = createPublicCalendarService(
-        anonSupabase as unknown as Parameters<
-          typeof createPublicCalendarService
-        >[0]
-      );
-
-      // enablePublicCalendar は第一引数に認証済みクライアントを受け取る
       const mockUpdate = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
@@ -373,12 +389,13 @@ describe("Task 6.1: ミドルウェアとRLSポリシーの統合テスト", () 
         }),
       };
 
-      const result = await service.enablePublicCalendar(
+      const service = createPublicCalendarService(
         authSupabase as unknown as Parameters<
-          typeof service.enablePublicCalendar
-        >[0],
-        "guild-123"
+          typeof createPublicCalendarService
+        >[0]
       );
+
+      const result = await service.enablePublicCalendar("guild-123");
 
       expect(result.success).toBe(true);
       expect(authSupabase.from).toHaveBeenCalledWith("guilds");

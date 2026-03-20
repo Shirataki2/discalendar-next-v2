@@ -227,7 +227,8 @@ describe("PublicCalendarContainer", () => {
       expect(mockFetchPublicEvents).toHaveBeenCalledWith(
         "guild-abc",
         expect.any(Date),
-        expect.any(Date)
+        expect.any(Date),
+        expect.any(AbortSignal)
       );
     });
   });

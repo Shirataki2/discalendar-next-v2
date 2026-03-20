@@ -1136,10 +1136,7 @@ export async function togglePublicCalendar(
   const service = createPublicCalendarService(auth.supabase);
 
   if (input.enabled) {
-    const result = await service.enablePublicCalendar(
-      auth.supabase,
-      input.guildId
-    );
+    const result = await service.enablePublicCalendar(input.guildId);
 
     if (!result.success) {
       return {
@@ -1158,10 +1155,7 @@ export async function togglePublicCalendar(
     };
   }
 
-  const result = await service.disablePublicCalendar(
-    auth.supabase,
-    input.guildId
-  );
+  const result = await service.disablePublicCalendar(input.guildId);
 
   if (!result.success) {
     return {
@@ -1234,10 +1228,7 @@ export async function regeneratePublicSlugAction(
   }
 
   const service = createPublicCalendarService(auth.supabase);
-  const result = await service.regeneratePublicSlug(
-    auth.supabase,
-    input.guildId
-  );
+  const result = await service.regeneratePublicSlug(input.guildId);
 
   if (!result.success) {
     return {

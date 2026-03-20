@@ -37,12 +37,12 @@ export type PublicCalendarUrlSectionProps = {
   publicSlug: string | null;
 };
 
+/** コピー完了フィードバックの表示時間（ミリ秒） */
+const COPY_FEEDBACK_DURATION_MS = 2000;
+
 function getBaseUrl(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
   }
   return "http://localhost:3000";
 }
@@ -146,7 +146,7 @@ export function PublicCalendarUrlSection({
     try {
       await navigator.clipboard.writeText(buildPublicUrl(publicSlug));
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
     } catch {
       setError("URLのコピーに失敗しました。");
     }

@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createPublicCalendarService,
-  type PublicCalendarServiceInterface,
-} from "@/lib/calendar/public-calendar-service";
+import { createPublicCalendarService } from "@/lib/calendar/public-calendar-service";
 
 /**
  * テーブルごとに独立したチェイナブルモックを返す Supabase モック
@@ -76,7 +73,14 @@ function createFetchMockSupabase(
     return chain;
   }
 
-  const results = [singleEventsResult, seriesResult, exceptionsResult];
+  // Step 0: ギルド公開チェック + Step 1-3: 単発イベント, シリーズ, 例外
+  const guildCheckResult = { data: { is_public: true }, error: null };
+  const results = [
+    guildCheckResult,
+    singleEventsResult,
+    seriesResult,
+    exceptionsResult,
+  ];
 
   const from = vi.fn().mockImplementation(() => {
     const result = results[fromCallCount] ?? { data: null, error: null };
@@ -93,16 +97,7 @@ const mockRandomUUID = vi.fn();
 vi.stubGlobal("crypto", { randomUUID: mockRandomUUID });
 
 describe("PublicCalendarService", () => {
-  let service: PublicCalendarServiceInterface;
-  let mockSupabase: ReturnType<typeof createMockSupabase>;
-
   beforeEach(() => {
-    mockSupabase = createMockSupabase();
-    service = createPublicCalendarService(
-      mockSupabase as unknown as Parameters<
-        typeof createPublicCalendarService
-      >[0]
-    );
     mockRandomUUID.mockReturnValue("550e8400-e29b-41d4-a716-446655440000");
   });
 
@@ -361,13 +356,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.enablePublicCalendar(
-        authMock as unknown as Parameters<
-          typeof service.enablePublicCalendar
-        >[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.enablePublicCalendar("guild-123");
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -411,13 +404,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.enablePublicCalendar(
-        authMock as unknown as Parameters<
-          typeof service.enablePublicCalendar
-        >[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.enablePublicCalendar("guild-123");
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -448,13 +439,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.enablePublicCalendar(
-        authMock as unknown as Parameters<
-          typeof service.enablePublicCalendar
-        >[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.enablePublicCalendar("guild-123");
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -488,13 +477,11 @@ describe("PublicCalendarService", () => {
           };
         }),
       }));
-
-      const result = await service.disablePublicCalendar(
-        authMock as unknown as Parameters<
-          typeof service.disablePublicCalendar
-        >[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.disablePublicCalendar("guild-123");
 
       expect(result.success).toBe(true);
     });
@@ -515,13 +502,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.disablePublicCalendar(
-        authMock as unknown as Parameters<
-          typeof service.disablePublicCalendar
-        >[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.disablePublicCalendar("guild-123");
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -553,13 +538,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.regeneratePublicSlug(
-        authMock as unknown as Parameters<
-          typeof service.regeneratePublicSlug
-        >[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.regeneratePublicSlug("guild-123");
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -602,13 +585,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.regeneratePublicSlug(
-        authMock as unknown as Parameters<
-          typeof service.regeneratePublicSlug
-        >[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.regeneratePublicSlug("guild-123");
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -633,11 +614,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.getPublicSettings(
-        authMock as unknown as Parameters<typeof service.getPublicSettings>[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.getPublicSettings("guild-123");
 
       expect(result).toEqual({
         success: true,
@@ -660,11 +641,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.getPublicSettings(
-        authMock as unknown as Parameters<typeof service.getPublicSettings>[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.getPublicSettings("guild-123");
 
       expect(result).toEqual({
         success: true,
@@ -686,11 +667,11 @@ describe("PublicCalendarService", () => {
           }),
         }),
       }));
-
-      const result = await service.getPublicSettings(
-        authMock as unknown as Parameters<typeof service.getPublicSettings>[0],
-        "guild-123"
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
+
+      const result = await svc.getPublicSettings("guild-123");
 
       expect(result.success).toBe(false);
       if (!result.success) {

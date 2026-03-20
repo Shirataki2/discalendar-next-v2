@@ -1,13 +1,21 @@
 import { endOfMonth, startOfMonth } from "date-fns";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { PublicCalendarContainer } from "@/components/calendar/public-calendar-container";
 import { createPublicCalendarService } from "@/lib/calendar/public-calendar-service";
 import { createClient } from "@/lib/supabase/server";
 
 type Params = { slug: string };
 
-async function resolveGuildAndEvents(slug: string) {
+/** slug のフォーマット: 12文字の hex 文字列 */
+const SLUG_PATTERN = /^[a-f0-9]{12}$/;
+
+const resolveGuildAndEvents = cache(async (slug: string) => {
+  if (!SLUG_PATTERN.test(slug)) {
+    return { guild: null, events: [] };
+  }
+
   const supabase = await createClient();
   const service = createPublicCalendarService(supabase);
 
@@ -27,7 +35,7 @@ async function resolveGuildAndEvents(slug: string) {
     guild: guildResult.data,
     events: eventsResult.success ? eventsResult.data : [],
   };
-}
+});
 
 export async function generateMetadata({
   params,

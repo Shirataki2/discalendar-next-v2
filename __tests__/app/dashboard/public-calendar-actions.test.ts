@@ -195,10 +195,7 @@ describe("togglePublicCalendar Server Action", () => {
         publicSlug: "abc123def456",
       });
     }
-    expect(mockEnablePublicCalendar).toHaveBeenCalledWith(
-      mockSupabase,
-      "12345678901234567"
-    );
+    expect(mockEnablePublicCalendar).toHaveBeenCalledWith("12345678901234567");
     expect(mockDisablePublicCalendar).not.toHaveBeenCalled();
   });
 
@@ -221,10 +218,7 @@ describe("togglePublicCalendar Server Action", () => {
         publicSlug: null,
       });
     }
-    expect(mockDisablePublicCalendar).toHaveBeenCalledWith(
-      mockSupabase,
-      "12345678901234567"
-    );
+    expect(mockDisablePublicCalendar).toHaveBeenCalledWith("12345678901234567");
     expect(mockEnablePublicCalendar).not.toHaveBeenCalled();
   });
 
@@ -349,10 +343,7 @@ describe("regeneratePublicSlugAction Server Action", () => {
     if (result.success) {
       expect(result.data).toEqual({ publicSlug: "newslug123ab" });
     }
-    expect(mockRegeneratePublicSlug).toHaveBeenCalledWith(
-      mockSupabase,
-      "12345678901234567"
-    );
+    expect(mockRegeneratePublicSlug).toHaveBeenCalledWith("12345678901234567");
   });
 
   it("再生成成功時に revalidatePath を呼び出す", async () => {

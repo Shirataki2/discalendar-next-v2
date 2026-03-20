@@ -76,10 +76,8 @@ export default async function GuildSettingsPage({
 
   // 公開カレンダー設定取得
   const publicCalendarService = createPublicCalendarService(supabase);
-  const publicSettingsResult = await publicCalendarService.getPublicSettings(
-    supabase,
-    guildId
-  );
+  const publicSettingsResult =
+    await publicCalendarService.getPublicSettings(guildId);
   const isPublic = publicSettingsResult.success
     ? publicSettingsResult.data.isPublic
     : false;

@@ -21,6 +21,8 @@ describe("Task 2.1: ギルド関連の内部型", () => {
         name: "Test Server",
         avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
         locale: "ja",
+        isPublic: false,
+        publicSlug: null,
       };
 
       expect(guild.id).toBe(1);
@@ -39,6 +41,8 @@ describe("Task 2.1: ギルド関連の内部型", () => {
         name: "No Icon Server",
         avatarUrl: null,
         locale: "en",
+        isPublic: false,
+        publicSlug: null,
       };
 
       expect(guild.avatarUrl).toBeNull();
