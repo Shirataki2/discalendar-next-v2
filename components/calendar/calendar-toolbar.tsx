@@ -12,7 +12,13 @@
 
 import { endOfWeek, format, startOfWeek } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, Settings } from "lucide-react";
+import {
+  CalendarHeart,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
 
@@ -33,6 +39,10 @@ export type CalendarToolbarProps = {
   isAddDisabled?: boolean;
   /** サーバー設定ボタンクリックハンドラー */
   onSettingsClick?: () => void;
+  /** 祝日表示ON/OFF状態 */
+  showHolidays?: boolean;
+  /** 祝日表示切り替えハンドラー */
+  onToggleHolidays?: () => void;
 };
 
 /**
@@ -94,6 +104,8 @@ export function CalendarToolbar({
   onAddClick,
   isAddDisabled,
   onSettingsClick,
+  showHolidays,
+  onToggleHolidays,
 }: CalendarToolbarProps) {
   const dateRangeLabel = getDateRangeLabel(viewMode, selectedDate);
 
@@ -189,47 +201,65 @@ export function CalendarToolbar({
           {dateRangeLabel}
         </div>
 
-        {/* ビューモード切り替え (Task 4.1) */}
-        <fieldset
-          aria-label="ビュー切り替え"
-          className="flex items-center gap-1 rounded-md border bg-muted p-1"
-        >
-          <Button
-            aria-label="日ビュー"
-            aria-pressed={viewMode === "day"}
-            data-active={viewMode === "day"}
-            onClick={() => onViewChange("day")}
-            size="sm"
-            type="button"
-            variant={viewMode === "day" ? "secondary" : "ghost"}
-          >
-            日
-          </Button>
+        {/* 祝日トグル + ビューモード切り替え */}
+        <div className="flex items-center gap-2">
+          {/* 祝日表示トグル (DIS-20 Task 4, Req 5.1) */}
+          {onToggleHolidays ? (
+            <Button
+              aria-label="祝日表示"
+              aria-pressed={showHolidays}
+              onClick={onToggleHolidays}
+              size="sm"
+              type="button"
+              variant={showHolidays ? "secondary" : "ghost"}
+            >
+              <CalendarHeart className="mr-1 size-4" />
+              祝日
+            </Button>
+          ) : null}
 
-          <Button
-            aria-label="週ビュー"
-            aria-pressed={viewMode === "week"}
-            data-active={viewMode === "week"}
-            onClick={() => onViewChange("week")}
-            size="sm"
-            type="button"
-            variant={viewMode === "week" ? "secondary" : "ghost"}
+          {/* ビューモード切り替え (Task 4.1) */}
+          <fieldset
+            aria-label="ビュー切り替え"
+            className="flex items-center gap-1 rounded-md border bg-muted p-1"
           >
-            週
-          </Button>
+            <Button
+              aria-label="日ビュー"
+              aria-pressed={viewMode === "day"}
+              data-active={viewMode === "day"}
+              onClick={() => onViewChange("day")}
+              size="sm"
+              type="button"
+              variant={viewMode === "day" ? "secondary" : "ghost"}
+            >
+              日
+            </Button>
 
-          <Button
-            aria-label="月ビュー"
-            aria-pressed={viewMode === "month"}
-            data-active={viewMode === "month"}
-            onClick={() => onViewChange("month")}
-            size="sm"
-            type="button"
-            variant={viewMode === "month" ? "secondary" : "ghost"}
-          >
-            月
-          </Button>
-        </fieldset>
+            <Button
+              aria-label="週ビュー"
+              aria-pressed={viewMode === "week"}
+              data-active={viewMode === "week"}
+              onClick={() => onViewChange("week")}
+              size="sm"
+              type="button"
+              variant={viewMode === "week" ? "secondary" : "ghost"}
+            >
+              週
+            </Button>
+
+            <Button
+              aria-label="月ビュー"
+              aria-pressed={viewMode === "month"}
+              data-active={viewMode === "month"}
+              onClick={() => onViewChange("month")}
+              size="sm"
+              type="button"
+              variant={viewMode === "month" ? "secondary" : "ghost"}
+            >
+              月
+            </Button>
+          </fieldset>
+        </div>
       </div>
     </div>
   );

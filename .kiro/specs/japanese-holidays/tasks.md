@@ -52,7 +52,7 @@
   - 祝日がある日にユーザー作成イベントも存在する場合、両方が同一セル内に表示されることを確認する
   - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2_
 
-- [ ] 4. (P) CalendarToolbar に祝日表示トグルを追加する
+- [x] 4. (P) CalendarToolbar に祝日表示トグルを追加する
   - CalendarToolbar の props に showHolidays と onToggleHolidays を追加する
   - ビュー切り替えボタン群の近くに祝日表示 ON/OFF を切り替えるトグルボタンを配置する
   - lucide-react のアイコンを使用して、祝日表示状態を視覚的に示す

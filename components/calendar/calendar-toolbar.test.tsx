@@ -350,6 +350,92 @@ describe("CalendarToolbar", () => {
     });
   });
 
+  describe("Task 4 (DIS-20): 祝日表示トグル (Req 5.1)", () => {
+    it("showHolidaysとonToggleHolidaysが提供されている場合、祝日トグルボタンを表示する", () => {
+      const onToggleHolidays = vi.fn();
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          onToggleHolidays={onToggleHolidays}
+          showHolidays={true}
+        />
+      );
+
+      const toggleButton = screen.getByRole("button", { name: "祝日表示" });
+      expect(toggleButton).toBeInTheDocument();
+    });
+
+    it("showHolidaysとonToggleHolidaysが未指定の場合、祝日トグルボタンを表示しない", () => {
+      render(<CalendarToolbar {...defaultProps} />);
+
+      expect(
+        screen.queryByRole("button", { name: "祝日表示" })
+      ).not.toBeInTheDocument();
+    });
+
+    it("showHolidaysがtrueの場合、ONの視覚的状態を示す", () => {
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          onToggleHolidays={vi.fn()}
+          showHolidays={true}
+        />
+      );
+
+      const toggleButton = screen.getByRole("button", { name: "祝日表示" });
+      expect(toggleButton).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("showHolidaysがfalseの場合、OFFの視覚的状態を示す", () => {
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          onToggleHolidays={vi.fn()}
+          showHolidays={false}
+        />
+      );
+
+      const toggleButton = screen.getByRole("button", { name: "祝日表示" });
+      expect(toggleButton).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("祝日トグルボタンをクリックすると onToggleHolidays が呼ばれる", async () => {
+      const user = userEvent.setup();
+      const onToggleHolidays = vi.fn();
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          onToggleHolidays={onToggleHolidays}
+          showHolidays={true}
+        />
+      );
+
+      const toggleButton = screen.getByRole("button", { name: "祝日表示" });
+      await user.click(toggleButton);
+
+      expect(onToggleHolidays).toHaveBeenCalledTimes(1);
+    });
+
+    it("モバイル表示でも祝日トグルボタンがアクセス可能", async () => {
+      const user = userEvent.setup();
+      const onToggleHolidays = vi.fn();
+      render(
+        <CalendarToolbar
+          {...defaultProps}
+          isMobile={true}
+          onToggleHolidays={onToggleHolidays}
+          showHolidays={true}
+        />
+      );
+
+      const toggleButton = screen.getByRole("button", { name: "祝日表示" });
+      expect(toggleButton).toBeInTheDocument();
+
+      await user.click(toggleButton);
+      expect(onToggleHolidays).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("アクセシビリティ (Req 8.2)", () => {
     it("すべてのボタンに適切なARIAラベルを設定する", () => {
       render(<CalendarToolbar {...defaultProps} />);
