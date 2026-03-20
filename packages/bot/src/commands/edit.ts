@@ -201,7 +201,9 @@ function buildNotifications(
     .filter((n) => n !== null);
 }
 
+// TODO: Reduce cognitive complexity of buildUpdatePayload (currently 21, max 15)
 /** パースされたオプションと既存イベントからUpdateペイロードを構築する */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: refactor planned
 function buildUpdatePayload(
   opts: ParsedEditOptions,
   event: EventRecord
