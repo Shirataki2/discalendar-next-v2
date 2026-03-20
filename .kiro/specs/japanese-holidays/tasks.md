@@ -18,15 +18,15 @@
   - backgroundEvent 形式への変換が正しいことをテストする
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 2. フックレイヤーの実装
-- [ ] 2.1 (P) useUserPreferences フックに祝日表示設定を追加する
+- [x] 2. フックレイヤーの実装
+- [x] 2.1 (P) useUserPreferences フックに祝日表示設定を追加する
   - 既存の useUserPreferences フックに showHolidays プロパティ（デフォルト: true）を追加する
   - 祝日表示設定を localStorage に永続化し、次回アクセス時にも維持する
   - 不正な値が保存されていた場合は true にフォールバックする
   - 既存の defaultCalendarView の動作に影響を与えないことを確認する
   - _Requirements: 5.4_
 
-- [ ] 2.2 useHolidays フックの実装
+- [x] 2.2 useHolidays フックの実装
   - ビューモードと選択日付から表示期間を計算し、該当期間の祝日データを取得するフックを作成する
   - 祝日データを backgroundEvents 形式と日付→祝日名のルックアップ Map として提供する
   - showHolidays が false の場合は空データ（空配列・空Map）を返却する
@@ -35,8 +35,8 @@
   - Task 1 の HolidayService に依存する
   - _Requirements: 1.1, 2.1, 3.1, 3.2_
 
-- [ ] 3. カレンダーグリッドの祝日表示
-- [ ] 3.1 (P) 祝日表示用の CSS スタイル定義
+- [x] 3. カレンダーグリッドの祝日表示
+- [x] 3.1 (P) 祝日表示用の CSS スタイル定義
   - 祝日セルの背景色を通常の日付セルと区別できるスタイルで定義する（rbc-holiday クラス）
   - 祝日ラベル（backgroundEvent）をユーザー作成イベントとは異なるスタイル（背景色・テキスト色・透明度）で定義する
   - ダークモード時に適応した配色を CSS 変数で定義する（--holiday-bg, --holiday-text）
@@ -44,7 +44,7 @@
   - 既存の今日ハイライト・月外セル・土日色分けと視覚的に干渉しないようにする
   - _Requirements: 3.3, 4.1, 4.2, 4.3_
 
-- [ ] 3.2 CalendarGrid コンポーネントの祝日表示対応
+- [x] 3.2 CalendarGrid コンポーネントの祝日表示対応
   - CalendarGrid の props に backgroundEvents と holidayMap を追加する
   - react-big-calendar の backgroundEvents prop に祝日データを渡して、全ビュー（月/週/日）で祝日ラベルを表示する
   - dayPropGetter を拡張して、holidayMap を参照し祝日セルに背景色クラスを適用する
