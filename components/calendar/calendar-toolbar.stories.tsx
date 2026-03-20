@@ -299,6 +299,24 @@ export const WithHolidayToggleOff: Story = {
 };
 
 /**
+ * DIS-20: 祝日表示トグルON（モバイル）
+ */
+export const WithHolidayToggleMobile: Story = {
+  args: {
+    viewMode: "month",
+    selectedDate: new Date(2025, 0, 15),
+    onViewChange: fn(),
+    onNavigate: fn(),
+    showHolidays: true,
+    onToggleHolidays: fn(),
+    isMobile: true,
+  },
+  parameters: {
+    viewport: { defaultViewport: "mobile" },
+  },
+};
+
+/**
  * DIS-20: 全ボタン付き（フルセットアップ）
  */
 export const FullToolbar: Story = {
