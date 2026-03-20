@@ -46,6 +46,14 @@ vi.mock("@/lib/guilds/event-settings-service", () => ({
   }),
 }));
 
+// Mock PublicCalendarService
+const mockGetPublicSettings = vi.fn();
+vi.mock("@/lib/calendar/public-calendar-service", () => ({
+  createPublicCalendarService: () => ({
+    getPublicSettings: mockGetPublicSettings,
+  }),
+}));
+
 // Mock buildDashboardUser
 vi.mock("@/lib/user/build-dashboard-user", () => ({
   buildDashboardUser: (user: { id: string; email?: string }) => ({
@@ -62,27 +70,24 @@ vi.mock("@/components/dashboard/dashboard-header", () => ({
 }));
 
 // Mock GuildSettingsForm to capture props
-const mockGuildSettingsForm = vi.fn(
-  (props: {
-    currentChannelId: string | null;
-    guild: { guildId: string; name: string; avatarUrl: string | null };
-    restricted: boolean;
-  }) => (
-    <div
-      data-guild-avatar={props.guild.avatarUrl ?? ""}
-      data-guild-id={props.guild.guildId}
-      data-guild-name={props.guild.name}
-      data-restricted={String(props.restricted)}
-      data-testid="guild-settings-form"
-    />
-  )
-);
+type MockFormProps = {
+  currentChannelId: string | null;
+  guild: { guildId: string; name: string; avatarUrl: string | null };
+  restricted: boolean;
+  isPublic: boolean;
+  publicSlug: string | null;
+};
+const mockGuildSettingsForm = vi.fn((props: MockFormProps) => (
+  <div
+    data-guild-avatar={props.guild.avatarUrl ?? ""}
+    data-guild-id={props.guild.guildId}
+    data-guild-name={props.guild.name}
+    data-restricted={String(props.restricted)}
+    data-testid="guild-settings-form"
+  />
+));
 vi.mock("@/components/guilds/guild-settings-form", () => ({
-  GuildSettingsForm: (props: {
-    currentChannelId: string | null;
-    guild: { guildId: string; name: string; avatarUrl: string | null };
-    restricted: boolean;
-  }) => mockGuildSettingsForm(props),
+  GuildSettingsForm: (props: MockFormProps) => mockGuildSettingsForm(props),
 }));
 
 // Helper: authenticated user
@@ -142,6 +147,10 @@ describe("GuildSettingsPage", () => {
     mockGetEventSettings.mockResolvedValue({
       success: true,
       data: null,
+    });
+    mockGetPublicSettings.mockResolvedValue({
+      success: true,
+      data: { isPublic: false, publicSlug: null },
     });
   });
 
@@ -310,6 +319,8 @@ describe("GuildSettingsPage", () => {
           name: "Test Server",
           avatarUrl: "https://cdn.discordapp.com/icons/guild-1/abc.png",
         },
+        isPublic: false,
+        publicSlug: null,
         restricted: true,
       });
     });

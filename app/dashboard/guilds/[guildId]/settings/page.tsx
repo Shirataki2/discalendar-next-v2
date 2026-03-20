@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { GuildSettingsForm } from "@/components/guilds/guild-settings-form";
+import { createPublicCalendarService } from "@/lib/calendar/public-calendar-service";
 import { canManageGuild } from "@/lib/discord/permissions";
 import { createEventSettingsService } from "@/lib/guilds/event-settings-service";
 import { fetchGuilds } from "@/lib/guilds/fetch-guilds";
@@ -73,6 +74,19 @@ export default async function GuildSettingsPage({
     ? (eventSettingsResult.data?.channelId ?? null)
     : null;
 
+  // 公開カレンダー設定取得
+  const publicCalendarService = createPublicCalendarService(supabase);
+  const publicSettingsResult = await publicCalendarService.getPublicSettings(
+    supabase,
+    guildId
+  );
+  const isPublic = publicSettingsResult.success
+    ? publicSettingsResult.data.isPublic
+    : false;
+  const publicSlug = publicSettingsResult.success
+    ? publicSettingsResult.data.publicSlug
+    : null;
+
   // ユーザー情報を整形
   const dashboardUser = buildDashboardUser(user);
 
@@ -87,6 +101,8 @@ export default async function GuildSettingsPage({
             name: targetGuild.name,
             avatarUrl: targetGuild.avatarUrl,
           }}
+          isPublic={isPublic}
+          publicSlug={publicSlug}
           restricted={configResult.data.restricted}
         />
       </main>
