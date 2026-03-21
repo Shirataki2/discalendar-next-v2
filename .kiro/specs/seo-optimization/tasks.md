@@ -59,14 +59,14 @@
   - _Requirements: 6.1, 6.2_
   - _Contracts: DashboardLayoutMetadata State_
 
-- [ ] 5. テストの修正と追加
-- [ ] 5.1 既存テストのtitle形式変更に対応する
+- [x] 5. テストの修正と追加
+- [x] 5.1 既存テストのtitle形式変更に対応する
   - 利用規約・プライバシーポリシー・ドキュメントページのテストで、タイトルアサーションをtitle.template適用後の形式に修正する
   - E2Eテストのタイトル検証がある場合、新しい統一形式に合わせて更新する
   - ビルド検証テストのメタデータ存在チェックが引き続きパスすることを確認する
   - _Requirements: 1.2, 1.3, 1.4, 1.6_
 
-- [ ]* 5.2 (P) SEOメタデータとOGP画像の検証テストを追加する
+- [x]* 5.2 (P) SEOメタデータとOGP画像の検証テストを追加する
   - OGP画像のレスポンスがContent-Type: image/pngで1200×630pxの画像を返すことを検証する
   - ランディングページのHTMLに`<script type="application/ld+json">`が含まれ、Schema.orgの必須フィールド（WebApplication, WebSite）が存在することを検証する
   - ダッシュボード配下でrobots noindex/nofollowが出力されることを検証する
