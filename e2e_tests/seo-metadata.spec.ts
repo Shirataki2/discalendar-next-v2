@@ -78,10 +78,7 @@ test.describe("SEO メタデータ E2E検証", () => {
         await page.goto(path);
 
         const link = page.locator('link[rel="canonical"]');
-        await expect(link).toHaveAttribute(
-          "href",
-          new RegExp(`${canonical.replace("/", "/")}$`)
-        );
+        await expect(link).toHaveAttribute("href", new RegExp(`${canonical}$`));
       });
     }
   });

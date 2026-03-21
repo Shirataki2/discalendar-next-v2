@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   keywords: ["Discord", "カレンダー", "予定管理", "イベント", "コミュニティ"],
   openGraph: {
     type: "website",
+    title: "Discalendar - Discordコミュニティの予定管理をもっと便利に",
+    description:
+      "Discordサーバーでイベントを簡単に管理できるカレンダーアプリケーション",
     siteName: "Discalendar",
     locale: "ja_JP",
   },
