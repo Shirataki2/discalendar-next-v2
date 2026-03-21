@@ -46,7 +46,9 @@ describe("ランディングページ JSON-LD構造化データ (Task 5.2)", () 
     const webApp = jsonLdContents.find(
       (ld) => ld["@type"] === "WebApplication"
     );
-    expect(webApp).toBeDefined();
+    if (!webApp) {
+      throw new Error("WebApplication JSON-LD not found");
+    }
     expect(webApp["@context"]).toBe("https://schema.org");
     expect(webApp.name).toBe("Discalendar");
     expect(webApp.description).toBeTruthy();
@@ -71,7 +73,9 @@ describe("ランディングページ JSON-LD構造化データ (Task 5.2)", () 
     );
 
     const webSite = jsonLdContents.find((ld) => ld["@type"] === "WebSite");
-    expect(webSite).toBeDefined();
+    if (!webSite) {
+      throw new Error("WebSite JSON-LD not found");
+    }
     expect(webSite["@context"]).toBe("https://schema.org");
     expect(webSite.name).toBe("Discalendar");
     expect(webSite.url).toBeTruthy();

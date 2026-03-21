@@ -59,8 +59,7 @@ describe("利用規約ページ メタデータ (Task 2.2)", () => {
 
   it("description が設定されている", async () => {
     const { metadata } = await import("@/app/terms/page");
-    expect(typeof metadata.description).toBe("string");
-    expect((metadata.description as string).length).toBeGreaterThan(0);
+    expect(metadata.description).toMatch(/.+/);
   });
 
   it("canonical URL が /terms に設定されている", async () => {
@@ -79,8 +78,7 @@ describe("プライバシーポリシーページ メタデータ (Task 2.2)", (
 
   it("description が設定されている", async () => {
     const { metadata } = await import("@/app/privacy/page");
-    expect(typeof metadata.description).toBe("string");
-    expect((metadata.description as string).length).toBeGreaterThan(0);
+    expect(metadata.description).toMatch(/.+/);
   });
 
   it("canonical URL が /privacy に設定されている", async () => {
@@ -150,8 +148,7 @@ describe("ログインページ メタデータ (Task 2.4)", () => {
 
   it("layout.tsx が description を設定している", async () => {
     const { metadata } = await import("@/app/auth/login/layout");
-    expect(typeof metadata.description).toBe("string");
-    expect((metadata.description as string).length).toBeGreaterThan(0);
+    expect(metadata.description).toMatch(/.+/);
   });
 
   it("layout.tsx が canonical URL を設定している", async () => {

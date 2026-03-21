@@ -60,6 +60,8 @@ export const metadata: Metadata = {
  *
  * Note: async Server Componentとして実装（Headerが認証状態を取得するため）
  */
+// JSON-LDのcanonical URLは常に本番URLを指す（SEOベストプラクティス）
+// layout.tsxのresolveBaseUrl()とは意図的に異なり、環境に依存しない
 const SITE_URL = "https://discalendar.app";
 
 const webApplicationJsonLd = {
