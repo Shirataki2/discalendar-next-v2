@@ -334,28 +334,46 @@ describe("PublicCalendarService", () => {
   });
 
   describe("enablePublicCalendar", () => {
-    it("公開カレンダーを有効化し、スラッグを生成する", async () => {
+    it("既存スラッグがない場合、新しいスラッグを生成する", async () => {
       mockRandomUUID.mockReturnValueOnce(
         "550e8400-e29b-41d4-a716-446655440000"
       );
 
+      let fromCallCount = 0;
       const authMock = createMockSupabase();
-      authMock.from.mockImplementation(() => ({
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
+      authMock.from.mockImplementation(() => {
+        fromCallCount += 1;
+        if (fromCallCount === 1) {
+          // 既存スラッグ確認: null
+          return {
             select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  guild_id: "guild-123",
-                  is_public: true,
-                  public_slug: "550e8400e29b",
-                },
-                error: null,
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { public_slug: null },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        // 新規スラッグで更新
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    guild_id: "guild-123",
+                    is_public: true,
+                    public_slug: "550e8400e29b",
+                  },
+                  error: null,
+                }),
               }),
             }),
           }),
-        }),
-      }));
+        };
+      });
       const svc = createPublicCalendarService(
         authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
@@ -368,6 +386,62 @@ describe("PublicCalendarService", () => {
       }
     });
 
+    it("既存スラッグがある場合は再利用する（is_public のみ更新）", async () => {
+      let fromCallCount = 0;
+      const authMock = createMockSupabase();
+      authMock.from.mockImplementation(() => {
+        fromCallCount += 1;
+        if (fromCallCount === 1) {
+          // 既存スラッグ確認: 既存スラッグあり
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { public_slug: "existslug123" },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        // is_public のみ更新
+        return {
+          update: vi
+            .fn()
+            .mockImplementation((data: Record<string, unknown>) => {
+              // スラッグが含まれていないことを確認
+              expect(data).toEqual({ is_public: true });
+              return {
+                eq: vi.fn().mockReturnValue({
+                  select: vi.fn().mockReturnValue({
+                    single: vi.fn().mockResolvedValue({
+                      data: {
+                        guild_id: "guild-123",
+                        is_public: true,
+                        public_slug: "existslug123",
+                      },
+                      error: null,
+                    }),
+                  }),
+                }),
+              };
+            }),
+        };
+      });
+      const svc = createPublicCalendarService(
+        authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
+      );
+
+      const result = await svc.enablePublicCalendar("guild-123");
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.slug).toBe("existslug123");
+      }
+      // 新しい UUID は生成されない
+      expect(mockRandomUUID).not.toHaveBeenCalled();
+    });
+
     it("UNIQUE 制約違反時に最大3回リトライする", async () => {
       mockRandomUUID
         .mockReturnValueOnce("aaaa0000-0000-0000-0000-000000000000")
@@ -375,35 +449,52 @@ describe("PublicCalendarService", () => {
         .mockReturnValueOnce("cccc0000-0000-0000-0000-000000000000");
 
       let callCount = 0;
+      let fromCallCount = 0;
       const authMock = createMockSupabase();
-      authMock.from.mockImplementation(() => ({
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
+      authMock.from.mockImplementation(() => {
+        fromCallCount += 1;
+        if (fromCallCount === 1) {
+          // 既存スラッグ確認: null
+          return {
             select: vi.fn().mockReturnValue({
-              single: vi.fn().mockImplementation(() => {
-                callCount += 1;
-                if (callCount <= 2) {
-                  return Promise.resolve({
-                    data: null,
-                    error: {
-                      message: "duplicate key",
-                      code: "23505",
-                    },
-                  });
-                }
-                return Promise.resolve({
-                  data: {
-                    guild_id: "guild-123",
-                    is_public: true,
-                    public_slug: "cccc00000000",
-                  },
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { public_slug: null },
                   error: null,
-                });
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockImplementation(() => {
+                  callCount += 1;
+                  if (callCount <= 2) {
+                    return Promise.resolve({
+                      data: null,
+                      error: {
+                        message: "duplicate key",
+                        code: "23505",
+                      },
+                    });
+                  }
+                  return Promise.resolve({
+                    data: {
+                      guild_id: "guild-123",
+                      is_public: true,
+                      public_slug: "cccc00000000",
+                    },
+                    error: null,
+                  });
+                }),
               }),
             }),
           }),
-        }),
-      }));
+        };
+      });
       const svc = createPublicCalendarService(
         authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );
@@ -423,22 +514,39 @@ describe("PublicCalendarService", () => {
         .mockReturnValueOnce("bbbb0000-0000-0000-0000-000000000000")
         .mockReturnValueOnce("cccc0000-0000-0000-0000-000000000000");
 
+      let fromCallCount = 0;
       const authMock = createMockSupabase();
-      authMock.from.mockImplementation(() => ({
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
+      authMock.from.mockImplementation(() => {
+        fromCallCount += 1;
+        if (fromCallCount === 1) {
+          // 既存スラッグ確認: null
+          return {
             select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: null,
-                error: {
-                  message: "duplicate key",
-                  code: "23505",
-                },
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { public_slug: null },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: {
+                    message: "duplicate key",
+                    code: "23505",
+                  },
+                }),
               }),
             }),
           }),
-        }),
-      }));
+        };
+      });
       const svc = createPublicCalendarService(
         authMock as unknown as Parameters<typeof createPublicCalendarService>[0]
       );

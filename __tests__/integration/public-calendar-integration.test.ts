@@ -383,9 +383,24 @@ describe("Task 6.1: ミドルウェアとRLSポリシーの統合テスト", () 
         }),
       });
 
+      let fromCallCount = 0;
       const authSupabase = {
-        from: vi.fn().mockReturnValue({
-          update: mockUpdate,
+        from: vi.fn().mockImplementation(() => {
+          fromCallCount += 1;
+          if (fromCallCount === 1) {
+            // 既存スラッグ確認: null（新規生成パス）
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { public_slug: null },
+                    error: null,
+                  }),
+                }),
+              }),
+            };
+          }
+          return { update: mockUpdate };
         }),
       };
 

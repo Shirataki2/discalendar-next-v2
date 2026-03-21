@@ -19,6 +19,7 @@ export type PublicCalendarContainerProps = {
   guildId: string;
   guildName: string;
   initialEvents: PublicCalendarEvent[];
+  initialDate: Date;
 };
 
 function toCalendarEvent(e: PublicCalendarEvent): CalendarEvent {
@@ -38,9 +39,10 @@ export function PublicCalendarContainer({
   guildId,
   guildName,
   initialEvents,
+  initialDate,
 }: PublicCalendarContainerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [events, setEvents] = useState<CalendarEvent[]>(
     initialEvents.map(toCalendarEvent)
   );

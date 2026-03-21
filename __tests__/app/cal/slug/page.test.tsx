@@ -31,12 +31,16 @@ vi.mock("@/components/calendar/public-calendar-container", () => ({
     guildId: string;
     guildName: string;
     initialEvents: unknown[];
+    initialDate: Date;
   }) => (
     <div data-testid="public-calendar-container">
       <span data-testid="guild-id">{props.guildId}</span>
       <span data-testid="guild-name">{props.guildName}</span>
       <span data-testid="initial-events-count">
         {props.initialEvents.length}
+      </span>
+      <span data-testid="has-initial-date">
+        {String(props.initialDate instanceof Date)}
       </span>
     </div>
   ),
@@ -94,6 +98,7 @@ describe("PublicCalendarPage", () => {
     expect(screen.getByTestId("guild-id")).toHaveTextContent("guild-123");
     expect(screen.getByTestId("guild-name")).toHaveTextContent("テストギルド");
     expect(screen.getByTestId("initial-events-count")).toHaveTextContent("2");
+    expect(screen.getByTestId("has-initial-date")).toHaveTextContent("true");
   });
 
   it("存在しないスラッグで notFound() を呼ぶ", async () => {

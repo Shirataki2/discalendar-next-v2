@@ -80,6 +80,14 @@ export interface PublicCalendarServiceInterface {
   ): Promise<PublicCalendarResult<{ isPublic: boolean; publicSlug: string | null }>>;
 }
 
+/** anon ロールで取得可能な events カラム（channel_id, channel_name, notifications を除外） */
+const PUBLIC_EVENT_COLUMNS =
+  "id, guild_id, name, description, color, is_all_day, start_at, end_at, location, series_id, original_date, created_at, updated_at" as const;
+
+/** anon ロールで取得可能な event_series カラム（channel_id, channel_name, notifications を除外） */
+const PUBLIC_SERIES_COLUMNS =
+  "id, guild_id, name, description, color, is_all_day, rrule, dtstart, duration_minutes, exdates, location, created_at, updated_at" as const;
+
 /** スラッグ生成のリトライ上限 */
 const MAX_SLUG_RETRIES = 3;
 
@@ -154,7 +162,7 @@ export function createPublicCalendarService(
         // Step 1: 単発イベントを取得（series_id IS NULL）
         let singleEventsQuery = supabase
           .from("events")
-          .select("*")
+          .select(PUBLIC_EVENT_COLUMNS)
           .eq("guild_id", guildId)
           .lte("start_at", endDate.toISOString())
           .gte("end_at", startDate.toISOString())
@@ -172,7 +180,7 @@ export function createPublicCalendarService(
         // Step 2: イベントシリーズを取得
         let seriesQuery = supabase
           .from("event_series")
-          .select("*")
+          .select(PUBLIC_SERIES_COLUMNS)
           .eq("guild_id", guildId);
         if (signal) seriesQuery = seriesQuery.abortSignal(signal);
         const { data: seriesData, error: seriesError } = await seriesQuery;
@@ -187,7 +195,7 @@ export function createPublicCalendarService(
         // Step 3: 例外レコードを取得（series_id IS NOT NULL）
         let exceptionQuery = supabase
           .from("events")
-          .select("*")
+          .select(PUBLIC_EVENT_COLUMNS)
           .eq("guild_id", guildId)
           .not("series_id", "is", null)
           .or(
@@ -304,6 +312,36 @@ export function createPublicCalendarService(
     },
 
     async enablePublicCalendar(guildId) {
+      // 既存スラッグを確認（再有効化時はスラッグを保持）
+      const { data: existing } = await supabase
+        .from("guilds")
+        .select("public_slug")
+        .eq("guild_id", guildId)
+        .single();
+
+      if (existing?.public_slug) {
+        // 既存スラッグがあれば is_public のみ更新
+        const { data, error } = await supabase
+          .from("guilds")
+          .update({ is_public: true })
+          .eq("guild_id", guildId)
+          .select("guild_id, is_public, public_slug")
+          .single();
+
+        if (error) {
+          return {
+            success: false,
+            error: { code: "FETCH_FAILED" as const, message: "公開カレンダーの有効化に失敗しました。" },
+          };
+        }
+
+        return {
+          success: true,
+          data: { slug: data.public_slug },
+        };
+      }
+
+      // 既存スラッグがなければ新規生成
       for (let attempt = 0; attempt < MAX_SLUG_RETRIES; attempt++) {
         const slug = generateSlug();
 

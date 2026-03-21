@@ -89,11 +89,14 @@ export default async function PublicCalendarPage({
     notFound();
   }
 
+  const now = new Date();
+
   return (
     <main className="flex min-h-screen flex-col">
       <PublicCalendarContainer
         guildId={guild.guildId}
         guildName={guild.name}
+        initialDate={now}
         initialEvents={events}
       />
     </main>
