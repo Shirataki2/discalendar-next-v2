@@ -42,7 +42,7 @@
   - _Requirements: 1.5_
   - _Contracts: LoginLayoutMetadata State_
 
-- [ ] 3. (P) OGP画像をファイルベース規約で動的生成する
+- [x] 3. (P) OGP画像をファイルベース規約で動的生成する
   - Next.jsのopengraph-image.tsxファイル規約を使用してOGP画像生成を実装する（APIルートではなくファイルベース規約を採用し、Next.jsが自動的にog:image/twitter:imageメタタグを生成する）
   - 画像サイズは1200×630px、PNG形式で出力する
   - サービス名「Discalendar」とキャッチコピーを含めたビジュアルデザインを実装する
