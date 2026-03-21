@@ -1155,6 +1155,12 @@ export async function togglePublicCalendar(
     };
   }
 
+  // 無効化前にスラッグを取得（クライアント側で保持するため）
+  const settingsResult = await service.getPublicSettings(input.guildId);
+  const preservedSlug = settingsResult.success
+    ? settingsResult.data.publicSlug
+    : null;
+
   const result = await service.disablePublicCalendar(input.guildId);
 
   if (!result.success) {
@@ -1170,7 +1176,7 @@ export async function togglePublicCalendar(
   revalidatePath("/dashboard");
   return {
     success: true,
-    data: { isPublic: false, publicSlug: null },
+    data: { isPublic: false, publicSlug: preservedSlug },
   };
 }
 

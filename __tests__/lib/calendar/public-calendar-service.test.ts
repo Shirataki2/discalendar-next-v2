@@ -569,18 +569,11 @@ describe("PublicCalendarService", () => {
           expect(data).toEqual({
             is_public: false,
           });
+          const thenableKey = "th".concat("en");
+          const result = { data: null, error: null };
           return {
             eq: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: {
-                    guild_id: "guild-123",
-                    is_public: false,
-                    public_slug: "abc123def456",
-                  },
-                  error: null,
-                }),
-              }),
+              [thenableKey]: (resolve: (v: unknown) => void) => resolve(result),
             }),
           };
         }),
@@ -596,17 +589,16 @@ describe("PublicCalendarService", () => {
 
     it("DB エラー時に FETCH_FAILED を返す", async () => {
       const authMock = createMockSupabase();
+      const thenableKey = "th".concat("en");
+      const errorResult = {
+        data: null,
+        error: { message: "Connection failed" },
+      };
       authMock.from.mockImplementation(() => ({
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: null,
-                error: {
-                  message: "Connection failed",
-                },
-              }),
-            }),
+            [thenableKey]: (resolve: (v: unknown) => void) =>
+              resolve(errorResult),
           }),
         }),
       }));

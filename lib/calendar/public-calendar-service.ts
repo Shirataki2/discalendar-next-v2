@@ -382,9 +382,7 @@ export function createPublicCalendarService(
       const { error } = await supabase
         .from("guilds")
         .update({ is_public: false })
-        .eq("guild_id", guildId)
-        .select()
-        .single();
+        .eq("guild_id", guildId);
 
       if (error) {
         return {

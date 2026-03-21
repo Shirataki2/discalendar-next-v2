@@ -29,6 +29,7 @@ vi.mock("@/lib/supabase/server", () => ({
 const mockEnablePublicCalendar = vi.fn();
 const mockDisablePublicCalendar = vi.fn();
 const mockRegeneratePublicSlug = vi.fn();
+const mockGetPublicSettings = vi.fn();
 vi.mock("@/lib/calendar/public-calendar-service", () => ({
   createPublicCalendarService: vi.fn(() => ({
     enablePublicCalendar: mockEnablePublicCalendar,
@@ -36,7 +37,7 @@ vi.mock("@/lib/calendar/public-calendar-service", () => ({
     regeneratePublicSlug: mockRegeneratePublicSlug,
     getPublicGuildBySlug: vi.fn(),
     fetchPublicEvents: vi.fn(),
-    getPublicSettings: vi.fn(),
+    getPublicSettings: mockGetPublicSettings,
   })),
 }));
 
@@ -199,8 +200,12 @@ describe("togglePublicCalendar Server Action", () => {
     expect(mockDisablePublicCalendar).not.toHaveBeenCalled();
   });
 
-  it("enabled=false の場合 disablePublicCalendar を呼び出す", async () => {
+  it("enabled=false の場合 disablePublicCalendar を呼び出し、スラッグを保持する", async () => {
     setupAdminAuth("12345678901234567");
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: true, publicSlug: "abc123def456" },
+    });
     mockDisablePublicCalendar.mockResolvedValueOnce({
       success: true,
       data: undefined,
@@ -215,7 +220,7 @@ describe("togglePublicCalendar Server Action", () => {
     if (result.success) {
       expect(result.data).toEqual({
         isPublic: false,
-        publicSlug: null,
+        publicSlug: "abc123def456",
       });
     }
     expect(mockDisablePublicCalendar).toHaveBeenCalledWith("12345678901234567");
@@ -239,6 +244,10 @@ describe("togglePublicCalendar Server Action", () => {
 
   it("無効化成功時に revalidatePath を呼び出す", async () => {
     setupAdminAuth("12345678901234567");
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: true, publicSlug: "abc123def456" },
+    });
     mockDisablePublicCalendar.mockResolvedValueOnce({
       success: true,
       data: undefined,

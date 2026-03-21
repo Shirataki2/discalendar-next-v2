@@ -13,7 +13,7 @@ const SLUG_PATTERN = /^[a-f0-9]{12}$/;
 
 const resolveGuildAndEvents = cache(async (slug: string) => {
   if (!SLUG_PATTERN.test(slug)) {
-    return { guild: null, events: [] };
+    return { guild: null, events: [], initialDateIso: "" };
   }
 
   const supabase = await createClient();
@@ -21,7 +21,7 @@ const resolveGuildAndEvents = cache(async (slug: string) => {
 
   const guildResult = await service.getPublicGuildBySlug(slug);
   if (!guildResult.success) {
-    return { guild: null, events: [] };
+    return { guild: null, events: [], initialDateIso: "" };
   }
 
   const now = new Date();
@@ -34,6 +34,7 @@ const resolveGuildAndEvents = cache(async (slug: string) => {
   return {
     guild: guildResult.data,
     events: eventsResult.success ? eventsResult.data : [],
+    initialDateIso: now.toISOString(),
   };
 });
 
@@ -83,20 +84,18 @@ export default async function PublicCalendarPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const { guild, events } = await resolveGuildAndEvents(slug);
+  const { guild, events, initialDateIso } = await resolveGuildAndEvents(slug);
 
   if (!guild) {
     notFound();
   }
-
-  const now = new Date();
 
   return (
     <main className="flex min-h-screen flex-col">
       <PublicCalendarContainer
         guildId={guild.guildId}
         guildName={guild.name}
-        initialDate={now}
+        initialDateIso={initialDateIso}
         initialEvents={events}
       />
     </main>

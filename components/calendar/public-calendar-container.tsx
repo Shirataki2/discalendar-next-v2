@@ -19,7 +19,8 @@ export type PublicCalendarContainerProps = {
   guildId: string;
   guildName: string;
   initialEvents: PublicCalendarEvent[];
-  initialDate: Date;
+  /** サーバー側で生成したISO 8601文字列。クライアントでのタイムゾーン再解釈を避けるためUTC年月を抽出して使用 */
+  initialDateIso: string;
 };
 
 function toCalendarEvent(e: PublicCalendarEvent): CalendarEvent {
@@ -35,14 +36,23 @@ function toCalendarEvent(e: PublicCalendarEvent): CalendarEvent {
   };
 }
 
+/** サーバーのUTC時刻からクライアントのローカルタイムゾーンでも同じ年月を指す日付を生成 */
+function parseServerDate(iso: string): Date {
+  const d = new Date(iso);
+  // サーバーのUTC年月に合わせたローカル日付を返す（月境界ズレ防止）
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
 export function PublicCalendarContainer({
   guildId,
   guildName,
   initialEvents,
-  initialDate,
+  initialDateIso,
 }: PublicCalendarContainerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
-  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+  const [selectedDate, setSelectedDate] = useState<Date>(() =>
+    parseServerDate(initialDateIso)
+  );
   const [events, setEvents] = useState<CalendarEvent[]>(
     initialEvents.map(toCalendarEvent)
   );

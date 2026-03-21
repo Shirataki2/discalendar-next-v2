@@ -59,7 +59,7 @@ export const Default: Story = {
     guildId: "123456789012345678",
     guildName: "テストサーバー",
     initialEvents: mockEvents,
-    initialDate: now,
+    initialDateIso: now.toISOString(),
   },
 };
 
@@ -68,6 +68,6 @@ export const Empty: Story = {
     guildId: "123456789012345678",
     guildName: "イベントなしサーバー",
     initialEvents: [],
-    initialDate: now,
+    initialDateIso: now.toISOString(),
   },
 };

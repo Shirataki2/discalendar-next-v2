@@ -136,7 +136,7 @@ describe("PublicCalendarContainer", () => {
       guildId: string;
       guildName: string;
       initialEvents: PublicCalendarEvent[];
-      initialDate: Date;
+      initialDateIso: string;
     }> = {}
   ) {
     const { PublicCalendarContainer } = await import(
@@ -146,7 +146,7 @@ describe("PublicCalendarContainer", () => {
       <PublicCalendarContainer
         guildId={overrides.guildId ?? "guild-123"}
         guildName={overrides.guildName ?? "テストギルド"}
-        initialDate={overrides.initialDate ?? new Date("2026-03-15T00:00:00Z")}
+        initialDateIso={overrides.initialDateIso ?? "2026-03-15T00:00:00.000Z"}
         initialEvents={overrides.initialEvents ?? sampleEvents}
       />
     );
