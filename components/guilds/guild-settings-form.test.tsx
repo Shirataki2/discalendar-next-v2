@@ -6,6 +6,8 @@ vi.mock("@/app/dashboard/actions", () => ({
   updateGuildConfig: vi.fn(),
   fetchGuildChannels: vi.fn(),
   updateNotificationChannel: vi.fn(),
+  togglePublicCalendar: vi.fn(),
+  regeneratePublicSlugAction: vi.fn(),
 }));
 
 import { fetchGuildChannels } from "@/app/dashboard/actions";
@@ -22,6 +24,8 @@ describe("GuildSettingsForm", () => {
     },
     restricted: false,
     currentChannelId: null as string | null,
+    isPublic: false,
+    publicSlug: null as string | null,
   };
 
   beforeEach(() => {
@@ -89,7 +93,18 @@ describe("GuildSettingsForm", () => {
       expect(
         screen.getByText("イベント編集を管理者のみに制限")
       ).toBeInTheDocument();
-      expect(screen.getByRole("switch")).toBeInTheDocument();
+      expect(screen.getAllByRole("switch").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("公開カレンダー設定セクションを表示する", () => {
+      render(<GuildSettingsForm {...defaultProps} />);
+
+      expect(screen.getByText("公開カレンダー")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "公開URLを発行して、ログイン不要でカレンダーを閲覧できるようにします。"
+        )
+      ).toBeInTheDocument();
     });
 
     it("通知設定セクションを表示する", () => {

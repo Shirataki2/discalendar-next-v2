@@ -161,6 +161,32 @@ describe("updateSession (proxy.ts)", () => {
 
       expect(result.status).not.toBe(307);
     });
+
+    it("should allow access to /cal/* for unauthenticated users", async () => {
+      mockGetClaims.mockResolvedValue({
+        data: { claims: null },
+      });
+
+      const { updateSession } = await import("@/lib/supabase/proxy");
+
+      const mockRequest = createMockRequest("/cal/abc123def456");
+      const result = await updateSession(mockRequest);
+
+      expect(result.status).not.toBe(307);
+    });
+
+    it("should allow access to /cal/[slug] with nested path for unauthenticated users", async () => {
+      mockGetClaims.mockResolvedValue({
+        data: { claims: null },
+      });
+
+      const { updateSession } = await import("@/lib/supabase/proxy");
+
+      const mockRequest = createMockRequest("/cal/some-slug/page");
+      const result = await updateSession(mockRequest);
+
+      expect(result.status).not.toBe(307);
+    });
   });
 });
 

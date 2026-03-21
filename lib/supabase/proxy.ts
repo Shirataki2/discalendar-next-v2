@@ -66,7 +66,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/test") ||
     pathname === "/terms" ||
     pathname === "/privacy" ||
-    pathname.startsWith("/docs");
+    pathname.startsWith("/docs") ||
+    pathname.startsWith("/cal");
 
   if (!user && !isPublicRoute) {
     // No user, redirect to login page

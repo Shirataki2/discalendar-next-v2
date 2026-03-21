@@ -26,6 +26,8 @@ const mockGuilds: Guild[] = [
     name: "テストサーバー1",
     avatarUrl: "https://cdn.discordapp.com/icons/111111111111111111/icon1.png",
     locale: "ja",
+    isPublic: false,
+    publicSlug: null,
   },
   {
     id: 2,
@@ -33,6 +35,8 @@ const mockGuilds: Guild[] = [
     name: "テストサーバー2",
     avatarUrl: null,
     locale: "ja",
+    isPublic: false,
+    publicSlug: null,
   },
   {
     id: 3,
@@ -40,6 +44,8 @@ const mockGuilds: Guild[] = [
     name: "English Server",
     avatarUrl: "https://cdn.discordapp.com/icons/333333333333333333/icon3.png",
     locale: "en",
+    isPublic: false,
+    publicSlug: null,
   },
 ];
 

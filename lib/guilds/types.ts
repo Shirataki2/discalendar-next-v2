@@ -25,6 +25,10 @@ export interface Guild {
   avatarUrl: string | null;
   /** ロケール設定 */
   locale: string;
+  /** 公開カレンダーが有効かどうか */
+  isPublic: boolean;
+  /** 公開カレンダーURL用スラッグ */
+  publicSlug: string | null;
 }
 
 /**
@@ -42,6 +46,10 @@ export interface GuildRow {
   avatar_url: string | null;
   /** ロケール設定 */
   locale: string;
+  /** 公開カレンダーが有効かどうか */
+  is_public: boolean;
+  /** 公開カレンダーURL用スラッグ */
+  public_slug: string | null;
 }
 
 /**
@@ -96,5 +104,7 @@ export function toGuild(row: GuildRow): Guild {
     name: row.name,
     avatarUrl: row.avatar_url,
     locale: row.locale,
+    isPublic: row.is_public,
+    publicSlug: row.public_slug,
   };
 }

@@ -21,6 +21,8 @@ describe("Task 2.1: ギルド関連の内部型", () => {
         name: "Test Server",
         avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
         locale: "ja",
+        isPublic: false,
+        publicSlug: null,
       };
 
       expect(guild.id).toBe(1);
@@ -39,6 +41,8 @@ describe("Task 2.1: ギルド関連の内部型", () => {
         name: "No Icon Server",
         avatarUrl: null,
         locale: "en",
+        isPublic: false,
+        publicSlug: null,
       };
 
       expect(guild.avatarUrl).toBeNull();
@@ -53,6 +57,8 @@ describe("Task 2.1: ギルド関連の内部型", () => {
         name: "Test Server",
         avatar_url: "https://cdn.discordapp.com/icons/123/abc.png",
         locale: "ja",
+        is_public: false,
+        public_slug: null,
       };
 
       expect(row.id).toBe(1);
@@ -62,6 +68,8 @@ describe("Task 2.1: ギルド関連の内部型", () => {
         "https://cdn.discordapp.com/icons/123/abc.png"
       );
       expect(row.locale).toBe("ja");
+      expect(row.is_public).toBe(false);
+      expect(row.public_slug).toBeNull();
     });
 
     it("should allow null avatar_url in GuildRow", () => {
@@ -71,6 +79,8 @@ describe("Task 2.1: ギルド関連の内部型", () => {
         name: "No Icon Server",
         avatar_url: null,
         locale: "en",
+        is_public: false,
+        public_slug: null,
       };
 
       expect(row.avatar_url).toBeNull();
@@ -118,6 +128,8 @@ describe("toGuild conversion function", () => {
       name: "Test Server",
       avatar_url: "https://cdn.discordapp.com/icons/123/abc.png",
       locale: "ja",
+      is_public: false,
+      public_slug: null,
     };
 
     const guild = toGuild(row);
@@ -127,6 +139,8 @@ describe("toGuild conversion function", () => {
     expect(guild.name).toBe("Test Server");
     expect(guild.avatarUrl).toBe("https://cdn.discordapp.com/icons/123/abc.png");
     expect(guild.locale).toBe("ja");
+    expect(guild.isPublic).toBe(false);
+    expect(guild.publicSlug).toBeNull();
   });
 
   it("should preserve null avatar_url as null avatarUrl", () => {
@@ -136,10 +150,29 @@ describe("toGuild conversion function", () => {
       name: "No Icon Server",
       avatar_url: null,
       locale: "en",
+      is_public: false,
+      public_slug: null,
     };
 
     const guild = toGuild(row);
 
     expect(guild.avatarUrl).toBeNull();
+  });
+
+  it("should convert public calendar fields correctly", () => {
+    const row: GuildRow = {
+      id: 3,
+      guild_id: "111222333444555666",
+      name: "Public Server",
+      avatar_url: null,
+      locale: "ja",
+      is_public: true,
+      public_slug: "abc123def456",
+    };
+
+    const guild = toGuild(row);
+
+    expect(guild.isPublic).toBe(true);
+    expect(guild.publicSlug).toBe("abc123def456");
   });
 });

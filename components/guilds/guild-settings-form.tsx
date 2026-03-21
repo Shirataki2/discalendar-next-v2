@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
 import { NotificationChannelSelect } from "@/components/guilds/notification-channel-select";
+import { PublicCalendarUrlSection } from "@/components/guilds/public-calendar-url-section";
 import { SettingsSection } from "@/components/settings/settings-section";
 
 export type GuildSettingsFormProps = {
@@ -25,6 +26,8 @@ export type GuildSettingsFormProps = {
   };
   restricted: boolean;
   currentChannelId: string | null;
+  isPublic: boolean;
+  publicSlug: string | null;
 };
 
 function getGuildInitial(name: string): string {
@@ -38,6 +41,8 @@ export function GuildSettingsForm({
   guild,
   restricted,
   currentChannelId,
+  isPublic,
+  publicSlug,
 }: GuildSettingsFormProps) {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -86,6 +91,18 @@ export function GuildSettingsForm({
         <NotificationChannelSelect
           currentChannelId={currentChannelId}
           guildId={guild.guildId}
+        />
+      </SettingsSection>
+
+      {/* 公開カレンダーURL設定セクション */}
+      <SettingsSection
+        description="公開URLを発行して、ログイン不要でカレンダーを閲覧できるようにします。"
+        title="公開カレンダー"
+      >
+        <PublicCalendarUrlSection
+          guildId={guild.guildId}
+          isPublic={isPublic}
+          publicSlug={publicSlug}
         />
       </SettingsSection>
     </div>

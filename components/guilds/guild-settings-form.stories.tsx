@@ -30,6 +30,8 @@ export const WithAvatar: Story = {
     },
     restricted: false,
     currentChannelId: null,
+    isPublic: false,
+    publicSlug: null,
   },
 };
 
@@ -42,6 +44,8 @@ export const WithoutAvatar: Story = {
     },
     restricted: false,
     currentChannelId: null,
+    isPublic: false,
+    publicSlug: null,
   },
 };
 
@@ -54,6 +58,22 @@ export const RestrictedOn: Story = {
     },
     restricted: true,
     currentChannelId: "11111111111111111",
+    isPublic: false,
+    publicSlug: null,
+  },
+};
+
+export const PublicCalendarEnabled: Story = {
+  args: {
+    guild: {
+      guildId: "123456789",
+      name: "Public Calendar Server",
+      avatarUrl: "https://cdn.discordapp.com/icons/123/abc.png",
+    },
+    restricted: false,
+    currentChannelId: null,
+    isPublic: true,
+    publicSlug: "abc123def456",
   },
 };
 
@@ -66,6 +86,8 @@ export const Mobile: Story = {
     },
     restricted: false,
     currentChannelId: null,
+    isPublic: false,
+    publicSlug: null,
   },
   parameters: {
     viewport: { defaultViewport: "mobile1" },

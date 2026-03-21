@@ -26,6 +26,7 @@ import {
   type UpdateSeriesInput,
 } from "@/lib/calendar/event-service";
 import { checkEventPermission } from "@/lib/calendar/permission-check";
+import { createPublicCalendarService } from "@/lib/calendar/public-calendar-service";
 import { createRsvpService } from "@/lib/calendar/rsvp-service";
 import {
   type AttendeeData,
@@ -1072,4 +1073,176 @@ export async function fetchAttendeesAction(
   });
 
   return sanitizeResult(result);
+}
+
+// ──────────────────────────────────────────────
+// Task 3.2 (public-calendar-url): 公開カレンダー設定
+// ──────────────────────────────────────────────
+
+type TogglePublicCalendarInput = {
+  guildId: string;
+  enabled: boolean;
+};
+
+type TogglePublicCalendarResult =
+  | { success: true; data: { isPublic: boolean; publicSlug: string | null } }
+  | { success: false; error: { code: string; message: string } };
+
+/**
+ * 公開カレンダーの有効化/無効化を切り替える Server Action
+ *
+ * 認証チェック → MANAGE_GUILD 権限検証 → PublicCalendarService 操作
+ * 成功時に revalidatePath で管理画面キャッシュを無効化する。
+ *
+ * Requirements: 1.1, 1.2
+ */
+export async function togglePublicCalendar(
+  input: TogglePublicCalendarInput
+): Promise<TogglePublicCalendarResult> {
+  if (!GUILD_ID_PATTERN.test(input.guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(input.guildId);
+
+  if (!authResult.success) {
+    return {
+      success: false,
+      error: {
+        code: authResult.error.code,
+        message: authResult.error.message,
+      },
+    };
+  }
+
+  const { auth } = authResult;
+
+  if (!canManageGuild(auth.permissions)) {
+    return {
+      success: false,
+      error: {
+        code: "PERMISSION_DENIED",
+        message: "公開カレンダーの設定にはサーバー管理権限が必要です。",
+      },
+    };
+  }
+
+  const service = createPublicCalendarService(auth.supabase);
+
+  if (input.enabled) {
+    const result = await service.enablePublicCalendar(input.guildId);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: {
+          code: result.error.code,
+          message: result.error.message,
+        },
+      };
+    }
+
+    revalidatePath("/dashboard");
+    return {
+      success: true,
+      data: { isPublic: true, publicSlug: result.data.slug },
+    };
+  }
+
+  const result = await service.disablePublicCalendar(input.guildId);
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: {
+        code: result.error.code,
+        message: result.error.message,
+      },
+    };
+  }
+
+  revalidatePath("/dashboard");
+  return {
+    success: true,
+    data: { isPublic: false, publicSlug: result.data.slug },
+  };
+}
+
+type RegeneratePublicSlugInput = {
+  guildId: string;
+};
+
+type RegeneratePublicSlugResult =
+  | { success: true; data: { publicSlug: string } }
+  | { success: false; error: { code: string; message: string } };
+
+/**
+ * 公開スラッグを再生成する Server Action
+ *
+ * 認証チェック → MANAGE_GUILD 権限検証 → PublicCalendarService.regeneratePublicSlug
+ * 成功時に revalidatePath で管理画面キャッシュを無効化する。
+ *
+ * Requirements: 1.3
+ */
+export async function regeneratePublicSlugAction(
+  input: RegeneratePublicSlugInput
+): Promise<RegeneratePublicSlugResult> {
+  if (!GUILD_ID_PATTERN.test(input.guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(input.guildId);
+
+  if (!authResult.success) {
+    return {
+      success: false,
+      error: {
+        code: authResult.error.code,
+        message: authResult.error.message,
+      },
+    };
+  }
+
+  const { auth } = authResult;
+
+  if (!canManageGuild(auth.permissions)) {
+    return {
+      success: false,
+      error: {
+        code: "PERMISSION_DENIED",
+        message: "公開カレンダーの設定にはサーバー管理権限が必要です。",
+      },
+    };
+  }
+
+  const service = createPublicCalendarService(auth.supabase);
+  const result = await service.regeneratePublicSlug(input.guildId);
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: {
+        code: result.error.code,
+        message: result.error.message,
+      },
+    };
+  }
+
+  revalidatePath("/dashboard");
+  return {
+    success: true,
+    data: { publicSlug: result.data.slug },
+  };
 }
