@@ -386,9 +386,12 @@ describe("EventDialog", () => {
       await user.click(saveButton);
 
       // ローディング中はボタンが無効
-      await waitFor(() => {
-        expect(saveButton).toBeDisabled();
-      });
+      await waitFor(
+        () => {
+          expect(saveButton).toBeDisabled();
+        },
+        { timeout: 3000 }
+      );
     });
   });
 

@@ -31,14 +31,23 @@ import { Hero } from "@/components/hero";
 // Header内で認証状態を取得するため動的レンダリングを強制
 export const dynamic = "force-dynamic";
 
-/**
- * ページメタデータ
- * Requirement 1.2: メタデータの設定
- */
 export const metadata: Metadata = {
-  title: "Discalendar - Discordコミュニティの予定管理をもっと便利に",
+  title: {
+    absolute: "Discalendar - Discordコミュニティの予定管理をもっと便利に",
+  },
   description:
     "Discordコミュニティ向け予定管理サービス。カレンダー形式で予定を視覚的に管理し、Discordと連携して予定を同期します。",
+  keywords: [
+    "Discord",
+    "カレンダー",
+    "予定管理",
+    "イベント",
+    "コミュニティ",
+    "スケジュール",
+  ],
+  alternates: {
+    canonical: "/",
+  },
 };
 
 /**
@@ -51,9 +60,48 @@ export const metadata: Metadata = {
  *
  * Note: async Server Componentとして実装（Headerが認証状態を取得するため）
  */
+// JSON-LDのcanonical URLは常に本番URLを指す（SEOベストプラクティス）
+// layout.tsxのresolveBaseUrl()とは意図的に異なり、環境に依存しない
+const SITE_URL = "https://discalendar.app";
+
+const webApplicationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Discalendar",
+  description:
+    "Discordコミュニティ向け予定管理サービス。カレンダー形式で予定を視覚的に管理し、Discordと連携して予定を同期します。",
+  url: SITE_URL,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "JPY",
+  },
+};
+
+const webSiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Discalendar",
+  url: SITE_URL,
+};
+
 export default async function Home() {
   return (
     <main className="space-y-0">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(webApplicationJsonLd),
+        }}
+        type="application/ld+json"
+      />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(webSiteJsonLd),
+        }}
+        type="application/ld+json"
+      />
       <Header />
       <Hero />
       <Features />

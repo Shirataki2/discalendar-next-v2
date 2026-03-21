@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { StaticPageLayout } from "@/components/static-page-layout";
 
 export const metadata: Metadata = {
-  title: "利用規約 | Discalendar",
+  title: "利用規約",
   description:
     "Discalendarの利用規約です。本サービスをご利用の際には必ずお読みください。",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsPage() {

@@ -6,15 +6,41 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PostHogProvider } from "@/lib/analytics/posthog-provider";
 import "./globals.css";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+function resolveBaseUrl(): string {
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}
+
+const defaultUrl = resolveBaseUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Discalendar - Discordサーバー向けカレンダー",
+  title: {
+    default: "Discalendar - Discordコミュニティの予定管理をもっと便利に",
+    template: "%s | Discalendar",
+  },
   description:
     "Discordサーバーでイベントを簡単に管理できるカレンダーアプリケーション",
+  keywords: ["Discord", "カレンダー", "予定管理", "イベント", "コミュニティ"],
+  openGraph: {
+    type: "website",
+    title: "Discalendar - Discordコミュニティの予定管理をもっと便利に",
+    description:
+      "Discordサーバーでイベントを簡単に管理できるカレンダーアプリケーション",
+    siteName: "Discalendar",
+    locale: "ja_JP",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/icon.png",
   },

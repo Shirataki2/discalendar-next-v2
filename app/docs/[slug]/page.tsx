@@ -44,8 +44,11 @@ export async function generateMetadata({
     return {};
   }
   return {
-    title: `${doc.title} | Discalendar ドキュメント`,
+    title: doc.title,
     description: doc.description,
+    alternates: {
+      canonical: `/docs/${slug}`,
+    },
   };
 }
 
