@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import {
+  formatHolidayDateKey,
   getHolidaysInRange,
   toHolidayEvents,
 } from "@/lib/calendar/holiday-service";
@@ -20,16 +21,6 @@ export interface UseHolidaysReturn {
 
 const EMPTY_EVENTS: CalendarEvent[] = [];
 const EMPTY_MAP = new Map<string, string>();
-
-/**
- * 日付をYYYY-MM-DD形式の文字列に変換する
- */
-function formatDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 /**
  * ビューモードと選択日付から祝日取得用の期間を計算する
@@ -111,7 +102,7 @@ export function useHolidays(
 
     const holidayMap = new Map<string, string>();
     for (const h of holidays) {
-      holidayMap.set(formatDateKey(h.date), h.name);
+      holidayMap.set(formatHolidayDateKey(h.date), h.name);
     }
 
     return { holidayEvents, holidayMap };

@@ -410,6 +410,9 @@ export function CalendarContainer({
       isAllDay?: boolean;
     }) => {
       const { event, start, end, isAllDay } = args;
+      if (isHolidayEvent(event)) {
+        return;
+      }
       const newStart = toDate(start);
       const newEnd = toDate(end);
 
@@ -449,6 +452,9 @@ export function CalendarContainer({
       end: Date | string;
     }) => {
       const { event, start, end } = args;
+      if (isHolidayEvent(event)) {
+        return;
+      }
       const newStart = toDate(start);
       const newEnd = toDate(end);
 
@@ -475,6 +481,8 @@ export function CalendarContainer({
 
   // ギルド未選択時は空のカレンダーを表示 (Req 5.2)
   const shouldShowEmpty = isGuildEmpty(guildId);
+  const visibleEvents = shouldShowEmpty ? [] : state.events;
+  const visibleBackgroundEvents = shouldShowEmpty ? [] : holidayEvents;
   const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
 
   // Task 7.1: ギルド選択時のみ追加ボタンを有効化
@@ -523,7 +531,8 @@ export function CalendarContainer({
       {state.isLoading || state.error ? null : (
         <div className="flex flex-1 flex-col">
           <CalendarGrid
-            events={shouldShowEmpty ? [] : [...state.events, ...holidayEvents]}
+            backgroundEvents={visibleBackgroundEvents}
+            events={visibleEvents}
             holidayMap={holidayMap}
             onDateChange={handleDateChange}
             onEventClick={handleEventClick}

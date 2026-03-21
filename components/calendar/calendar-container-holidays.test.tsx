@@ -39,9 +39,10 @@ vi.mock("@/components/calendar/calendar-grid", () => ({
   CalendarGrid: vi.fn(
     (props: {
       events?: Array<{ id: string }>;
+      backgroundEvents?: Array<{ id: string }>;
       holidayMap?: { size: number };
     }) => {
-      const holidayCount = (props.events ?? []).filter((e) =>
+      const holidayCount = (props.backgroundEvents ?? []).filter((e) =>
         e.id.startsWith("holiday-")
       ).length;
       return (

@@ -63,6 +63,17 @@ export function getHolidayName(date: Date): string | null {
 }
 
 /**
+ * 祝日の日付をYYYY-MM-DD形式の文字列に変換する
+ * holiday_jpの日付はUTC midnightのため、UTCゲッターを使用する
+ */
+export function formatHolidayDateKey(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * 祝日データを CalendarEvent 形式に変換する
  * 通常の終日イベントと同じ形式で表示される
  *
@@ -71,10 +82,10 @@ export function getHolidayName(date: Date): string | null {
  */
 export function toHolidayEvents(holidays: HolidayInfo[]): CalendarEvent[] {
   return holidays.map((h) => {
-    // holiday_jpの日付はUTC midnightのため、ローカルタイムゾーンに正規化
-    const y = h.date.getFullYear();
-    const m = h.date.getMonth();
-    const d = h.date.getDate();
+    // holiday_jpの日付はUTC midnightのため、UTCゲッターでローカルタイムゾーンに正規化
+    const y = h.date.getUTCFullYear();
+    const m = h.date.getUTCMonth();
+    const d = h.date.getUTCDate();
     return {
       id: `${HOLIDAY_EVENT_ID_PREFIX}${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
       title: h.name,

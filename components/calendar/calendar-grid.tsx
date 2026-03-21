@@ -189,6 +189,8 @@ export type CalendarGridProps = {
   resizable?: boolean;
   /** 日付→祝日名のMap（dayPropGetter用） */
   holidayMap?: Map<string, string>;
+  /** 背景イベント（月ビューでスロットを消費しない） */
+  backgroundEvents?: CalendarEvent[];
 };
 
 /**
@@ -270,6 +272,7 @@ export function CalendarGrid({
   onEventResize,
   resizable = true,
   holidayMap,
+  backgroundEvents,
 }: CalendarGridProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -456,6 +459,7 @@ export function CalendarGrid({
     >
       <div className="flex h-full flex-1 flex-col">
         <DnDCalendar
+          backgroundEvents={backgroundEvents}
           components={calendarComponents}
           date={selectedDate}
           dayPropGetter={dayPropGetter}

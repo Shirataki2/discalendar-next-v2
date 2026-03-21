@@ -9,6 +9,7 @@ import {
   HOLIDAY_COLOR,
   HOLIDAY_EVENT_ID_PREFIX,
   type HolidayInfo,
+  formatHolidayDateKey,
   getHolidayName,
   getHolidaysInRange,
   isHolidayEvent,
@@ -185,10 +186,11 @@ describe("getHolidayName", () => {
 });
 
 describe("toHolidayEvents", () => {
+  // @holiday-jp/holiday_jp はUTC midnight日付を返すため、テストデータもUTC midnightで作成
   it("HolidayInfo 配列を CalendarEvent 配列に変換する", () => {
     const holidays: HolidayInfo[] = [
-      { date: new Date(2026, 0, 1), name: "元日" },
-      { date: new Date(2026, 0, 12), name: "成人の日" },
+      { date: new Date(Date.UTC(2026, 0, 1)), name: "元日" },
+      { date: new Date(Date.UTC(2026, 0, 12)), name: "成人の日" },
     ];
 
     const events = toHolidayEvents(holidays);
@@ -198,7 +200,7 @@ describe("toHolidayEvents", () => {
 
   it("各イベントが正しいプロパティを持つ", () => {
     const holidays: HolidayInfo[] = [
-      { date: new Date(2026, 0, 1), name: "元日" },
+      { date: new Date(Date.UTC(2026, 0, 1)), name: "元日" },
     ];
 
     const events = toHolidayEvents(holidays);
@@ -220,9 +222,9 @@ describe("toHolidayEvents", () => {
 
   it("全ての祝日が正しく変換される", () => {
     const holidays: HolidayInfo[] = [
-      { date: new Date(2026, 0, 1), name: "元日" },
-      { date: new Date(2026, 0, 12), name: "成人の日" },
-      { date: new Date(2026, 1, 11), name: "建国記念の日" },
+      { date: new Date(Date.UTC(2026, 0, 1)), name: "元日" },
+      { date: new Date(Date.UTC(2026, 0, 12)), name: "成人の日" },
+      { date: new Date(Date.UTC(2026, 1, 11)), name: "建国記念の日" },
     ];
 
     const events = toHolidayEvents(holidays);
@@ -238,10 +240,18 @@ describe("toHolidayEvents", () => {
   });
 });
 
+describe("formatHolidayDateKey", () => {
+  it("UTC midnight日付をYYYY-MM-DD形式に変換する", () => {
+    expect(formatHolidayDateKey(new Date(Date.UTC(2026, 0, 1)))).toBe("2026-01-01");
+    expect(formatHolidayDateKey(new Date(Date.UTC(2026, 11, 31)))).toBe("2026-12-31");
+    expect(formatHolidayDateKey(new Date(Date.UTC(2026, 4, 5)))).toBe("2026-05-05");
+  });
+});
+
 describe("isHolidayEvent", () => {
   it("祝日イベントに対して true を返す", () => {
     const holidays: HolidayInfo[] = [
-      { date: new Date(2026, 0, 1), name: "元日" },
+      { date: new Date(Date.UTC(2026, 0, 1)), name: "元日" },
     ];
     const event = toHolidayEvents(holidays)[0];
 
