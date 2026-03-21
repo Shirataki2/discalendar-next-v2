@@ -561,7 +561,7 @@ describe("PublicCalendarService", () => {
   });
 
   describe("disablePublicCalendar", () => {
-    it("公開カレンダーを無効化する（スラッグは保持）", async () => {
+    it("公開カレンダーを無効化し、スラッグを返す", async () => {
       const authMock = createMockSupabase();
       authMock.from.mockImplementation(() => ({
         update: vi.fn().mockImplementation((data: Record<string, unknown>) => {
@@ -569,11 +569,14 @@ describe("PublicCalendarService", () => {
           expect(data).toEqual({
             is_public: false,
           });
-          const thenableKey = "th".concat("en");
-          const result = { data: null, error: null };
           return {
             eq: vi.fn().mockReturnValue({
-              [thenableKey]: (resolve: (v: unknown) => void) => resolve(result),
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { public_slug: "abc123def456" },
+                  error: null,
+                }),
+              }),
             }),
           };
         }),
@@ -585,20 +588,22 @@ describe("PublicCalendarService", () => {
       const result = await svc.disablePublicCalendar("guild-123");
 
       expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.slug).toBe("abc123def456");
+      }
     });
 
     it("DB エラー時に FETCH_FAILED を返す", async () => {
       const authMock = createMockSupabase();
-      const thenableKey = "th".concat("en");
-      const errorResult = {
-        data: null,
-        error: { message: "Connection failed" },
-      };
       authMock.from.mockImplementation(() => ({
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            [thenableKey]: (resolve: (v: unknown) => void) =>
-              resolve(errorResult),
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: null,
+                error: { message: "Connection failed" },
+              }),
+            }),
           }),
         }),
       }));

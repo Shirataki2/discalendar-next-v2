@@ -69,7 +69,7 @@ export interface PublicCalendarServiceInterface {
 
   disablePublicCalendar(
     guildId: string,
-  ): Promise<PublicCalendarResult<void>>;
+  ): Promise<PublicCalendarResult<{ slug: string | null }>>;
 
   regeneratePublicSlug(
     guildId: string,
@@ -379,10 +379,12 @@ export function createPublicCalendarService(
     },
 
     async disablePublicCalendar(guildId) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("guilds")
         .update({ is_public: false })
-        .eq("guild_id", guildId);
+        .eq("guild_id", guildId)
+        .select("public_slug")
+        .single();
 
       if (error) {
         return {
@@ -391,7 +393,7 @@ export function createPublicCalendarService(
         };
       }
 
-      return { success: true, data: undefined };
+      return { success: true, data: { slug: data.public_slug } };
     },
 
     async regeneratePublicSlug(guildId) {

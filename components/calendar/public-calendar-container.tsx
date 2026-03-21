@@ -69,10 +69,9 @@ export function PublicCalendarContainer({
   const serviceRef = useRef(createPublicCalendarService(supabaseRef.current));
 
   const fetchEvents = useCallback(async () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setIsLoading(true);
     const { startDate, endDate } = getDateRange(viewMode, selectedDate);
@@ -80,8 +79,13 @@ export function PublicCalendarContainer({
       guildId,
       startDate,
       endDate,
-      abortControllerRef.current.signal
+      controller.signal
     );
+
+    // 中断された旧リクエストは状態更新しない
+    if (controller.signal.aborted) {
+      return;
+    }
 
     if (result.success) {
       setEvents(result.data.map(toCalendarEvent));

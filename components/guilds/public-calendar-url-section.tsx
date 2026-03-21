@@ -40,17 +40,6 @@ export type PublicCalendarUrlSectionProps = {
 /** コピー完了フィードバックの表示時間（ミリ秒） */
 const COPY_FEEDBACK_DURATION_MS = 2000;
 
-function getBaseUrl(): string {
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-  return "http://localhost:3000";
-}
-
-function buildPublicUrl(slug: string): string {
-  return `${getBaseUrl()}/cal/${slug}`;
-}
-
 export function PublicCalendarUrlSection({
   guildId,
   isPublic: initialIsPublic,
@@ -61,8 +50,13 @@ export function PublicCalendarUrlSection({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [baseUrl, setBaseUrl] = useState("");
   const [disableDialogOpen, setDisableDialogOpen] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+
+  useEffect(() => {
+    setBaseUrl(window.location.origin);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: guildId は effect 内で直接使用されないが、ギルド切替時にエラーをリセットするために依存配列に含める
   useEffect(() => {
@@ -144,13 +138,13 @@ export function PublicCalendarUrlSection({
       return;
     }
     try {
-      await navigator.clipboard.writeText(buildPublicUrl(publicSlug));
+      await navigator.clipboard.writeText(`${baseUrl}/cal/${publicSlug}`);
       setCopied(true);
       setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
     } catch {
       setError("URLのコピーに失敗しました。");
     }
-  }, [publicSlug]);
+  }, [publicSlug, baseUrl]);
 
   return (
     <div className="space-y-4">
@@ -173,7 +167,7 @@ export function PublicCalendarUrlSection({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded bg-muted px-3 py-2 text-sm">
-              {buildPublicUrl(publicSlug)}
+              {`${baseUrl}/cal/${publicSlug}`}
             </code>
             <Button
               disabled={isPending}

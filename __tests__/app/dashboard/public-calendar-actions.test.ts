@@ -202,13 +202,9 @@ describe("togglePublicCalendar Server Action", () => {
 
   it("enabled=false の場合 disablePublicCalendar を呼び出し、スラッグを保持する", async () => {
     setupAdminAuth("12345678901234567");
-    mockGetPublicSettings.mockResolvedValueOnce({
-      success: true,
-      data: { isPublic: true, publicSlug: "abc123def456" },
-    });
     mockDisablePublicCalendar.mockResolvedValueOnce({
       success: true,
-      data: undefined,
+      data: { slug: "abc123def456" },
     });
 
     const result = await togglePublicCalendar({
@@ -244,13 +240,9 @@ describe("togglePublicCalendar Server Action", () => {
 
   it("無効化成功時に revalidatePath を呼び出す", async () => {
     setupAdminAuth("12345678901234567");
-    mockGetPublicSettings.mockResolvedValueOnce({
-      success: true,
-      data: { isPublic: true, publicSlug: "abc123def456" },
-    });
     mockDisablePublicCalendar.mockResolvedValueOnce({
       success: true,
-      data: undefined,
+      data: { slug: "abc123def456" },
     });
 
     await togglePublicCalendar({
