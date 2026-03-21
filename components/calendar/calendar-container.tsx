@@ -41,6 +41,7 @@ import { useEditScopeDialog } from "@/hooks/calendar/use-edit-scope-dialog";
 import { useEventDialog } from "@/hooks/calendar/use-event-dialog";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
 import { useEventPopover } from "@/hooks/calendar/use-event-popover";
+import { useHolidays } from "@/hooks/calendar/use-holidays";
 import { useBreakpoint } from "@/hooks/calendar/use-media-query";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { mapNavigationDirection, trackEvent } from "@/lib/analytics/events";
@@ -54,6 +55,7 @@ import {
   toEventFormData,
 } from "@/lib/calendar/calendar-helpers";
 import { createEventService } from "@/lib/calendar/event-service";
+import { isHolidayEvent } from "@/lib/calendar/holiday-service";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarErrorDisplay } from "./calendar-error-display";
@@ -94,8 +96,9 @@ export function CalendarContainer({
   canEditEvents = true,
   onSettingsClick,
 }: CalendarContainerProps) {
-  // ユーザー設定のデフォルトカレンダービューを取得
-  const { defaultCalendarView } = useUserPreferences();
+  // ユーザー設定のデフォルトカレンダービューと祝日表示設定を取得
+  const { defaultCalendarView, showHolidays, setShowHolidays } =
+    useUserPreferences();
 
   // URL同期されたビューモードと日付（デフォルトビューをフォールバック値として注入）
   const { viewMode, selectedDate, setViewMode, setSelectedDate } =
@@ -109,6 +112,18 @@ export function CalendarContainer({
 
   // モバイル判定
   const { isMobile } = useBreakpoint();
+
+  // 祝日データの取得（DIS-20 Task 5: 祝日統合）
+  const { holidayEvents, holidayMap } = useHolidays(
+    viewMode,
+    selectedDate,
+    showHolidays
+  );
+
+  // 祝日表示トグルハンドラー
+  const handleToggleHolidays = useCallback(() => {
+    setShowHolidays(!showHolidays);
+  }, [showHolidays, setShowHolidays]);
 
   // Supabaseクライアントの初期化
   const supabaseRef = useRef(createClient());
@@ -277,9 +292,13 @@ export function CalendarContainer({
 
   /**
    * イベントクリックハンドラー (Task 7: EventPopoverを表示)
+   * 祝日イベントはポップオーバー対象外
    */
   const handleEventClick = useCallback(
     (event: CalendarEvent, _element: HTMLElement) => {
+      if (isHolidayEvent(event)) {
+        return;
+      }
       openPopover(event);
     },
     [openPopover]
@@ -391,6 +410,9 @@ export function CalendarContainer({
       isAllDay?: boolean;
     }) => {
       const { event, start, end, isAllDay } = args;
+      if (isHolidayEvent(event)) {
+        return;
+      }
       const newStart = toDate(start);
       const newEnd = toDate(end);
 
@@ -430,6 +452,9 @@ export function CalendarContainer({
       end: Date | string;
     }) => {
       const { event, start, end } = args;
+      if (isHolidayEvent(event)) {
+        return;
+      }
       const newStart = toDate(start);
       const newEnd = toDate(end);
 
@@ -456,6 +481,8 @@ export function CalendarContainer({
 
   // ギルド未選択時は空のカレンダーを表示 (Req 5.2)
   const shouldShowEmpty = isGuildEmpty(guildId);
+  const visibleEvents = shouldShowEmpty ? [] : state.events;
+  const visibleBackgroundEvents = shouldShowEmpty ? [] : holidayEvents;
   const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
 
   // Task 7.1: ギルド選択時のみ追加ボタンを有効化
@@ -479,8 +506,10 @@ export function CalendarContainer({
         onAddClick={toolbarAddClickHandler}
         onNavigate={handleNavigate}
         onSettingsClick={onSettingsClick}
+        onToggleHolidays={handleToggleHolidays}
         onViewChange={handleViewChange}
         selectedDate={selectedDate}
+        showHolidays={showHolidays}
         viewMode={viewMode}
       />
 
@@ -502,7 +531,9 @@ export function CalendarContainer({
       {state.isLoading || state.error ? null : (
         <div className="flex flex-1 flex-col">
           <CalendarGrid
-            events={shouldShowEmpty ? [] : state.events}
+            backgroundEvents={visibleBackgroundEvents}
+            events={visibleEvents}
+            holidayMap={holidayMap}
             onDateChange={handleDateChange}
             onEventClick={handleEventClick}
             onEventDrop={gridEventDropHandler}

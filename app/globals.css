@@ -40,6 +40,8 @@
     --chart-3: 174 63% 40%;
     --chart-4: 45 100% 51%;
     --chart-5: 151 100% 45%;
+    --holiday-bg: rgba(239, 68, 68, 0.06);
+    --holiday-text: #dc2626;
     --radius: 0.5rem;
   }
   .dark {
@@ -65,6 +67,8 @@
     --chart-1: 210 79% 52%;
     --chart-2: 34 100% 50%;
     --chart-3: 174 63% 45%;
+    --holiday-bg: rgba(248, 113, 113, 0.08);
+    --holiday-text: #f87171;
     --chart-4: 291 63% 50%;
     --chart-5: 122 39% 55%;
   }
@@ -442,6 +446,41 @@
     color: #c27070;
   }
 
+  /**
+   * Task 3.1: 祝日表示用 CSS スタイル (DIS-20)
+   *
+   * - rbc-holiday: 祝日セルの背景色
+   * - rbc-background-event: 祝日ラベル（backgroundEvent）のスタイル
+   * - ダークモード対応: CSS変数 --holiday-bg, --holiday-text を使用
+   * - 既存の今日ハイライト・月外セル・土日色分けと干渉しない
+   *
+   * Requirements: 3.3, 4.1, 4.2, 4.3
+   */
+
+  /* 祝日セルの背景色 */
+  .rbc-day-bg.rbc-holiday {
+    background-color: var(--holiday-bg);
+  }
+
+  /* 祝日ラベル（backgroundEvent）のスタイル - ユーザーイベントとの視覚的区別 */
+  .rbc-background-event {
+    background-color: transparent !important;
+    color: var(--holiday-text) !important;
+    font-size: 0.65rem;
+    font-weight: 500;
+    opacity: 0.85;
+    pointer-events: none;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 2px !important;
+  }
+
+  /* 週/日ビューの祝日ラベル */
+  .rbc-time-view .rbc-background-event {
+    font-size: 0.7rem;
+    opacity: 0.9;
+  }
+
   /*
    * 週/日ビュー: イベントブロックのテキスト折り返し対応 (DIS-52)
    *
@@ -640,6 +679,16 @@
 
 .dark .rbc-sunday-text {
   color: #f87171;
+}
+
+/* ダークモード: 祝日スタイル (DIS-20) */
+/* --holiday-bg, --holiday-text は .dark 内で定義済み */
+.dark .rbc-day-bg.rbc-holiday {
+  background-color: var(--holiday-bg);
+}
+
+.dark .rbc-background-event {
+  color: var(--holiday-text) !important;
 }
 
 /* 静的ページ用アニメーション */

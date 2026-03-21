@@ -7,7 +7,7 @@
  * - 不正な値が保存されていた場合のフォールバック
  * - localStorage 書き込み失敗時もセッション中は動作継続
  *
- * Requirements: 3.3, 5.1, 5.2, 5.3, 5.5
+ * Requirements: 3.3, 5.1, 5.2, 5.3, 5.4, 5.5
  */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -204,6 +204,66 @@ describe("useUserPreferences", () => {
 			// オブジェクト形式で返されること（将来の設定項目追加に対応）
 			expect(result.current).toHaveProperty("defaultCalendarView");
 			expect(result.current).toHaveProperty("setDefaultCalendarView");
+		});
+	});
+
+	describe("showHolidays (Req 5.4)", () => {
+		it("showHolidays のデフォルト値が true である", () => {
+			const { result } = renderHook(() => useUserPreferences());
+			expect(result.current.showHolidays).toBe(true);
+		});
+
+		it("setShowHolidays で false に変更できる", () => {
+			const { result } = renderHook(() => useUserPreferences());
+
+			act(() => {
+				result.current.setShowHolidays(false);
+			});
+
+			expect(result.current.showHolidays).toBe(false);
+		});
+
+		it("showHolidays が localStorage に保存される", () => {
+			const { result } = renderHook(() => useUserPreferences());
+
+			act(() => {
+				result.current.setShowHolidays(false);
+			});
+
+			expect(localStorageMock.setItem).toHaveBeenCalledWith(
+				"discalendar:show-holidays",
+				JSON.stringify(false),
+			);
+		});
+
+		it("localStorage から showHolidays が復元される", () => {
+			store.set("discalendar:show-holidays", JSON.stringify(false));
+
+			const { result } = renderHook(() => useUserPreferences());
+			expect(result.current.showHolidays).toBe(false);
+		});
+
+		it("localStorage に不正な値がある場合は true にフォールバックする", () => {
+			store.set("discalendar:show-holidays", "not-a-boolean");
+
+			const { result } = renderHook(() => useUserPreferences());
+			expect(result.current.showHolidays).toBe(true);
+		});
+
+		it("既存の defaultCalendarView に影響を与えない", () => {
+			store.set(STORAGE_KEY, JSON.stringify("week"));
+
+			const { result } = renderHook(() => useUserPreferences());
+
+			expect(result.current.defaultCalendarView).toBe("week");
+			expect(result.current.showHolidays).toBe(true);
+
+			act(() => {
+				result.current.setShowHolidays(false);
+			});
+
+			// defaultCalendarView は変更されない
+			expect(result.current.defaultCalendarView).toBe("week");
 		});
 	});
 });

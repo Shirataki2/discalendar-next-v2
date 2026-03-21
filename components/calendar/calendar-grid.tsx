@@ -51,6 +51,7 @@ import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
+import { isHolidayEvent } from "@/lib/calendar/holiday-service";
 import {
   calendarFormats,
   calendarLocalizer,
@@ -186,6 +187,10 @@ export type CalendarGridProps = {
   onEventResize?: (args: EventInteractionArgs<CalendarEvent>) => void;
   /** リサイズ可能かどうか（デフォルト: true） */
   resizable?: boolean;
+  /** 日付→祝日名のMap（dayPropGetter用） */
+  holidayMap?: Map<string, string>;
+  /** 背景イベント（月ビューでスロットを消費しない） */
+  backgroundEvents?: CalendarEvent[];
 };
 
 /**
@@ -244,6 +249,17 @@ function isSameMonth(date1: Date, date2: Date): boolean {
   );
 }
 
+/**
+ * 日付をYYYY-MM-DD形式の文字列に変換する
+ * holidayMap のキーと一致する形式
+ */
+function formatDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function CalendarGrid({
   events,
   viewMode,
@@ -255,6 +271,8 @@ export function CalendarGrid({
   onEventDrop,
   onEventResize,
   resizable = true,
+  holidayMap,
+  backgroundEvents,
 }: CalendarGridProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -370,6 +388,7 @@ export function CalendarGrid({
    * 日付セルのスタイルをカスタマイズ
    * Task 5.3: 表示月外の日付セルを視覚的に区別する (Req 2.5)
    * Task 5.4: 今日の日付セルをハイライトする (Req 7.1, 7.2, 7.3, 7.4)
+   * Task 3.2: 祝日セルに rbc-holiday クラスを適用する (Req 2.2, 4.2)
    */
   const dayPropGetter = useCallback(
     (date: Date) => {
@@ -382,6 +401,11 @@ export function CalendarGrid({
         classNames.push("rbc-saturday");
       } else if (dayOfWeek === 0) {
         classNames.push("rbc-sunday");
+      }
+
+      // Task 3.2: 祝日セルに背景色クラスを適用
+      if (holidayMap?.has(formatDateKey(date))) {
+        classNames.push("rbc-holiday");
       }
 
       // Task 5.4: 今日の日付をハイライト
@@ -401,7 +425,7 @@ export function CalendarGrid({
         style,
       };
     },
-    [today, selectedDate]
+    [today, selectedDate, holidayMap]
   );
 
   /**
@@ -418,6 +442,14 @@ export function CalendarGrid({
     []
   );
 
+  /**
+   * 祝日イベントのドラッグ＆ドロップ・リサイズを防止する
+   */
+  const draggableAccessor = useCallback(
+    (event: RBCEvent) => !isHolidayEvent(event as CalendarEvent),
+    []
+  );
+
   return (
     <section
       aria-label="カレンダー"
@@ -427,9 +459,11 @@ export function CalendarGrid({
     >
       <div className="flex h-full flex-1 flex-col">
         <DnDCalendar
+          backgroundEvents={backgroundEvents}
           components={calendarComponents}
           date={selectedDate}
           dayPropGetter={dayPropGetter}
+          draggableAccessor={draggableAccessor}
           eventPropGetter={eventStyleGetter}
           events={events}
           formats={calendarFormats}
@@ -445,6 +479,7 @@ export function CalendarGrid({
           }}
           popup
           resizable={resizable}
+          resizableAccessor={draggableAccessor}
           selectable
           slotPropGetter={slotPropGetter}
           style={{ flex: "1 1 0%", height: "100%", width: "100%" }}

@@ -16,10 +16,15 @@ export interface UseUserPreferencesReturn {
 	defaultCalendarView: CalendarViewMode;
 	/** カレンダーデフォルトビューを更新 */
 	setDefaultCalendarView: (view: CalendarViewMode) => void;
+	/** 祝日表示ON/OFF */
+	showHolidays: boolean;
+	/** 祝日表示設定を更新 */
+	setShowHolidays: (show: boolean) => void;
 }
 
 /** localStorage キー */
 const STORAGE_KEY = "discalendar:default-calendar-view";
+const HOLIDAYS_STORAGE_KEY = "discalendar:show-holidays";
 
 /** デフォルトのカレンダービューモード */
 const DEFAULT_VIEW: CalendarViewMode = "month";
@@ -76,9 +81,16 @@ export function useUserPreferences(): UseUserPreferencesReturn {
 		DEFAULT_VIEW,
 	);
 
+	const [storedShowHolidays, setStoredShowHolidays] =
+		useLocalStorage<boolean>(HOLIDAYS_STORAGE_KEY, true);
+
 	// 保存された値が有効なビューモードかを検証し、不正な場合はフォールバック
 	const defaultCalendarView: CalendarViewMode =
 		isValidCalendarViewMode(storedView) ? storedView : DEFAULT_VIEW;
+
+	// 不正な値（boolean以外）の場合はtrueにフォールバック
+	const showHolidays: boolean =
+		typeof storedShowHolidays === "boolean" ? storedShowHolidays : true;
 
 	const setDefaultCalendarView = useCallback(
 		(view: CalendarViewMode) => {
@@ -87,8 +99,17 @@ export function useUserPreferences(): UseUserPreferencesReturn {
 		[setStoredView],
 	);
 
+	const setShowHolidays = useCallback(
+		(show: boolean) => {
+			setStoredShowHolidays(show);
+		},
+		[setStoredShowHolidays],
+	);
+
 	return {
 		defaultCalendarView,
 		setDefaultCalendarView,
+		showHolidays,
+		setShowHolidays,
 	};
 }
