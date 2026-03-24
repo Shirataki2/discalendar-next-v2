@@ -14,22 +14,22 @@
   - 正常にインポートできることを確認する
   - _Requirements: 4.1_
 
-- [ ] 2. CrossGuildEventService 横断イベント取得サービスを実装する
-- [ ] 2.1 全参加ギルドの単発イベントを一括取得する
+- [x] 2. CrossGuildEventService 横断イベント取得サービスを実装する
+- [x] 2.1 全参加ギルドの単発イベントを一括取得する
   - ギルドIDリストを受け取り、events テーブルから現在日時〜30日以内の単発イベント（series_id が NULL）を一括取得するクエリを実装する
   - ギルドリストが空の場合は即座に空配列を返す
   - Supabase クエリエラーを Result 型で返却する
   - _Requirements: 1.1, 1.2, 1.3, 1.5_
   - _Contracts: CrossGuildEventService Service Interface_
 
-- [ ] 2.2 繰り返しイベントのオカレンス展開と例外マージを実装する
+- [x] 2.2 繰り返しイベントのオカレンス展開と例外マージを実装する
   - 全参加ギルドの event_series を一括取得し、30日範囲内のオカレンスを展開する
   - 例外レコード（series_id 付き events）を一括取得し、元のオカレンスと差し替えるマージ処理を実装する
   - 既存の expandOccurrences 関数を再利用してオカレンス日付を生成する
   - 各オカレンスにギルド情報を付加して UpcomingEvent に変換する
   - _Requirements: 1.3, 2.5_
 
-- [ ] 2.3 結果のマージ・ソート・件数制限を行う fetchUpcomingEvents を完成させる
+- [x] 2.3 結果のマージ・ソート・件数制限を行う fetchUpcomingEvents を完成させる
   - 単発イベントとオカレンス展開結果をマージし、開始日時昇順でソートする
   - 上限件数（デフォルト20件）でトランケートし、超過の有無を hasMore フラグで返す
   - 全体を fetchUpcomingEvents 関数として統合し、Result 型で返却する
