@@ -35,8 +35,8 @@
   - 全体を fetchUpcomingEvents 関数として統合し、Result 型で返却する
   - _Requirements: 1.4, 5.1_
 
-- [ ] 3. 予定一覧 UI コンポーネント群を実装する
-- [ ] 3.1 (P) UpcomingEventItem 個別予定カードを実装する
+- [x] 3. 予定一覧 UI コンポーネント群を実装する
+- [x] 3.1 (P) UpcomingEventItem 個別予定カードを実装する
   - イベント名、開始日時、イベント色（左ボーダーまたはドット）を表示するカードコンポーネントを作成する
   - サーバー名とサーバーアイコン（Discord CDN）を表示する
   - 終日イベントは日付のみ、時刻指定イベントは時刻も含めて表示を区別する
@@ -44,26 +44,26 @@
   - Storybook ストーリーを作成する（通常・終日・繰り返しバリアント）
   - _Requirements: 2.2, 2.3, 2.4, 3.1, 3.2, 3.3_
 
-- [ ] 3.2 (P) UpcomingEventsSkeleton ローディング表示を実装する
+- [x] 3.2 (P) UpcomingEventsSkeleton ローディング表示を実装する
   - shadcn Skeleton を使用して、予定カード3〜5行分のプレースホルダー表示を作成する
   - セクションヘッダーのスケルトンも含める
   - Storybook ストーリーを作成する
   - _Requirements: 4.1_
 
-- [ ] 3.3 (P) UpcomingEventsEmpty 空状態表示を実装する
+- [x] 3.3 (P) UpcomingEventsEmpty 空状態表示を実装する
   - variant プロパティで「予定なし」と「サーバー未参加」の2パターンを切り替えるコンポーネントを作成する
   - 予定なし: カレンダーアイコンと「直近の予定はありません」メッセージを表示する
   - サーバー未参加: Bot 招待への導線メッセージを表示する
   - Storybook ストーリーを作成する（各バリアント）
   - _Requirements: 4.2, 4.4_
 
-- [ ] 3.4 (P) UpcomingEventsError エラー・リトライ表示を実装する
+- [x] 3.4 (P) UpcomingEventsError エラー・リトライ表示を実装する
   - エラーメッセージと「再読み込み」ボタンを表示するコンポーネントを作成する
   - リトライボタンは router.refresh() でページの再レンダリングをトリガーする
   - Storybook ストーリーを作成する
   - _Requirements: 4.3_
 
-- [ ] 3.5 UpcomingEventList 予定一覧リストコンテナを実装する
+- [x] 3.5 UpcomingEventList 予定一覧リストコンテナを実装する
   - 「直近の予定」セクションヘッダーと UpcomingEventItem のリストを表示するコンテナコンポーネントを作成する
   - hasMore が true の場合に「さらに表示」ボタンを表示し、カレンダーへの導線を提供する
   - Storybook ストーリーを作成する（通常・hasMore・少数件数）
