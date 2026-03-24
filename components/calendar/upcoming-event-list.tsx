@@ -8,8 +8,7 @@ export type UpcomingEventListProps = {
 
 export function UpcomingEventList({ events, hasMore }: UpcomingEventListProps) {
   return (
-    <section>
-      <h2 className="mb-2 font-semibold text-sm">直近の予定</h2>
+    <div>
       <div className="space-y-1">
         {events.map((event) => (
           <UpcomingEventItem event={event} key={event.id} />
@@ -25,6 +24,6 @@ export function UpcomingEventList({ events, hasMore }: UpcomingEventListProps) {
           </a>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

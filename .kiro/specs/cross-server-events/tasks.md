@@ -69,14 +69,14 @@
   - Storybook ストーリーを作成する（通常・hasMore・少数件数）
   - _Requirements: 2.1, 5.2_
 
-- [ ] 4. ダッシュボード統合
-- [ ] 4.1 UpcomingEventsSection Server Component を実装する
+- [x] 4. ダッシュボード統合
+- [x] 4.1 UpcomingEventsSection Server Component を実装する
   - 非同期 Server Component としてギルド一覧を受け取り、fetchUpcomingEvents を呼び出す
   - 取得結果に応じて UpcomingEventList / UpcomingEventsEmpty / UpcomingEventsError を選択してレンダリングする
   - ギルドが0件の場合は UpcomingEventsEmpty の no-guilds バリアントを表示する
   - _Requirements: 5.3_
 
-- [ ] 4.2 DashboardPageLayout に予定セクションを組み込む
+- [x] 4.2 DashboardPageLayout に予定セクションを組み込む
   - DashboardPage 内で UpcomingEventsSection を Suspense 境界で囲み、fallback に UpcomingEventsSkeleton を設定する
   - DashboardPageLayout のレイアウトに予定セクションを DashboardWithCalendar の前に配置する
   - 既存のギルド一覧・カレンダー表示に影響がないことを確認する

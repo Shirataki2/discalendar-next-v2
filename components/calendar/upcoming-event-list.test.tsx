@@ -20,9 +20,9 @@ function createEvent(overrides: Partial<UpcomingEvent> = {}): UpcomingEvent {
 }
 
 describe("UpcomingEventList", () => {
-  it("セクションヘッダーを表示する", () => {
+  it("イベントリストをレンダリングする", () => {
     render(<UpcomingEventList events={[createEvent()]} hasMore={false} />);
-    expect(screen.getByText("直近の予定")).toBeInTheDocument();
+    expect(screen.getByText("テストイベント")).toBeInTheDocument();
   });
 
   it("全てのイベントを表示する", () => {

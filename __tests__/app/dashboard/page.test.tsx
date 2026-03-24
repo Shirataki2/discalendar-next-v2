@@ -510,4 +510,80 @@ describe("DashboardPage", () => {
       expect(expandButton).toHaveAttribute("aria-expanded", "false");
     });
   });
+
+  describe("Task 4.2: 直近の予定セクション統合", () => {
+    it("upcomingEventsSlot が渡された場合に予定セクションを表示する", () => {
+      render(
+        <DashboardPageLayout
+          guilds={[]}
+          invitableGuilds={[]}
+          upcomingEventsSlot={
+            <div data-testid="upcoming-events-slot">予定セクション</div>
+          }
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      expect(screen.getByTestId("upcoming-events-slot")).toBeInTheDocument();
+      expect(screen.getByText("予定セクション")).toBeInTheDocument();
+    });
+
+    it("upcomingEventsSlot が DashboardWithCalendar の前に配置される", () => {
+      const mockGuilds = [
+        {
+          id: 1,
+          guildId: "123456789012345678",
+          name: "Test Server",
+          avatarUrl: null,
+          locale: "ja",
+        },
+      ];
+
+      const { container } = render(
+        <DashboardPageLayout
+          guilds={mockGuilds}
+          invitableGuilds={[]}
+          upcomingEventsSlot={
+            <div data-testid="upcoming-events-slot">予定セクション</div>
+          }
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      const main = container.querySelector("main");
+      expect(main).toBeInTheDocument();
+      // 予定セクション slot が main 内の最初の子要素であることを確認
+      const slotEl = screen.getByTestId("upcoming-events-slot");
+      expect(main?.firstElementChild?.contains(slotEl)).toBe(true);
+    });
+
+    it("upcomingEventsSlot が渡されない場合も正常に動作する", () => {
+      render(
+        <DashboardPageLayout
+          guilds={[]}
+          invitableGuilds={[]}
+          user={{
+            id: "user-123",
+            email: "test@example.com",
+            fullName: "Test User",
+            avatarUrl: null,
+          }}
+        />
+      );
+
+      // 既存のレイアウトが正常に表示される
+      expect(screen.getByRole("main")).toBeInTheDocument();
+      expect(screen.getByRole("banner")).toBeInTheDocument();
+    });
+  });
 });
