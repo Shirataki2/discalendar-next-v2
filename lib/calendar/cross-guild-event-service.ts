@@ -22,6 +22,8 @@ interface FetchUpcomingEventsParams {
   guilds: ReadonlyArray<GuildInfo>;
   days?: number;
   limit?: number;
+  /** リクエストキャンセル用のAbortSignal */
+  signal?: AbortSignal;
 }
 
 /** 横断イベント取得結果 */
@@ -41,7 +43,7 @@ export async function fetchUpcomingEvents(
   supabase: SupabaseClient,
   params: FetchUpcomingEventsParams,
 ): Promise<FetchUpcomingEventsResult> {
-  const { guilds, days = UPCOMING_EVENTS_DAYS, limit = UPCOMING_EVENTS_LIMIT } =
+  const { guilds, days = UPCOMING_EVENTS_DAYS, limit = UPCOMING_EVENTS_LIMIT, signal } =
     params;
 
   // ギルドが空の場合は即座に空配列を返す
@@ -59,13 +61,17 @@ export async function fetchUpcomingEvents(
   const rangeEnd = new Date(now.getTime() + days * MS_PER_DAY);
 
   // Step 1: 単発イベントを一括取得（series_id IS NULL）
-  const { data: singleEventsData, error: singleEventsError } = await supabase
+  let singleEventsQuery = supabase
     .from("events")
     .select("*")
     .in("guild_id", guildIds)
     .gte("start_at", now.toISOString())
     .lte("start_at", rangeEnd.toISOString())
     .is("series_id", null);
+  if (signal) {
+    singleEventsQuery = singleEventsQuery.abortSignal(signal);
+  }
+  const { data: singleEventsData, error: singleEventsError } = await singleEventsQuery;
 
   if (singleEventsError) {
     const code = classifySupabaseError(singleEventsError, "fetch");
@@ -79,10 +85,14 @@ export async function fetchUpcomingEvents(
   }
 
   // Step 2: イベントシリーズを一括取得
-  const { data: seriesData, error: seriesError } = await supabase
+  let seriesQuery = supabase
     .from("event_series")
     .select("*")
     .in("guild_id", guildIds);
+  if (signal) {
+    seriesQuery = seriesQuery.abortSignal(signal);
+  }
+  const { data: seriesData, error: seriesError } = await seriesQuery;
 
   if (seriesError) {
     const code = classifySupabaseError(seriesError, "fetch");
@@ -96,7 +106,7 @@ export async function fetchUpcomingEvents(
   }
 
   // Step 3: 例外レコードを一括取得（series_id IS NOT NULL）
-  const { data: exceptionData, error: exceptionError } = await supabase
+  let exceptionQuery = supabase
     .from("events")
     .select("*")
     .in("guild_id", guildIds)
@@ -104,6 +114,10 @@ export async function fetchUpcomingEvents(
     .or(
       `and(original_date.gte.${now.toISOString()},original_date.lte.${rangeEnd.toISOString()}),and(start_at.gte.${now.toISOString()},start_at.lte.${rangeEnd.toISOString()})`,
     );
+  if (signal) {
+    exceptionQuery = exceptionQuery.abortSignal(signal);
+  }
+  const { data: exceptionData, error: exceptionError } = await exceptionQuery;
 
   if (exceptionError) {
     const code = classifySupabaseError(exceptionError, "fetch");
@@ -116,9 +130,9 @@ export async function fetchUpcomingEvents(
     };
   }
 
-  const singleRecords = (singleEventsData ?? []) as EventRecord[];
-  const series = (seriesData ?? []) as EventSeriesRecord[];
-  const exceptions = (exceptionData ?? []) as EventRecord[];
+  const singleRecords: EventRecord[] = singleEventsData ?? [];
+  const series: EventSeriesRecord[] = seriesData ?? [];
+  const exceptions: EventRecord[] = exceptionData ?? [];
 
   // Step 4: 例外レコードをマップ化
   const exceptionMap = new Map<string, EventRecord>();
