@@ -10,13 +10,6 @@ describe("UpcomingEventsSkeleton", () => {
     expect(skeletons.length).toBeLessThanOrEqual(5);
   });
 
-  it("セクションヘッダーのスケルトンが表示される", () => {
-    render(<UpcomingEventsSkeleton />);
-    expect(
-      screen.getByTestId("upcoming-events-skeleton-header")
-    ).toBeInTheDocument();
-  });
-
   it("aria-busyが設定される", () => {
     render(<UpcomingEventsSkeleton />);
     const container = screen.getByTestId("upcoming-events-skeleton");

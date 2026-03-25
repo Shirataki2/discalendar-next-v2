@@ -1,4 +1,5 @@
 import { Calendar, Users } from "lucide-react";
+import { UPCOMING_EVENTS_DAYS } from "@/lib/calendar/cross-guild-event-types";
 
 export type UpcomingEventsEmptyProps = {
   variant: "no-events" | "no-guilds";
@@ -35,7 +36,7 @@ export function UpcomingEventsEmpty({ variant }: UpcomingEventsEmptyProps) {
           直近の予定はありません
         </p>
         <p className="text-muted-foreground/70 text-xs">
-          今後30日以内に予定が登録されていません
+          今後{UPCOMING_EVENTS_DAYS}日以内に予定が登録されていません
         </p>
       </div>
     </div>

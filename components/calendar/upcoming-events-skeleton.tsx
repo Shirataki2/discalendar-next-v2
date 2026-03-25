@@ -22,10 +22,6 @@ export function UpcomingEventsSkeleton() {
       className="space-y-2"
       data-testid="upcoming-events-skeleton"
     >
-      <Skeleton
-        className="h-5 w-28"
-        data-testid="upcoming-events-skeleton-header"
-      />
       <div className="space-y-1">
         <SkeletonRow />
         <SkeletonRow />

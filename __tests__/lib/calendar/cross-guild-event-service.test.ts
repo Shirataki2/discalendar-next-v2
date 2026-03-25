@@ -110,7 +110,8 @@ describe("CrossGuildEventService", () => {
       // 2回目: event_series 取得
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
 
       // 3回目: 例外レコード取得
@@ -239,7 +240,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
       const exceptionQuery = {
         select: vi.fn().mockReturnThis(),
@@ -310,7 +312,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
       const exceptionQuery = {
         select: vi.fn().mockReturnThis(),
@@ -375,7 +378,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: seriesData, error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: seriesData, error: null }),
       };
       const exceptionQuery = {
         select: vi.fn().mockReturnThis(),
@@ -469,7 +473,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: seriesData, error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: seriesData, error: null }),
       };
       const exceptionQuery = {
         select: vi.fn().mockReturnThis(),
@@ -547,7 +552,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
       const exceptionQuery = {
         select: vi.fn().mockReturnThis(),
@@ -634,7 +640,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: seriesData, error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: seriesData, error: null }),
       };
       const exceptionQuery = {
         select: vi.fn().mockReturnThis(),
@@ -681,7 +688,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({
           data: null,
           error: { message: "series query failed", code: "PGRST000" },
         }),
@@ -758,7 +766,8 @@ describe("CrossGuildEventService", () => {
       };
       const seriesQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        in: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
       const exceptionQuery = {
         select: vi.fn().mockReturnThis(),

@@ -84,11 +84,12 @@ export async function fetchUpcomingEvents(
     };
   }
 
-  // Step 2: イベントシリーズを一括取得
+  // Step 2: イベントシリーズを一括取得（dtstart が rangeEnd 以前のもののみ）
   let seriesQuery = supabase
     .from("event_series")
     .select("*")
-    .in("guild_id", guildIds);
+    .in("guild_id", guildIds)
+    .lte("dtstart", rangeEnd.toISOString());
   if (signal) {
     seriesQuery = seriesQuery.abortSignal(signal);
   }
@@ -138,7 +139,9 @@ export async function fetchUpcomingEvents(
   const exceptionMap = new Map<string, EventRecord>();
   for (const exc of exceptions) {
     if (exc.series_id && exc.original_date) {
-      const key = `${exc.series_id}:${new Date(exc.original_date).toISOString()}`;
+      const excOriginal = new Date(exc.original_date);
+      excOriginal.setMilliseconds(0);
+      const key = `${exc.series_id}:${excOriginal.toISOString()}`;
       exceptionMap.set(key, exc);
     }
   }
@@ -163,7 +166,9 @@ export async function fetchUpcomingEvents(
     const { dates } = expandOccurrences(s.rrule, dtstart, now, rangeEnd, exdates);
 
     for (const occDate of dates) {
-      const exceptionKey = `${s.id}:${occDate.toISOString()}`;
+      const normalizedOccDate = new Date(occDate);
+      normalizedOccDate.setMilliseconds(0);
+      const exceptionKey = `${s.id}:${normalizedOccDate.toISOString()}`;
       const exception = exceptionMap.get(exceptionKey);
 
       if (exception) {
