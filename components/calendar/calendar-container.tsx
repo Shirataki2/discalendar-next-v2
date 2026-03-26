@@ -481,8 +481,19 @@ export function CalendarContainer({
 
   // ギルド未選択時は空のカレンダーを表示 (Req 5.2)
   const shouldShowEmpty = isGuildEmpty(guildId);
-  const visibleEvents = shouldShowEmpty ? [] : state.events;
-  const visibleBackgroundEvents = shouldShowEmpty ? [] : holidayEvents;
+  // 月ビュー: 祝日をbackgroundEventsにしてスロット消費を防止（+N件オーバーフロー回避）
+  // 週/日ビュー: 祝日を通常eventsにして終日セクションに表示
+  const isMonthView = viewMode === "month";
+  const visibleEvents = shouldShowEmpty
+    ? []
+    : isMonthView
+      ? state.events
+      : [...state.events, ...holidayEvents];
+  const visibleBackgroundEvents = shouldShowEmpty
+    ? []
+    : isMonthView
+      ? holidayEvents
+      : [];
   const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
 
   // Task 7.1: ギルド選択時のみ追加ボタンを有効化
