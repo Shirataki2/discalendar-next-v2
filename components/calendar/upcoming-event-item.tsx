@@ -29,7 +29,8 @@ function formatEventTime(isoString: string): string {
 }
 
 function getDateParam(isoString: string): string {
-  return isoString.slice(0, 10);
+  const date = new Date(isoString);
+  return format(date, "yyyy-MM-dd");
 }
 
 export function UpcomingEventItem({ event }: UpcomingEventItemProps) {

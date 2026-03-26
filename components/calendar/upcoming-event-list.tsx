@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { UpcomingEvent } from "@/lib/calendar/cross-guild-event-types";
 import { UpcomingEventItem } from "./upcoming-event-item";
 
@@ -17,12 +16,9 @@ export function UpcomingEventList({ events, hasMore }: UpcomingEventListProps) {
       </div>
       {hasMore ? (
         <div className="mt-3 text-center">
-          <Link
-            className="text-muted-foreground text-xs hover:text-foreground hover:underline"
-            href="/dashboard"
-          >
-            さらに表示 →
-          </Link>
+          <span className="text-muted-foreground text-xs">
+            他にも予定があります
+          </span>
         </div>
       ) : null}
     </div>

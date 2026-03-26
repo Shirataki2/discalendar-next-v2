@@ -172,10 +172,13 @@ export async function fetchUpcomingEvents(
       const exception = exceptionMap.get(exceptionKey);
 
       if (exception) {
-        // 例外レコードで差し替え（ギルド情報を付加）
-        upcomingEvents.push(
-          toUpcomingEventFromException(exception, guild),
-        );
+        // 例外レコードで差し替え（過去に移動されていない場合のみ追加）
+        const excStart = new Date(exception.start_at);
+        if (excStart >= now) {
+          upcomingEvents.push(
+            toUpcomingEventFromException(exception, guild),
+          );
+        }
         exceptionMap.delete(exceptionKey);
       } else {
         // 通常のオカレンス

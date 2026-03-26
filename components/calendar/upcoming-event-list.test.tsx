@@ -38,13 +38,13 @@ describe("UpcomingEventList", () => {
     expect(screen.getByText("イベント3")).toBeInTheDocument();
   });
 
-  it("hasMore=true の場合「さらに表示」ボタンが表示される", () => {
+  it("hasMore=true の場合「他にも予定があります」が表示される", () => {
     render(<UpcomingEventList events={[createEvent()]} hasMore />);
-    expect(screen.getByText(/さらに表示/)).toBeInTheDocument();
+    expect(screen.getByText("他にも予定があります")).toBeInTheDocument();
   });
 
-  it("hasMore=false の場合「さらに表示」ボタンが表示されない", () => {
+  it("hasMore=false の場合「他にも予定があります」が表示されない", () => {
     render(<UpcomingEventList events={[createEvent()]} hasMore={false} />);
-    expect(screen.queryByText(/さらに表示/)).not.toBeInTheDocument();
+    expect(screen.queryByText("他にも予定があります")).not.toBeInTheDocument();
   });
 });

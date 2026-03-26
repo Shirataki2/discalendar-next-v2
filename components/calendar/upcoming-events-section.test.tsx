@@ -128,7 +128,7 @@ describe("UpcomingEventsSection", () => {
     expect(screen.getByText("再読み込み")).toBeInTheDocument();
   });
 
-  it("hasMore が true の場合に「さらに表示」を表示する", async () => {
+  it("hasMore が true の場合に「他にも予定があります」を表示する", async () => {
     mockFetchUpcomingEvents.mockResolvedValue({
       success: true,
       data: sampleEvents,
@@ -138,7 +138,7 @@ describe("UpcomingEventsSection", () => {
     const jsx = await UpcomingEventsSection({ guilds: sampleGuilds });
     render(jsx);
 
-    expect(screen.getByText(/さらに表示/)).toBeInTheDocument();
+    expect(screen.getByText("他にも予定があります")).toBeInTheDocument();
   });
 
   it("guilds を GuildInfo 形式に変換して fetchUpcomingEvents に渡す", async () => {
