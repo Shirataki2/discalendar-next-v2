@@ -18,6 +18,20 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SlotSelectInfo } from "./calendar-grid";
 
+// useRealtimeSync のモック
+const mockTrackMutationStart = vi.fn();
+const mockTrackMutationEnd = vi.fn();
+const mockUseRealtimeSync = vi.fn().mockReturnValue({
+  status: "connected" as const,
+  trackMutationStart: mockTrackMutationStart,
+  trackMutationEnd: mockTrackMutationEnd,
+});
+
+vi.mock("@/hooks/calendar/use-realtime-sync", () => ({
+  useRealtimeSync: (params: Record<string, unknown>) =>
+    mockUseRealtimeSync(params),
+}));
+
 // コールバックをキャプチャするための変数
 let capturedOnAddClick: (() => void) | undefined;
 let capturedOnSlotSelect: ((slotInfo: SlotSelectInfo) => void) | undefined;
@@ -326,6 +340,12 @@ describe("CalendarContainer", () => {
     Object.defineProperty(window, "innerWidth", {
       writable: true,
       value: 1200,
+    });
+    // useRealtimeSync のモックをリセット
+    mockUseRealtimeSync.mockReturnValue({
+      status: "connected" as const,
+      trackMutationStart: mockTrackMutationStart,
+      trackMutationEnd: mockTrackMutationEnd,
     });
   });
 
@@ -943,6 +963,125 @@ describe("CalendarContainer", () => {
         // ギルド未選択時はコールバックがundefined
         expect(capturedOnEdit).toBeUndefined();
         expect(capturedOnDelete).toBeUndefined();
+      });
+    });
+  });
+
+  describe("Task 5: Realtime同期統合 (DIS-124)", () => {
+    beforeEach(() => {
+      capturedOnDelete = undefined;
+
+      mockFetchEventsWithSeries.mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      vi.mocked(createEventService).mockReturnValue({
+        fetchEventsWithSeries: mockFetchEventsWithSeries,
+      });
+    });
+
+    it("useRealtimeSyncが正しいguildIdで呼び出される", () => {
+      render(<CalendarContainer guildId="test-guild-rt" />);
+
+      expect(mockUseRealtimeSync).toHaveBeenCalledWith(
+        expect.objectContaining({ guildId: "test-guild-rt" })
+      );
+    });
+
+    it("guildIdがnullの場合、useRealtimeSyncにnullが渡される", () => {
+      render(<CalendarContainer guildId={null} />);
+
+      expect(mockUseRealtimeSync).toHaveBeenCalledWith(
+        expect.objectContaining({ guildId: null })
+      );
+    });
+
+    it("useRealtimeSyncにsupabaseクライアントが渡される", () => {
+      render(<CalendarContainer guildId="test-guild" />);
+
+      const params = mockUseRealtimeSync.mock.calls[0][0];
+      expect(params.supabase).toBeDefined();
+      expect(params.supabase.auth).toBeDefined();
+    });
+
+    it("useRealtimeSyncにeventsとactionsが渡される", () => {
+      render(<CalendarContainer guildId="test-guild" />);
+
+      const params = mockUseRealtimeSync.mock.calls[0][0];
+      expect(params.events).toBeDefined();
+      expect(Array.isArray(params.events)).toBe(true);
+      expect(params.actions).toBeDefined();
+    });
+
+    it("useRealtimeSyncのonRefetchNeededがfetchEventsを呼び出す", async () => {
+      render(<CalendarContainer guildId="test-guild" />);
+
+      await waitFor(() => {
+        expect(mockFetchEventsWithSeries).toHaveBeenCalled();
+      });
+
+      const callsBefore = mockFetchEventsWithSeries.mock.calls.length;
+
+      // onRefetchNeeded を呼び出す
+      const params = mockUseRealtimeSync.mock.calls[0][0];
+      params.onRefetchNeeded();
+
+      await waitFor(() => {
+        expect(mockFetchEventsWithSeries.mock.calls.length).toBeGreaterThan(
+          callsBefore
+        );
+      });
+    });
+
+    it("削除ミューテーション時にtrackMutationStartとtrackMutationEndが呼ばれる", async () => {
+      mockDeleteEventAction.mockResolvedValue({
+        success: true,
+        data: undefined,
+      });
+
+      render(<CalendarContainer guildId="test-guild" />);
+
+      await waitFor(() => {
+        expect(capturedOnDelete).toBeDefined();
+      });
+
+      const mockEvent = {
+        id: "event-rt-delete",
+        title: "Realtime削除テスト",
+        start: new Date("2025-12-25T10:00:00Z"),
+        end: new Date("2025-12-25T11:00:00Z"),
+        allDay: false,
+        color: "#3b82f6",
+      };
+
+      if (capturedOnDelete) {
+        capturedOnDelete(mockEvent as CalendarEvent);
+      }
+
+      await waitFor(() => {
+        expect(screen.getByTestId("confirm-dialog")).toBeInTheDocument();
+      });
+
+      const confirmButton = screen.getByTestId("confirm-dialog-confirm");
+      confirmButton.click();
+
+      await waitFor(() => {
+        expect(mockTrackMutationStart).toHaveBeenCalledWith("event-rt-delete");
+      });
+
+      await waitFor(() => {
+        expect(mockTrackMutationEnd).toHaveBeenCalledWith("event-rt-delete");
+      });
+    });
+
+    it("既存のfetchEventsパターンが維持される（手動リフェッチ）", async () => {
+      render(<CalendarContainer guildId="test-guild" />);
+
+      await waitFor(() => {
+        expect(mockFetchEventsWithSeries).toHaveBeenCalledWith(
+          expect.objectContaining({ guildId: "test-guild" })
+        );
       });
     });
   });

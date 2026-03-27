@@ -34,6 +34,15 @@ Object.defineProperty(window, "localStorage", {
   writable: true,
 });
 
+// useRealtimeSync のモック（CalendarContainerがRealtime同期フックを使用するため）
+vi.mock("@/hooks/calendar/use-realtime-sync", () => ({
+  useRealtimeSync: () => ({
+    status: "connected" as const,
+    trackMutationStart: vi.fn(),
+    trackMutationEnd: vi.fn(),
+  }),
+}));
+
 // Mock child UI components
 vi.mock("@/components/calendar/calendar-grid", () => ({
   CalendarGrid: vi.fn(

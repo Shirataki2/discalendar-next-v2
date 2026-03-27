@@ -43,6 +43,7 @@ import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
 import { useEventPopover } from "@/hooks/calendar/use-event-popover";
 import { useHolidays } from "@/hooks/calendar/use-holidays";
 import { useBreakpoint } from "@/hooks/calendar/use-media-query";
+import { useRealtimeSync } from "@/hooks/calendar/use-realtime-sync";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { mapNavigationDirection, trackEvent } from "@/lib/analytics/events";
 import {
@@ -183,13 +184,6 @@ export function CalendarContainer({
     handleSelect: handleEditScopeSelect,
   } = useEditScopeDialog(guildId, openEditDialogWithScopeRef, fetchEventsRef);
 
-  // Task 7.2: useEventMutation for CRUD operations
-  const {
-    state: mutationState,
-    updateEvent,
-    deleteEvent,
-  } = useEventMutation(guildId ?? "");
-
   /**
    * イベントデータを取得する
    */
@@ -246,6 +240,27 @@ export function CalendarContainer({
 
   // fetchEventsの最新参照をrefに同期（stale closure回避）
   fetchEventsRef.current = fetchEvents;
+
+  // DIS-124: Realtime同期フック（eventsテーブル・event_seriesテーブルのPostgres Changes購読）
+  const { trackMutationStart, trackMutationEnd } = useRealtimeSync({
+    guildId,
+    supabase: supabaseRef.current as unknown as Parameters<
+      typeof useRealtimeSync
+    >[0]["supabase"],
+    events: state.events,
+    actions,
+    onRefetchNeeded: fetchEvents,
+  });
+
+  // Task 7.2: useEventMutation for CRUD operations（Realtime競合回避のミューテーション追跡を接続）
+  const {
+    state: mutationState,
+    updateEvent,
+    deleteEvent,
+  } = useEventMutation(guildId ?? "", {
+    onMutationStart: trackMutationStart,
+    onMutationEnd: trackMutationEnd,
+  });
 
   /**
    * ギルドIDまたは表示期間が変更されたらイベントを再取得

@@ -66,7 +66,7 @@
   - _Requirements: 4.1, 4.3_
   - _Contracts: UseEventMutationParams_
 
-- [ ] 5. CalendarContainer 統合
+- [x] 5. CalendarContainer 統合
   - CalendarContainerでuseRealtimeSyncフックを呼び出し、guildId・supabaseクライアント・events・actions・refetchコールバックを渡す
   - useEventMutationの呼び出しにuseRealtimeSyncが返すtrackMutationStart/trackMutationEndをonMutationStart/onMutationEndとして接続する
   - Realtimeの購読ステータスに応じたUIフィードバック（接続中・エラー等）は将来対応とし、現時点では内部ステータス管理のみとする
