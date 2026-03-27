@@ -17,9 +17,7 @@ import { toCalendarEvent } from "./types";
 // ─── Realtime ペイロード型定義 ───────────────────────────
 
 /** Supabase Realtime Postgres Changes ペイロードの判別共用体 */
-export type RealtimePostgresChangesPayload<
-  T extends Record<string, unknown>,
-> =
+export type RealtimePostgresChangesPayload<T extends { id: string }> =
   | { eventType: "INSERT"; new: T; old: Record<string, never> }
   | { eventType: "UPDATE"; new: T; old: Partial<T> }
   | { eventType: "DELETE"; new: Record<string, never>; old: { id: string } };

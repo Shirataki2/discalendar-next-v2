@@ -24,8 +24,8 @@
   - handleInsert（重複ID）: 既存IDと同じレコードが来た場合UPDATEとして処理されること
   - _Requirements: 3.1, 3.2, 3.3, 4.2_
 
-- [ ] 3. useRealtimeSync フック
-- [ ] 3.1 チャネル購読とギルドスコープフィルタリング
+- [x] 3. useRealtimeSync フック
+- [x] 3.1 チャネル購読とギルドスコープフィルタリング
   - guildIdを受け取り、eventsテーブルとevent_seriesテーブルのPostgres Changesチャネルを作成・購読する
   - INSERT/UPDATEイベントに `guild_id=eq.{guildId}` のサーバーサイドフィルタを設定する
   - DELETEイベントはサーバーサイドフィルタ不可のため、ローカルstateからIDを検索してguild_idを確認する
@@ -36,21 +36,21 @@
   - _Requirements: 1.1, 1.2, 2.1, 2.2, 5.4_
   - _Contracts: UseRealtimeSyncParams, UseRealtimeSyncReturn_
 
-- [ ] 3.2 イベントルーティングとリフェッチトリガー
+- [x] 3.2 イベントルーティングとリフェッチトリガー
   - eventsテーブルのペイロードでseries_idがnullの場合、RealtimeHandlerに差分更新を委譲する
   - eventsテーブルのペイロードでseries_idが非null（例外レコード）の場合、差分更新をスキップしリフェッチをトリガーする
   - event_seriesテーブルの全変更（INSERT/UPDATE/DELETE）でリフェッチをトリガーする
   - リフェッチトリガーはデバウンスして短時間の連続変更を集約する
   - _Requirements: 1.3, 1.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [ ] 3.3 ライフサイクル管理（タブ可視性・再接続・クリーンアップ）
+- [x] 3.3 ライフサイクル管理（タブ可視性・再接続・クリーンアップ）
   - コンポーネントアンマウント時に全アクティブチャネルの購読を解除する
   - `document.visibilitychange`を監視し、hidden→visible遷移時にフルリフェッチをトリガーする
   - Supabase SDKの自動再接続を活用し、再接続成功時にフルリフェッチをトリガーする
   - WebSocket接続エラー時はstatus: "error"を設定し、既存の手動リフェッチで機能を維持する（グレースフルデグラデーション）
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 3.4 ミューテーション追跡による競合回避
+- [x] 3.4 ミューテーション追跡による競合回避
   - 進行中ミューテーションのエンティティIDを`pendingMutationIds` Setで管理する
   - `trackMutationStart(entityId)`: IDをSetに追加し、該当エンティティのRealtimeイベント即時反映を保留する
   - `trackMutationEnd(entityId)`: IDをSetから削除し、フルリフェッチをトリガーして最新状態を反映する
