@@ -665,4 +665,123 @@ describe("useEventMutation", () => {
       expect(result.current.state.error).toBeNull();
     });
   });
+
+  describe("onMutationStart / onMutationEnd コールバック (Realtime競合回避)", () => {
+    it("createEvent: 開始時にonMutationStartが呼ばれ、完了時にonMutationEndが呼ばれる", async () => {
+      mockCreateEventAction.mockResolvedValue({
+        success: true,
+        data: { ...mockCalendarEvent, id: "new-event-1" },
+      });
+      const onMutationStart = vi.fn();
+      const onMutationEnd = vi.fn();
+
+      const { result } = renderHook(() =>
+        useEventMutation("guild-123", { onMutationStart, onMutationEnd })
+      );
+
+      await act(async () => {
+        await result.current.createEvent({
+          guildId: "guild-123",
+          title: "新しいイベント",
+          startAt: new Date("2025-12-15T10:00:00Z"),
+          endAt: new Date("2025-12-15T12:00:00Z"),
+        });
+      });
+
+      // createは新規作成でentityIdが未確定のため、"__creating__"一時IDで呼ばれる
+      expect(onMutationStart).toHaveBeenCalledTimes(1);
+      expect(onMutationStart).toHaveBeenCalledWith("__creating__");
+      expect(onMutationEnd).toHaveBeenCalledTimes(1);
+      expect(onMutationEnd).toHaveBeenCalledWith("__creating__");
+    });
+
+    it("updateEvent: 開始時にentityIdでonMutationStartが呼ばれ、完了時にonMutationEndが呼ばれる", async () => {
+      mockUpdateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
+      });
+      const onMutationStart = vi.fn();
+      const onMutationEnd = vi.fn();
+
+      const { result } = renderHook(() =>
+        useEventMutation("guild-123", { onMutationStart, onMutationEnd })
+      );
+
+      await act(async () => {
+        await result.current.updateEvent("event-1", {
+          title: "更新されたタイトル",
+        });
+      });
+
+      expect(onMutationStart).toHaveBeenCalledTimes(1);
+      expect(onMutationStart).toHaveBeenCalledWith("event-1");
+      expect(onMutationEnd).toHaveBeenCalledTimes(1);
+      expect(onMutationEnd).toHaveBeenCalledWith("event-1");
+    });
+
+    it("deleteEvent: 開始時にentityIdでonMutationStartが呼ばれ、完了時にonMutationEndが呼ばれる", async () => {
+      mockDeleteEventAction.mockResolvedValue({
+        success: true,
+        data: undefined,
+      });
+      const onMutationStart = vi.fn();
+      const onMutationEnd = vi.fn();
+
+      const { result } = renderHook(() =>
+        useEventMutation("guild-123", { onMutationStart, onMutationEnd })
+      );
+
+      await act(async () => {
+        await result.current.deleteEvent("event-1");
+      });
+
+      expect(onMutationStart).toHaveBeenCalledTimes(1);
+      expect(onMutationStart).toHaveBeenCalledWith("event-1");
+      expect(onMutationEnd).toHaveBeenCalledTimes(1);
+      expect(onMutationEnd).toHaveBeenCalledWith("event-1");
+    });
+
+    it("ミューテーション失敗時でもonMutationEndが呼ばれる", async () => {
+      const mockError: CalendarError = {
+        code: "UPDATE_FAILED",
+        message: "イベントの更新に失敗しました。",
+      };
+      mockUpdateEventAction.mockResolvedValue({
+        success: false,
+        error: mockError,
+      });
+      const onMutationStart = vi.fn();
+      const onMutationEnd = vi.fn();
+
+      const { result } = renderHook(() =>
+        useEventMutation("guild-123", { onMutationStart, onMutationEnd })
+      );
+
+      await act(async () => {
+        await result.current.updateEvent("event-1", { title: "失敗テスト" });
+      });
+
+      expect(onMutationStart).toHaveBeenCalledWith("event-1");
+      expect(onMutationEnd).toHaveBeenCalledWith("event-1");
+    });
+
+    it("コールバック未指定時でも正常に動作する（後方互換性）", async () => {
+      mockCreateEventAction.mockResolvedValue({
+        success: true,
+        data: mockCalendarEvent,
+      });
+
+      const { result } = renderHook(() => useEventMutation("guild-123"));
+
+      await act(async () => {
+        const createResult = await result.current.createEvent({
+          guildId: "guild-123",
+          title: "テスト",
+          startAt: new Date(),
+          endAt: new Date(),
+        });
+        expect(createResult.success).toBe(true);
+      });
+    });
+  });
 });

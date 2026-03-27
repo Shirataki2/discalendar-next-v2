@@ -57,7 +57,7 @@
   - 保留中にRealtimeイベントが来た場合、ミューテーション完了後のリフェッチで正しい状態に収束する
   - _Requirements: 4.1, 4.3_
 
-- [ ] 4. (P) useEventMutation ミューテーション追跡コールバック拡張
+- [x] 4. (P) useEventMutation ミューテーション追跡コールバック拡張
   - 既存のuseEventMutationフックのパラメータに `onMutationStart` と `onMutationEnd` コールバックを追加する
   - 各ミューテーション（create/update/delete）の開始時にonMutationStartを呼び出す（entityIdを渡す）
   - 各ミューテーションの完了時（成功・失敗問わず）にonMutationEndを呼び出す

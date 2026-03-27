@@ -45,6 +45,10 @@ export interface UseEventMutationOptions {
   onSuccess?: () => void;
   /** 操作失敗時のコールバック */
   onError?: (error: CalendarError) => void;
+  /** Realtime競合回避用: ミューテーション開始時に呼ばれる */
+  onMutationStart?: (entityId: string) => void;
+  /** Realtime競合回避用: ミューテーション完了時に呼ばれる（成功・失敗問わず） */
+  onMutationEnd?: (entityId: string) => void;
 }
 
 /**
@@ -118,8 +122,10 @@ export function useEventMutation(
    */
   const createEvent = useCallback(
     async (data: CreateEventInput): Promise<MutationResult<CalendarEvent>> => {
+      const entityId = "__creating__";
       setIsCreating(true);
       setError(null);
+      options?.onMutationStart?.(entityId);
 
       try {
         const result = await createEventAction({ guildId, eventData: data });
@@ -134,6 +140,7 @@ export function useEventMutation(
         return result;
       } finally {
         setIsCreating(false);
+        options?.onMutationEnd?.(entityId);
       }
     },
     [guildId, options]
@@ -149,6 +156,7 @@ export function useEventMutation(
     ): Promise<MutationResult<CalendarEvent>> => {
       setIsUpdating(true);
       setError(null);
+      options?.onMutationStart?.(id);
 
       try {
         const result = await updateEventAction({ guildId, eventId: id, eventData: data });
@@ -163,6 +171,7 @@ export function useEventMutation(
         return result;
       } finally {
         setIsUpdating(false);
+        options?.onMutationEnd?.(id);
       }
     },
     [guildId, options]
@@ -175,6 +184,7 @@ export function useEventMutation(
     async (id: string): Promise<MutationResult<void>> => {
       setIsDeleting(true);
       setError(null);
+      options?.onMutationStart?.(id);
 
       try {
         const result = await deleteEventAction({ guildId, eventId: id });
@@ -189,6 +199,7 @@ export function useEventMutation(
         return result;
       } finally {
         setIsDeleting(false);
+        options?.onMutationEnd?.(id);
       }
     },
     [guildId, options]
