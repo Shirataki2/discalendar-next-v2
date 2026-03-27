@@ -5,8 +5,8 @@
   - UPDATE/DELETEのRealtimeペイロードでold recordを受信可能にする
   - _Requirements: 1.3, 3.3_
 
-- [ ] 2. Realtime 型定義と RealtimeHandler
-- [ ] 2.1 (P) Realtime ペイロード型と差分更新ハンドラーの実装
+- [x] 2. Realtime 型定義と RealtimeHandler
+- [x] 2.1 (P) Realtime ペイロード型と差分更新ハンドラーの実装
   - Supabase Realtime Postgres Changesのペイロード型を定義する（INSERT/UPDATE/DELETEの判別共用体）
   - 単発イベント（series_id が null）に対するINSERTハンドラーを実装する。新規EventRecordをCalendarEventに変換して配列に追加する
   - UPDATEハンドラーを実装する。該当IDのイベントを新データで置換する
@@ -17,7 +17,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 4.2_
   - _Contracts: RealtimeEventHandlers Service_
 
-- [ ]* 2.2 RealtimeHandler ユニットテスト
+- [x]* 2.2 RealtimeHandler ユニットテスト
   - handleInsert: 新規EventRecordがCalendarEvent配列に追加されること
   - handleUpdate: 既存IDのイベントが新データで置換されること
   - handleDelete: 指定IDのイベントが配列から除外されること
