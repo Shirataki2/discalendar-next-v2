@@ -539,9 +539,9 @@ export function CalendarContainer({
         viewMode={viewMode}
       />
 
-      {/* ローディング状態 (Req 5.3) */}
+      {/* ローディング状態 (Req 5.3): 初回読み込み時のみ表示。バックグラウンドリフレッシュ時はグリッドを維持 */}
       {/* biome-ignore lint/nursery/noLeakedRender: isLoading is boolean */}
-      {state.isLoading && !shouldShowEmpty && (
+      {state.isLoading && !shouldShowEmpty && state.events.length === 0 && (
         <div className="flex items-center justify-center p-8">
           <div className="text-muted-foreground">読み込み中...</div>
         </div>
@@ -553,8 +553,8 @@ export function CalendarContainer({
         <CalendarErrorDisplay error={state.error} onRetry={fetchEvents} />
       )}
 
-      {/* カレンダーグリッド */}
-      {state.isLoading || state.error ? null : (
+      {/* カレンダーグリッド: イベント表示中はローディング中も維持してチラつきを防止 */}
+      {(state.isLoading && state.events.length === 0) || state.error ? null : (
         <div className="flex flex-1 flex-col">
           <CalendarGrid
             backgroundEvents={visibleBackgroundEvents}
