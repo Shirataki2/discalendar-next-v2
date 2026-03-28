@@ -210,7 +210,7 @@ describe("useRealtimeSync", () => {
       }
     });
 
-    it("DELETEイベントにはサーバーサイドフィルタを設定しない", () => {
+    it("DELETEイベントにもguild_idフィルタを設定する", () => {
       const params = createDefaultParams();
       const mockSupabase = params.supabase as unknown as ReturnType<
         typeof createMockSupabase
@@ -224,7 +224,7 @@ describe("useRealtimeSync", () => {
       );
       expect(deleteSubs.length).toBeGreaterThan(0);
       for (const sub of deleteSubs) {
-        expect(sub.filter).toBeUndefined();
+        expect(sub.filter).toBe(`guild_id=eq.${params.guildId}`);
       }
     });
 

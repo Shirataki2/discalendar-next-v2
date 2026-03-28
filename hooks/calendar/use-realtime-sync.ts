@@ -180,6 +180,7 @@ export function useRealtimeSync({
           event: "DELETE",
           schema: "public",
           table: "events",
+          filter: `guild_id=eq.${guildId}`,
         },
         handleEventChange,
       );
@@ -212,6 +213,7 @@ export function useRealtimeSync({
           event: "DELETE",
           schema: "public",
           table: "event_series",
+          filter: `guild_id=eq.${guildId}`,
         },
         handleSeriesChange,
       );

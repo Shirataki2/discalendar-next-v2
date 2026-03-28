@@ -352,6 +352,11 @@ export function CalendarContainer({
   /**
    * Task 7.1: イベントダイアログ成功ハンドラー (Req 1.4, 1.5)
    * 予定保存成功時にfetchEventsを呼び出してカレンダー表示を更新する
+   *
+   * Note: EventDialogは内部で独自のミューテーション処理を行うため、
+   * useEventMutationのtrackMutationStart/Endには接続していない。
+   * 成功時にfetchEvents()でフルリフェッチするため、Realtimeとの競合は
+   * リフェッチで解消される。
    */
   const handleEventDialogSuccess = useCallback(() => {
     closeEventDialog();
@@ -406,9 +411,9 @@ export function CalendarContainer({
     if (result.success) {
       trackEvent("event_deleted", {});
       closeConfirmDialog();
-      fetchEvents();
+      // リフェッチはonMutationEnd → triggerRefetch(200msデバウンス)で自動実行される
     }
-  }, [eventToDelete, deleteEvent, closeConfirmDialog, fetchEvents]);
+  }, [eventToDelete, deleteEvent, closeConfirmDialog]);
 
   /**
    * イベントドロップ（日時変更）ハンドラー

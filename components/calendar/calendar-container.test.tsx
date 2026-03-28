@@ -861,7 +861,7 @@ describe("CalendarContainer", () => {
         );
       });
 
-      it("削除確認後にfetchEventsが再呼び出しされてカレンダー表示が更新される", async () => {
+      it("削除確認後にConfirmDialogが閉じてdeleteEventActionが呼ばれる", async () => {
         // 削除成功のモックを設定
         mockDeleteEventAction.mockResolvedValue({
           success: true,
@@ -874,8 +874,6 @@ describe("CalendarContainer", () => {
         await waitFor(() => {
           expect(mockFetchEventsWithSeries).toHaveBeenCalled();
         });
-
-        const initialCallCount = mockFetchEventsWithSeries.mock.calls.length;
 
         await waitFor(() => {
           expect(capturedOnDelete).toBeDefined();
@@ -903,14 +901,15 @@ describe("CalendarContainer", () => {
         const confirmButton = screen.getByTestId("confirm-dialog-confirm");
         confirmButton.click();
 
-        // fetchEventsが再呼び出しされる
+        // deleteEventActionが呼ばれる
         await waitFor(() => {
-          expect(mockFetchEventsWithSeries.mock.calls.length).toBeGreaterThan(
-            initialCallCount
-          );
+          expect(mockDeleteEventAction).toHaveBeenCalledWith({
+            guildId: "test-guild",
+            eventId: "event-delete-2",
+          });
         });
 
-        // ConfirmDialogが閉じる
+        // ConfirmDialogが閉じる（リフェッチはonMutationEnd→triggerRefetchで自動実行される）
         await waitFor(() => {
           expect(
             screen.queryByTestId("confirm-dialog")
