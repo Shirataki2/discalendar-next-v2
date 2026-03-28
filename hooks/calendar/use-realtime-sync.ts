@@ -6,6 +6,11 @@
  *
  * Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 3.1-3.6, 4.1, 4.3, 5.1-5.4
  */
+import type {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
+  SupabaseClient,
+} from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   handleRealtimeDelete,
@@ -21,10 +26,7 @@ type RealtimeSyncStatus = "disconnected" | "connecting" | "connected" | "error";
 
 export interface UseRealtimeSyncParams {
   guildId: string | null;
-  supabase: {
-    channel: (name: string) => RealtimeChannelLike;
-    removeChannel: (channel: RealtimeChannelLike) => Promise<unknown>;
-  };
+  supabase: Pick<SupabaseClient, "channel" | "removeChannel">;
   events: CalendarEvent[];
   actions: CalendarActions;
   onRefetchNeeded: () => void;
@@ -34,18 +36,6 @@ export interface UseRealtimeSyncReturn {
   status: RealtimeSyncStatus;
   trackMutationStart: (entityId: string) => void;
   trackMutationEnd: (entityId: string) => void;
-}
-
-interface RealtimeChannelLike {
-  on: (
-    type: string,
-    opts: { event: string; schema: string; table: string; filter?: string },
-    callback: (payload: Record<string, unknown>) => void,
-  ) => RealtimeChannelLike;
-  subscribe: (
-    callback?: (status: string) => void,
-  ) => RealtimeChannelLike;
-  unsubscribe: () => Promise<unknown>;
 }
 
 // ─── 定数 ──────────────────────────────────────────
@@ -82,7 +72,7 @@ export function useRealtimeSync({
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 現在のチャネル参照
-  const channelRef = useRef<RealtimeChannelLike | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   // デバウンスされたリフェッチトリガー
   const triggerRefetch = useCallback(() => {
@@ -98,14 +88,12 @@ export function useRealtimeSync({
   // ─── eventsテーブル変更ハンドラー ──────────────
 
   const handleEventChange = useCallback(
-    (payload: Record<string, unknown>) => {
-      const eventType = payload.eventType as string;
-      const newRecord = payload.new as Record<string, unknown>;
-      const oldRecord = payload.old as Record<string, unknown>;
+    (payload: RealtimePostgresChangesPayload<EventRecord>) => {
+      const { eventType } = payload;
 
       // DELETEの場合: ローカルstateに該当IDがなければ無視（他ギルドのDELETE）
       if (eventType === "DELETE") {
-        const deletedId = (oldRecord as { id?: string }).id;
+        const deletedId = (payload.old as Partial<EventRecord>).id;
         if (!deletedId) return;
 
         // 進行中ミューテーションのIDは保留
@@ -123,7 +111,7 @@ export function useRealtimeSync({
       }
 
       // INSERT/UPDATE: series_id非nullの場合はリフェッチ
-      const record = newRecord as unknown as EventRecord;
+      const record = payload.new as EventRecord;
       if (record.series_id) {
         triggerRefetch();
         return;

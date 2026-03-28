@@ -244,9 +244,7 @@ export function CalendarContainer({
   // DIS-124: Realtime同期フック（eventsテーブル・event_seriesテーブルのPostgres Changes購読）
   const { trackMutationStart, trackMutationEnd } = useRealtimeSync({
     guildId,
-    supabase: supabaseRef.current as unknown as Parameters<
-      typeof useRealtimeSync
-    >[0]["supabase"],
+    supabase: supabaseRef.current,
     events: state.events,
     actions,
     onRefetchNeeded: fetchEvents,
