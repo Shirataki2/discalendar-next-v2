@@ -9,7 +9,7 @@
  *
  * Requirements: 1.4, 3.3, 4.2
  */
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   createEventAction,
   deleteEventAction,
@@ -45,6 +45,10 @@ export interface UseEventMutationOptions {
   onSuccess?: () => void;
   /** 操作失敗時のコールバック */
   onError?: (error: CalendarError) => void;
+  /** Realtime競合回避用: ミューテーション開始時に呼ばれる */
+  onMutationStart?: (entityId: string) => void;
+  /** Realtime競合回避用: ミューテーション完了時に呼ばれる（成功・失敗問わず） */
+  onMutationEnd?: (entityId: string) => void;
 }
 
 /**
@@ -105,6 +109,10 @@ export function useEventMutation(
   guildId: string,
   options?: UseEventMutationOptions
 ): UseEventMutationReturn {
+  // 最新のoptionsをrefで保持（コールバック内でstale closureを回避）
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   // ローディング状態
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -118,25 +126,28 @@ export function useEventMutation(
    */
   const createEvent = useCallback(
     async (data: CreateEventInput): Promise<MutationResult<CalendarEvent>> => {
+      const entityId = "__creating__";
       setIsCreating(true);
       setError(null);
+      optionsRef.current?.onMutationStart?.(entityId);
 
       try {
         const result = await createEventAction({ guildId, eventData: data });
 
         if (result.success) {
-          options?.onSuccess?.();
+          optionsRef.current?.onSuccess?.();
         } else {
           setError(result.error);
-          options?.onError?.(result.error);
+          optionsRef.current?.onError?.(result.error);
         }
 
         return result;
       } finally {
         setIsCreating(false);
+        optionsRef.current?.onMutationEnd?.(entityId);
       }
     },
-    [guildId, options]
+    [guildId]
   );
 
   /**
@@ -149,23 +160,25 @@ export function useEventMutation(
     ): Promise<MutationResult<CalendarEvent>> => {
       setIsUpdating(true);
       setError(null);
+      optionsRef.current?.onMutationStart?.(id);
 
       try {
         const result = await updateEventAction({ guildId, eventId: id, eventData: data });
 
         if (result.success) {
-          options?.onSuccess?.();
+          optionsRef.current?.onSuccess?.();
         } else {
           setError(result.error);
-          options?.onError?.(result.error);
+          optionsRef.current?.onError?.(result.error);
         }
 
         return result;
       } finally {
         setIsUpdating(false);
+        optionsRef.current?.onMutationEnd?.(id);
       }
     },
-    [guildId, options]
+    [guildId]
   );
 
   /**
@@ -175,23 +188,25 @@ export function useEventMutation(
     async (id: string): Promise<MutationResult<void>> => {
       setIsDeleting(true);
       setError(null);
+      optionsRef.current?.onMutationStart?.(id);
 
       try {
         const result = await deleteEventAction({ guildId, eventId: id });
 
         if (result.success) {
-          options?.onSuccess?.();
+          optionsRef.current?.onSuccess?.();
         } else {
           setError(result.error);
-          options?.onError?.(result.error);
+          optionsRef.current?.onError?.(result.error);
         }
 
         return result;
       } finally {
         setIsDeleting(false);
+        optionsRef.current?.onMutationEnd?.(id);
       }
     },
-    [guildId, options]
+    [guildId]
   );
 
   /**

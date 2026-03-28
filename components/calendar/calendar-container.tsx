@@ -43,6 +43,7 @@ import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
 import { useEventPopover } from "@/hooks/calendar/use-event-popover";
 import { useHolidays } from "@/hooks/calendar/use-holidays";
 import { useBreakpoint } from "@/hooks/calendar/use-media-query";
+import { useRealtimeSync } from "@/hooks/calendar/use-realtime-sync";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { mapNavigationDirection, trackEvent } from "@/lib/analytics/events";
 import {
@@ -183,13 +184,6 @@ export function CalendarContainer({
     handleSelect: handleEditScopeSelect,
   } = useEditScopeDialog(guildId, openEditDialogWithScopeRef, fetchEventsRef);
 
-  // Task 7.2: useEventMutation for CRUD operations
-  const {
-    state: mutationState,
-    updateEvent,
-    deleteEvent,
-  } = useEventMutation(guildId ?? "");
-
   /**
    * イベントデータを取得する
    */
@@ -246,6 +240,25 @@ export function CalendarContainer({
 
   // fetchEventsの最新参照をrefに同期（stale closure回避）
   fetchEventsRef.current = fetchEvents;
+
+  // DIS-124: Realtime同期フック（eventsテーブル・event_seriesテーブルのPostgres Changes購読）
+  const { trackMutationStart, trackMutationEnd } = useRealtimeSync({
+    guildId,
+    supabase: supabaseRef.current,
+    events: state.events,
+    actions,
+    onRefetchNeeded: fetchEvents,
+  });
+
+  // Task 7.2: useEventMutation for CRUD operations（Realtime競合回避のミューテーション追跡を接続）
+  const {
+    state: mutationState,
+    updateEvent,
+    deleteEvent,
+  } = useEventMutation(guildId ?? "", {
+    onMutationStart: trackMutationStart,
+    onMutationEnd: trackMutationEnd,
+  });
 
   /**
    * ギルドIDまたは表示期間が変更されたらイベントを再取得
@@ -339,6 +352,11 @@ export function CalendarContainer({
   /**
    * Task 7.1: イベントダイアログ成功ハンドラー (Req 1.4, 1.5)
    * 予定保存成功時にfetchEventsを呼び出してカレンダー表示を更新する
+   *
+   * Note: EventDialogは内部で独自のミューテーション処理を行うため、
+   * useEventMutationのtrackMutationStart/Endには接続していない。
+   * 成功時にfetchEvents()でフルリフェッチするため、Realtimeとの競合は
+   * リフェッチで解消される。
    */
   const handleEventDialogSuccess = useCallback(() => {
     closeEventDialog();
@@ -393,9 +411,9 @@ export function CalendarContainer({
     if (result.success) {
       trackEvent("event_deleted", {});
       closeConfirmDialog();
-      fetchEvents();
+      // リフェッチはonMutationEnd → triggerRefetch(200msデバウンス)で自動実行される
     }
-  }, [eventToDelete, deleteEvent, closeConfirmDialog, fetchEvents]);
+  }, [eventToDelete, deleteEvent, closeConfirmDialog]);
 
   /**
    * イベントドロップ（日時変更）ハンドラー
@@ -484,22 +502,33 @@ export function CalendarContainer({
   // 月ビュー: 祝日をbackgroundEventsにしてスロット消費を防止（+N件オーバーフロー回避）
   // 週/日ビュー: 祝日を通常eventsにして終日セクションに表示
   const isMonthView = viewMode === "month";
-  const visibleEvents = shouldShowEmpty
-    ? []
-    : isMonthView
-      ? state.events
-      : [...state.events, ...holidayEvents];
-  const visibleBackgroundEvents = shouldShowEmpty
-    ? []
-    : isMonthView
-      ? holidayEvents
-      : [];
+  const visibleEvents = (() => {
+    if (shouldShowEmpty) {
+      return [];
+    }
+    if (isMonthView) {
+      return state.events;
+    }
+    return [...state.events, ...holidayEvents];
+  })();
+  const visibleBackgroundEvents = (() => {
+    if (shouldShowEmpty) {
+      return [];
+    }
+    if (isMonthView) {
+      return holidayEvents;
+    }
+    return [];
+  })();
   const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
 
   // Task 7.1: ギルド選択時のみ追加ボタンを有効化
   const toolbarAddClickHandler = shouldShowEmpty ? undefined : handleAddClick;
   // guild-permissions 5.1: 権限不足時は追加ボタンを disabled にする
   const isAddDisabled = canEditEvents ? undefined : true;
+
+  const isInitialLoading = state.isLoading && state.events.length === 0;
+  const showCalendarGrid = !isInitialLoading && state.error === null;
 
   // guild-permissions 5.2: 編集・削除・DnD・スロット選択は選択済みかつ権限がある場合のみ有効化
   const popoverEditHandler = canInteract ? handleEditEvent : undefined;
@@ -524,9 +553,9 @@ export function CalendarContainer({
         viewMode={viewMode}
       />
 
-      {/* ローディング状態 (Req 5.3) */}
+      {/* ローディング状態 (Req 5.3): 初回読み込み時のみ表示。バックグラウンドリフレッシュ時はグリッドを維持 */}
       {/* biome-ignore lint/nursery/noLeakedRender: isLoading is boolean */}
-      {state.isLoading && !shouldShowEmpty && (
+      {state.isLoading && !shouldShowEmpty && state.events.length === 0 && (
         <div className="flex items-center justify-center p-8">
           <div className="text-muted-foreground">読み込み中...</div>
         </div>
@@ -538,8 +567,8 @@ export function CalendarContainer({
         <CalendarErrorDisplay error={state.error} onRetry={fetchEvents} />
       )}
 
-      {/* カレンダーグリッド */}
-      {state.isLoading || state.error ? null : (
+      {/* カレンダーグリッド: イベント表示中はローディング中も維持してチラつきを防止 */}
+      {showCalendarGrid ? (
         <div className="flex flex-1 flex-col">
           <CalendarGrid
             backgroundEvents={visibleBackgroundEvents}
@@ -555,7 +584,7 @@ export function CalendarContainer({
             viewMode={viewMode}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Task 7: イベント詳細ポップオーバー */}
       {/* Task 7.2: onEditとonDeleteコールバックを追加 */}

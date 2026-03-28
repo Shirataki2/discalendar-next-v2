@@ -25,6 +25,15 @@ vi.mock("@/lib/analytics/events", () => ({
   getChangedEventFields: () => [],
 }));
 
+// useRealtimeSync のモック（CalendarContainerがRealtime同期フックを使用するため）
+vi.mock("@/hooks/calendar/use-realtime-sync", () => ({
+  useRealtimeSync: () => ({
+    status: "connected" as const,
+    trackMutationStart: vi.fn(),
+    trackMutationEnd: vi.fn(),
+  }),
+}));
+
 // CalendarToolbar コールバックキャプチャ用
 let capturedOnViewChange:
   | ((mode: "day" | "week" | "month") => void)

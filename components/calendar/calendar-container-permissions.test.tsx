@@ -11,6 +11,15 @@
 import { render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// useRealtimeSync のモック（CalendarContainerがRealtime同期フックを使用するため）
+vi.mock("@/hooks/calendar/use-realtime-sync", () => ({
+  useRealtimeSync: () => ({
+    status: "connected" as const,
+    trackMutationStart: vi.fn(),
+    trackMutationEnd: vi.fn(),
+  }),
+}));
+
 // キャプチャ変数
 let capturedOnAddClick: (() => void) | undefined;
 let capturedIsAddDisabled: boolean | undefined;
