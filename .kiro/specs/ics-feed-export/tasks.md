@@ -9,8 +9,8 @@
   - RLSを有効化し、認証済みユーザーが自分のギルドのトークンを読み取り・作成・更新できるポリシーを設定する（user_guildsテーブルでメンバーシップ検証）
   - _Requirements: 5.1, 5.2, 5.3, 5.5_
 
-- [ ] 2. ICSビルダー: RFC 5545準拠のICSテキスト生成
-- [ ] 2.1 (P) VCALENDARの基本構造とヘルパー関数を実装する
+- [x] 2. ICSビルダー: RFC 5545準拠のICSテキスト生成
+- [x] 2.1 (P) VCALENDARの基本構造とヘルパー関数を実装する
   - VCALENDAR開始/終了タグ、VERSION:2.0、PRODID、X-WR-CALNAME（ギルド名）を出力する関数を作成する
   - ICS日時フォーマット変換ヘルパー: ISO 8601からICS形式（YYYYMMDDTHHMMSSZ / YYYYMMDD）への変換を実装する
   - テキストエスカープヘルパー: カンマ・セミコロンのバックスラッシュエスケープ、改行の`\n`変換を実装する
@@ -19,7 +19,7 @@
   - Edge Functionの共有コードとして配置し、将来の再利用を可能にする
   - _Requirements: 1.2, 2.2, 2.6_
 
-- [ ] 2.2 (P) 単発イベントのVEVENT生成を実装する
+- [x] 2.2 (P) 単発イベントのVEVENT生成を実装する
   - 単発イベント（series_idがNULL）をVEVENTコンポーネントに変換する関数を作成する
   - 必須フィールド: DTSTART、DTEND、SUMMARY（イベント名）、UID、DTSTAMP を出力する
   - 終日イベント（is_all_day = true）の場合はDTSTART/DTENDをVALUE=DATE形式で出力する
@@ -27,7 +27,7 @@
   - channel_id、channel_name、notificationsなどの内部情報はVEVENTに含めない
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 7.3_
 
-- [ ] 2.3 (P) 繰り返しイベントと例外オカレンスのVEVENT生成を実装する
+- [x] 2.3 (P) 繰り返しイベントと例外オカレンスのVEVENT生成を実装する
   - 繰り返しイベント（event_series）をRRULE付きVEVENTに変換する関数を作成する
   - event_series.rruleの値をそのままRRULEプロパティとして出力する
   - DTSTARTとしてdtstart、DTENDとしてdtstart + duration_minutesを計算して出力する
@@ -36,7 +36,7 @@
   - RECURRENCE-IDの値にはoriginal_dateを使用し、親シリーズと同じUIDを設定する
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.3_
 
-- [ ] 2.4 ICSビルダーのユニットテストを作成する
+- [x] 2.4 ICSビルダーのユニットテストを作成する
   - VCALENDAR全体構造の検証（VERSION、PRODID、X-WR-CALNAME）
   - 単発イベントの必須フィールド出力、終日イベントのVALUE=DATE出力、オプショナルフィールドの条件付き出力をテストする
   - 繰り返しイベントのRRULE出力、EXDATE出力、duration_minutesからのDTEND計算をテストする
