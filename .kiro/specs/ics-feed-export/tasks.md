@@ -45,8 +45,8 @@
   - 内部情報（channel_id等）がVEVENTに含まれないことを検証する
   - _Requirements: 1.2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.3, 3.4, 3.5, 7.3_
 
-- [ ] 3. Edge Function: ICSフィードエンドポイント
-- [ ] 3.1 Edge Functionの基本セットアップとギルド検索を実装する
+- [x] 3. Edge Function: ICSフィードエンドポイント
+- [x] 3.1 Edge Functionの基本セットアップとギルド検索を実装する
   - Supabase Edge Function（Deno.serve）のエントリーポイントを作成する
   - クエリパラメータからguild_idとtokenを抽出する
   - guild_idが未指定の場合は400 Bad Requestを返す
@@ -56,7 +56,7 @@
   - Cache-Controlヘッダー（public, max-age=3600, stale-while-revalidate=600）を設定する
   - _Requirements: 1.1, 1.3, 1.4_
 
-- [ ] 3.2 アクセストークン認証ロジックを実装する
+- [x] 3.2 アクセストークン認証ロジックを実装する
   - ギルドが非公開（is_public = false）の場合、tokenパラメータの有無を確認する
   - ics_feed_tokensテーブルからguild_idとtokenの組み合わせでアクティブなトークン（revoked_at IS NULL）を検索する
   - トークン検証にcrypto.subtle.timingSafeEqual()を使用し、タイミング攻撃を防止する
@@ -64,7 +64,7 @@
   - 公開ギルド（is_public = true）の場合はトークン検証をスキップしてフィード生成に進む
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.4, 7.4_
 
-- [ ] 3.3 イベントデータ取得とICSレスポンス生成を実装する
+- [x] 3.3 イベントデータ取得とICSレスポンス生成を実装する
   - 単発イベント（events テーブル、series_id IS NULL）をguild_idで取得する（内部カラムを除外するSELECT句）
   - 繰り返しイベント（event_series テーブル）をguild_idで取得する（内部カラム除外）
   - 例外オカレンス（events テーブル、series_id IS NOT NULL）をguild_idで取得する
@@ -73,7 +73,7 @@
   - パラメータ化クエリ（Supabase clientの自動処理）でSQLインジェクションを防止する
   - _Requirements: 1.1, 1.2, 2.1, 3.1, 7.1, 7.2_
 
-- [ ] 3.4 Edge Functionの統合テストを作成する
+- [x] 3.4 Edge Functionの統合テストを作成する
   - 公開ギルドのICSフィード取得（トークンなしで200レスポンス、Content-Type検証）
   - 非公開ギルドの認証テスト（有効トークンで200、無効トークンで401、トークンなしで401）
   - 存在しないギルドで404レスポンスを返すこと
