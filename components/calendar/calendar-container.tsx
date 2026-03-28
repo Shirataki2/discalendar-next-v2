@@ -502,22 +502,33 @@ export function CalendarContainer({
   // 月ビュー: 祝日をbackgroundEventsにしてスロット消費を防止（+N件オーバーフロー回避）
   // 週/日ビュー: 祝日を通常eventsにして終日セクションに表示
   const isMonthView = viewMode === "month";
-  const visibleEvents = shouldShowEmpty
-    ? []
-    : isMonthView
-      ? state.events
-      : [...state.events, ...holidayEvents];
-  const visibleBackgroundEvents = shouldShowEmpty
-    ? []
-    : isMonthView
-      ? holidayEvents
-      : [];
+  const visibleEvents = (() => {
+    if (shouldShowEmpty) {
+      return [];
+    }
+    if (isMonthView) {
+      return state.events;
+    }
+    return [...state.events, ...holidayEvents];
+  })();
+  const visibleBackgroundEvents = (() => {
+    if (shouldShowEmpty) {
+      return [];
+    }
+    if (isMonthView) {
+      return holidayEvents;
+    }
+    return [];
+  })();
   const canInteract = canInteractWithEvents(shouldShowEmpty, canEditEvents);
 
   // Task 7.1: ギルド選択時のみ追加ボタンを有効化
   const toolbarAddClickHandler = shouldShowEmpty ? undefined : handleAddClick;
   // guild-permissions 5.1: 権限不足時は追加ボタンを disabled にする
   const isAddDisabled = canEditEvents ? undefined : true;
+
+  const isInitialLoading = state.isLoading && state.events.length === 0;
+  const showCalendarGrid = !isInitialLoading && state.error === null;
 
   // guild-permissions 5.2: 編集・削除・DnD・スロット選択は選択済みかつ権限がある場合のみ有効化
   const popoverEditHandler = canInteract ? handleEditEvent : undefined;
@@ -557,7 +568,7 @@ export function CalendarContainer({
       )}
 
       {/* カレンダーグリッド: イベント表示中はローディング中も維持してチラつきを防止 */}
-      {(state.isLoading && state.events.length === 0) || state.error ? null : (
+      {showCalendarGrid ? (
         <div className="flex flex-1 flex-col">
           <CalendarGrid
             backgroundEvents={visibleBackgroundEvents}
@@ -573,7 +584,7 @@ export function CalendarContainer({
             viewMode={viewMode}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Task 7: イベント詳細ポップオーバー */}
       {/* Task 7.2: onEditとonDeleteコールバックを追加 */}
