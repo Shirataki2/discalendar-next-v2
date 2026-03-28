@@ -7,7 +7,6 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 3.1-3.6, 4.1, 4.3, 5.1-5.4
  */
 import type {
-  RealtimeChannel,
   RealtimePostgresChangesPayload,
   SupabaseClient,
 } from "@supabase/supabase-js";
@@ -70,9 +69,6 @@ export function useRealtimeSync({
 
   // リフェッチのデバウンスタイマー
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 現在のチャネル参照
-  const channelRef = useRef<RealtimeChannel | null>(null);
 
   // デバウンスされたリフェッチトリガー
   const triggerRefetch = useCallback(() => {
@@ -150,7 +146,6 @@ export function useRealtimeSync({
     setStatus("connecting");
 
     const channel = supabase.channel(`realtime-sync:${guildId}`);
-    channelRef.current = channel;
 
     // events テーブル購読
     channel
@@ -219,11 +214,22 @@ export function useRealtimeSync({
       );
 
     // 購読開始
+    let wasConnected = false;
     channel.subscribe((subscribeStatus: string) => {
       if (subscribeStatus === "SUBSCRIBED") {
+        if (wasConnected) {
+          // 再接続時: 切断中に失われたイベントを取得
+          triggerRefetch();
+        }
+        wasConnected = true;
         setStatus("connected");
       } else if (subscribeStatus === "CHANNEL_ERROR") {
         setStatus("error");
+      } else if (
+        subscribeStatus === "TIMED_OUT" ||
+        subscribeStatus === "CLOSED"
+      ) {
+        setStatus("disconnected");
       }
     });
 
@@ -234,7 +240,6 @@ export function useRealtimeSync({
         refetchTimerRef.current = null;
       }
       supabase.removeChannel(channel);
-      channelRef.current = null;
     };
   }, [guildId, supabase, handleEventChange, handleSeriesChange]);
 
@@ -245,6 +250,9 @@ export function useRealtimeSync({
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
+        // タブ復帰時は即時リフェッチ（デバウンスなし）。
+        // Realtime由来のtriggerRefetchは200msデバウンスだが、
+        // タブ復帰はユーザーの明示的操作であり即座にデータを最新化する。
         onRefetchNeededRef.current();
       }
     };
