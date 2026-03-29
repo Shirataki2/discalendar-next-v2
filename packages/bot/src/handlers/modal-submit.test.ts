@@ -72,6 +72,8 @@ function makeInteraction(
       getTextInputValue: (id: string) => fields[id] ?? "",
     },
     reply: vi.fn(),
+    deferReply: vi.fn(),
+    editReply: vi.fn(),
     followUp: vi.fn(),
   } as unknown as ModalSubmitInteraction;
 }
@@ -115,10 +117,9 @@ describe("handleModalSubmit", () => {
         },
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("タイトル"),
-          ephemeral: true,
         })
       );
     });
@@ -134,10 +135,9 @@ describe("handleModalSubmit", () => {
         },
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("開始日時"),
-          ephemeral: true,
         })
       );
     });
@@ -153,10 +153,9 @@ describe("handleModalSubmit", () => {
         },
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("終了日時"),
-          ephemeral: true,
         })
       );
     });
@@ -172,10 +171,9 @@ describe("handleModalSubmit", () => {
         },
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("開始時間が終了時間以降"),
-          ephemeral: true,
         })
       );
     });
@@ -191,10 +189,9 @@ describe("handleModalSubmit", () => {
         },
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("true または false"),
-          ephemeral: true,
         })
       );
     });
@@ -251,10 +248,9 @@ describe("handleModalSubmit", () => {
       } as unknown as GuildMember;
       const interaction = makeInteraction({ member });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("権限"),
-          ephemeral: true,
         })
       );
     });
@@ -283,10 +279,9 @@ describe("handleModalSubmit", () => {
       });
       const interaction = makeInteraction();
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("ギルド設定"),
-          ephemeral: true,
         })
       );
     });
@@ -306,7 +301,7 @@ describe("handleModalSubmit", () => {
           is_all_day: false,
         })
       );
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("作成"),
           embeds: expect.arrayContaining([expect.any(Object)]),
@@ -341,10 +336,9 @@ describe("handleModalSubmit", () => {
       });
       const interaction = makeInteraction();
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("作成に失敗"),
-          ephemeral: true,
         })
       );
     });
@@ -375,7 +369,7 @@ describe("handleModalSubmit", () => {
         "guild-1",
         expect.objectContaining({ name: "更新後イベント" })
       );
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("更新"),
           embeds: expect.arrayContaining([expect.any(Object)]),
@@ -389,10 +383,9 @@ describe("handleModalSubmit", () => {
         customId: "event-edit:660e8400-e29b-41d4-b716-446655440001",
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("見つかりません"),
-          ephemeral: true,
         })
       );
     });
@@ -406,10 +399,9 @@ describe("handleModalSubmit", () => {
         customId: "event-edit:550e8400-e29b-41d4-a716-446655440000",
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("取得に失敗"),
-          ephemeral: true,
         })
       );
     });
@@ -427,10 +419,9 @@ describe("handleModalSubmit", () => {
         customId: "event-edit:550e8400-e29b-41d4-a716-446655440000",
       });
       await handleModalSubmit(interaction);
-      expect(interaction.reply).toHaveBeenCalledWith(
+      expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("更新に失敗"),
-          ephemeral: true,
         })
       );
     });

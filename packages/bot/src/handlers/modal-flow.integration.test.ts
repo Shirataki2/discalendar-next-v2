@@ -121,9 +121,13 @@ function makeModalSubmitInteraction(options: {
       getTextInputValue: (id: string) => options.fields[id] ?? "",
     },
     reply: vi.fn(),
+    deferReply: vi.fn(),
+    editReply: vi.fn(),
     followUp: vi.fn(),
   } as unknown as ModalSubmitInteraction & {
     reply: ReturnType<typeof vi.fn>;
+    deferReply: ReturnType<typeof vi.fn>;
+    editReply: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -190,7 +194,7 @@ describe("結合テスト: /create モーダルフロー", () => {
     );
 
     // 成功レスポンス（Embed付き）
-    expect(submitInteraction.reply).toHaveBeenCalledWith(
+    expect(submitInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "正常に予定を作成しました",
         embeds: expect.arrayContaining([expect.any(Object)]),
@@ -214,10 +218,9 @@ describe("結合テスト: /create モーダルフロー", () => {
     const { handleModalSubmit } = await import("./modal-submit.js");
     await handleModalSubmit(submitInteraction);
 
-    expect(submitInteraction.reply).toHaveBeenCalledWith(
+    expect(submitInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "開始時間が終了時間以降になっています",
-        ephemeral: true,
       })
     );
     expect(mockCreateEvent).not.toHaveBeenCalled();
@@ -244,10 +247,9 @@ describe("結合テスト: /create モーダルフロー", () => {
     const { handleModalSubmit } = await import("./modal-submit.js");
     await handleModalSubmit(submitInteraction);
 
-    expect(submitInteraction.reply).toHaveBeenCalledWith(
+    expect(submitInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "予定の作成に失敗しました",
-        ephemeral: true,
       })
     );
   });
@@ -328,7 +330,7 @@ describe("結合テスト: /edit モーダルフロー", () => {
         description: "更新後の説明",
       })
     );
-    expect(submitInteraction.reply).toHaveBeenCalledWith(
+    expect(submitInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "正常に予定を更新しました",
         embeds: expect.arrayContaining([expect.any(Object)]),
@@ -350,7 +352,6 @@ describe("結合テスト: /edit モーダルフロー", () => {
     expect(cmdInteraction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining("見つかりません"),
-        ephemeral: true,
       })
     );
     expect(cmdInteraction.showModal).not.toHaveBeenCalled();
@@ -374,10 +375,9 @@ describe("結合テスト: /edit モーダルフロー", () => {
     const { handleModalSubmit } = await import("./modal-submit.js");
     await handleModalSubmit(submitInteraction);
 
-    expect(submitInteraction.reply).toHaveBeenCalledWith(
+    expect(submitInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining("見つかりません"),
-        ephemeral: true,
       })
     );
     expect(mockUpdateEvent).not.toHaveBeenCalled();
@@ -489,7 +489,6 @@ describe("結合テスト: 権限チェック（restricted guild）", () => {
     expect(cmdInteraction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining("権限"),
-        ephemeral: true,
       })
     );
     expect(cmdInteraction.showModal).not.toHaveBeenCalled();
@@ -508,7 +507,6 @@ describe("結合テスト: 権限チェック（restricted guild）", () => {
     expect(cmdInteraction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining("権限"),
-        ephemeral: true,
       })
     );
     expect(cmdInteraction.showModal).not.toHaveBeenCalled();
@@ -531,10 +529,9 @@ describe("結合テスト: 権限チェック（restricted guild）", () => {
     const { handleModalSubmit } = await import("./modal-submit.js");
     await handleModalSubmit(submitInteraction);
 
-    expect(submitInteraction.reply).toHaveBeenCalledWith(
+    expect(submitInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining("権限"),
-        ephemeral: true,
       })
     );
     expect(mockCreateEvent).not.toHaveBeenCalled();
@@ -574,7 +571,7 @@ describe("結合テスト: 権限チェック（restricted guild）", () => {
     await handleModalSubmit(submitInteraction);
 
     expect(mockCreateEvent).toHaveBeenCalled();
-    expect(submitInteraction.reply).toHaveBeenCalledWith(
+    expect(submitInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "正常に予定を作成しました",
         embeds: expect.arrayContaining([expect.any(Object)]),

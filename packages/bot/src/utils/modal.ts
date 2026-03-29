@@ -82,7 +82,7 @@ function buildIsAllDayInput(
     .setLabel("終日")
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
-    .setPlaceholder("true または false");
+    .setPlaceholder("true（空白/falseで通常）");
   if (value !== undefined) {
     input.setValue(value);
   }

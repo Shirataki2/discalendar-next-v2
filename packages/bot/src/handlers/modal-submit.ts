@@ -79,7 +79,7 @@ function extractAndValidateFields(
   if (!startResult.success) {
     return {
       success: false,
-      error: "開始日時のフォーマットが不正です。例: 2025/03/29 15:00",
+      error: `開始日時のフォーマットが不正です。例: ${new Date().getFullYear()}/03/29 15:00`,
     };
   }
 
@@ -87,7 +87,7 @@ function extractAndValidateFields(
   if (!endResult.success) {
     return {
       success: false,
-      error: "終了日時のフォーマットが不正です。例: 2025/03/29 16:00",
+      error: `終了日時のフォーマットが不正です。例: ${new Date().getFullYear()}/03/29 16:00`,
     };
   }
 
@@ -130,9 +130,8 @@ async function checkPermission(
       { error: guildConfigResult.error, guildId },
       "Failed to fetch guild config"
     );
-    await interaction.reply({
+    await interaction.editReply({
       content: "ギルド設定の取得に失敗しました",
-      ephemeral: true,
     });
     return false;
   }
@@ -140,10 +139,9 @@ async function checkPermission(
   if (guildConfigResult.data?.restricted) {
     const member = interaction.member as GuildMember | null;
     if (!hasManagementPermission(member)) {
-      await interaction.reply({
+      await interaction.editReply({
         content:
           "このコマンドを実行するためには「管理者」「サーバー管理」「ロールの管理」「メッセージの管理」のいずれかの権限が必要です",
-        ephemeral: true,
       });
       return false;
     }
@@ -171,15 +169,12 @@ async function handleCreate(
       { error: result.error, guildId },
       "Failed to create event via modal"
     );
-    await interaction.reply({
-      content: "予定の作成に失敗しました",
-      ephemeral: true,
-    });
+    await interaction.editReply({ content: "予定の作成に失敗しました" });
     return;
   }
 
   const embed = createEventEmbed(result.data);
-  await interaction.reply({
+  await interaction.editReply({
     content: "正常に予定を作成しました",
     embeds: [embed],
   });
@@ -197,17 +192,13 @@ async function handleEdit(
       { error: fetchResult.error, eventId, guildId },
       "Failed to fetch event for modal edit"
     );
-    await interaction.reply({
-      content: "イベントの取得に失敗しました",
-      ephemeral: true,
-    });
+    await interaction.editReply({ content: "イベントの取得に失敗しました" });
     return;
   }
 
   if (!fetchResult.data) {
-    await interaction.reply({
+    await interaction.editReply({
       content: "指定されたイベントが見つかりません",
-      ephemeral: true,
     });
     return;
   }
@@ -225,15 +216,12 @@ async function handleEdit(
       { error: updateResult.error, eventId, guildId },
       "Failed to update event via modal"
     );
-    await interaction.reply({
-      content: "予定の更新に失敗しました",
-      ephemeral: true,
-    });
+    await interaction.editReply({ content: "予定の更新に失敗しました" });
     return;
   }
 
   const embed = createEventEmbed(updateResult.data);
-  await interaction.reply({
+  await interaction.editReply({
     content: "正常に予定を更新しました",
     embeds: [embed],
   });
@@ -263,6 +251,8 @@ export async function handleModalSubmit(
 
   const guildId = interaction.guild.id;
 
+  await interaction.deferReply();
+
   const permitted = await checkPermission(interaction, guildId);
   if (!permitted) {
     return;
@@ -270,10 +260,7 @@ export async function handleModalSubmit(
 
   const validationResult = extractAndValidateFields(interaction);
   if (!validationResult.success) {
-    await interaction.reply({
-      content: validationResult.error,
-      ephemeral: true,
-    });
+    await interaction.editReply({ content: validationResult.error });
     return;
   }
 
