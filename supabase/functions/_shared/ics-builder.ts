@@ -8,7 +8,7 @@ const MAX_LINE_OCTETS = 75;
 
 // --- Types ---
 
-export interface IcsEvent {
+export type IcsEvent = {
   id: string;
   name: string;
   description: string | null;
@@ -19,9 +19,9 @@ export interface IcsEvent {
   location: string | null;
   createdAt: string;
   updatedAt: string;
-}
+};
 
-export interface IcsSeries {
+export type IcsSeries = {
   id: string;
   name: string;
   description: string | null;
@@ -34,9 +34,9 @@ export interface IcsSeries {
   exdates: string[];
   createdAt: string;
   updatedAt: string;
-}
+};
 
-export interface IcsException {
+export type IcsException = {
   id: string;
   seriesId: string;
   name: string;
@@ -49,14 +49,14 @@ export interface IcsException {
   originalDate: string;
   createdAt: string;
   updatedAt: string;
-}
+};
 
-export interface BuildCalendarParams {
+export type BuildCalendarParams = {
   calendarName: string;
   events: IcsEvent[];
   series: IcsSeries[];
   exceptions: IcsException[];
-}
+};
 
 // --- Helper Functions (Task 2.1) ---
 
@@ -84,7 +84,9 @@ export function formatDateToIcs(iso: string): string {
 }
 
 export function escapeText(text: string): string {
-  if (text === "") return "";
+  if (text === "") {
+    return "";
+  }
   return text
     .replace(/\\/g, "\\\\")
     .replace(/;/g, "\\;")
@@ -112,7 +114,7 @@ export function foldLine(line: string): string {
     } else {
       // Don't split multibyte characters: walk back to a valid UTF-8 boundary
       while (end > offset && isUtf8Continuation(buf[end])) {
-        end--;
+        end -= 1;
       }
     }
     const chunk = decoder.decode(buf.subarray(offset, end));
@@ -125,6 +127,7 @@ export function foldLine(line: string): string {
 }
 
 function isUtf8Continuation(byte: number): boolean {
+  // biome-ignore lint/suspicious/noBitwiseOperators: intentional UTF-8 continuation byte check
   return (byte & 0xc0) === 0x80;
 }
 

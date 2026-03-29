@@ -78,6 +78,7 @@ function createDeps(supabaseUrl: string, serviceRoleKey: string): IcsFeedDeps {
   };
 }
 
+// biome-ignore lint/correctness/noUndeclaredVariables: Deno runtime global
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -89,8 +90,10 @@ Deno.serve(async (req) => {
     const guildId = url.searchParams.get("guild_id");
     const token = url.searchParams.get("token");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // biome-ignore lint/correctness/noUndeclaredVariables: Deno runtime global
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    // biome-ignore lint/correctness/noUndeclaredVariables: Deno runtime global
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const deps = createDeps(supabaseUrl, serviceRoleKey);
 
     const response = await handleIcsFeed(guildId, token, deps);
