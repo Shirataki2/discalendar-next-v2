@@ -174,7 +174,8 @@ async function handleCreate(
   }
 
   const embed = createEventEmbed(result.data);
-  await interaction.editReply({
+  await interaction.deleteReply();
+  await interaction.followUp({
     content: "正常に予定を作成しました",
     embeds: [embed],
   });
@@ -221,7 +222,8 @@ async function handleEdit(
   }
 
   const embed = createEventEmbed(updateResult.data);
-  await interaction.editReply({
+  await interaction.deleteReply();
+  await interaction.followUp({
     content: "正常に予定を更新しました",
     embeds: [embed],
   });
@@ -251,7 +253,7 @@ export async function handleModalSubmit(
 
   const guildId = interaction.guild.id;
 
-  await interaction.deferReply();
+  await interaction.deferReply({ ephemeral: true });
 
   const permitted = await checkPermission(interaction, guildId);
   if (!permitted) {

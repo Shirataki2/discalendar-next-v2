@@ -123,11 +123,13 @@ function makeModalSubmitInteraction(options: {
     reply: vi.fn(),
     deferReply: vi.fn(),
     editReply: vi.fn(),
+    deleteReply: vi.fn(),
     followUp: vi.fn(),
   } as unknown as ModalSubmitInteraction & {
     reply: ReturnType<typeof vi.fn>;
     deferReply: ReturnType<typeof vi.fn>;
     editReply: ReturnType<typeof vi.fn>;
+    deleteReply: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -194,7 +196,7 @@ describe("結合テスト: /create モーダルフロー", () => {
     );
 
     // 成功レスポンス（Embed付き）
-    expect(submitInteraction.editReply).toHaveBeenCalledWith(
+    expect(submitInteraction.followUp).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "正常に予定を作成しました",
         embeds: expect.arrayContaining([expect.any(Object)]),
@@ -330,7 +332,7 @@ describe("結合テスト: /edit モーダルフロー", () => {
         description: "更新後の説明",
       })
     );
-    expect(submitInteraction.editReply).toHaveBeenCalledWith(
+    expect(submitInteraction.followUp).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "正常に予定を更新しました",
         embeds: expect.arrayContaining([expect.any(Object)]),
@@ -571,7 +573,7 @@ describe("結合テスト: 権限チェック（restricted guild）", () => {
     await handleModalSubmit(submitInteraction);
 
     expect(mockCreateEvent).toHaveBeenCalled();
-    expect(submitInteraction.editReply).toHaveBeenCalledWith(
+    expect(submitInteraction.followUp).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "正常に予定を作成しました",
         embeds: expect.arrayContaining([expect.any(Object)]),

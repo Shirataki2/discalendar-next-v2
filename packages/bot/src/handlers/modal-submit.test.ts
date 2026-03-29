@@ -74,6 +74,7 @@ function makeInteraction(
     reply: vi.fn(),
     deferReply: vi.fn(),
     editReply: vi.fn(),
+    deleteReply: vi.fn(),
     followUp: vi.fn(),
   } as unknown as ModalSubmitInteraction;
 }
@@ -301,7 +302,7 @@ describe("handleModalSubmit", () => {
           is_all_day: false,
         })
       );
-      expect(interaction.editReply).toHaveBeenCalledWith(
+      expect(interaction.followUp).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("作成"),
           embeds: expect.arrayContaining([expect.any(Object)]),
@@ -369,7 +370,7 @@ describe("handleModalSubmit", () => {
         "guild-1",
         expect.objectContaining({ name: "更新後イベント" })
       );
-      expect(interaction.editReply).toHaveBeenCalledWith(
+      expect(interaction.followUp).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining("更新"),
           embeds: expect.arrayContaining([expect.any(Object)]),
