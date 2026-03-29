@@ -28,9 +28,9 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
     .addStringOption((opt) =>
       opt
         .setName("name")
-        .setDescription("予定の名称")
+        .setDescription("予定の名称（省略時はモーダル入力）")
         .setMaxLength(100)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -38,7 +38,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(年)")
         .setMinValue(MIN_YEAR)
         .setMaxValue(MAX_YEAR)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -46,7 +46,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(月)")
         .setMinValue(1)
         .setMaxValue(12)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -54,7 +54,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(日)")
         .setMinValue(1)
         .setMaxValue(31)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -62,7 +62,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(時)")
         .setMinValue(0)
         .setMaxValue(23)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -70,7 +70,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(分)")
         .setMinValue(0)
         .setMaxValue(59)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -78,7 +78,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(年)")
         .setMinValue(MIN_YEAR)
         .setMaxValue(MAX_YEAR)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -86,7 +86,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(月)")
         .setMinValue(1)
         .setMaxValue(12)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -94,7 +94,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(日)")
         .setMinValue(1)
         .setMaxValue(31)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -102,7 +102,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(時)")
         .setMinValue(0)
         .setMaxValue(23)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -110,7 +110,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(分)")
         .setMinValue(0)
         .setMaxValue(59)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addStringOption((opt) =>
       opt
@@ -181,7 +181,17 @@ async function execute(
     }
   }
 
-  const name = interaction.options.getString("name", true);
+  const name = interaction.options.getString("name");
+
+  // Modal path: name未指定 → モーダルを表示
+  if (!name) {
+    const { buildCreateModal } = await import("../utils/modal.js");
+    const modal = buildCreateModal();
+    await interaction.showModal(modal);
+    return;
+  }
+
+  // Inline path: 既存のスラッシュオプション処理（後方互換性）
   const startYear = interaction.options.getInteger("start_year", true);
   const startMonth = interaction.options.getInteger("start_month", true);
   const startDay = interaction.options.getInteger("start_day", true);
