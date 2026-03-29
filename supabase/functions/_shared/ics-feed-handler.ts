@@ -1,8 +1,8 @@
 // ICS Feed Handler - Environment-agnostic handler logic
 // Tested via Vitest, used by the Edge Function entry point
 
-import type { IcsEvent, IcsException, IcsSeries } from "./ics-builder";
-import { buildCalendar } from "./ics-builder";
+import type { IcsEvent, IcsException, IcsSeries } from "./ics-builder.ts";
+import { buildCalendar } from "./ics-builder.ts";
 
 // --- DB Row Types (snake_case) ---
 

@@ -69,6 +69,13 @@ vi.mock("@/components/dashboard/dashboard-header", () => ({
   DashboardHeader: () => <div data-testid="dashboard-header" />,
 }));
 
+// Mock getOrCreateIcsFeedToken
+const mockGetOrCreateIcsFeedToken = vi.fn();
+vi.mock("@/app/dashboard/actions", () => ({
+  getOrCreateIcsFeedToken: (...args: unknown[]) =>
+    mockGetOrCreateIcsFeedToken(...args),
+}));
+
 // Mock GuildSettingsForm to capture props
 type MockFormProps = {
   currentChannelId: string | null;
@@ -76,6 +83,7 @@ type MockFormProps = {
   restricted: boolean;
   isPublic: boolean;
   publicSlug: string | null;
+  feedUrl: string;
 };
 const mockGuildSettingsForm = vi.fn((props: MockFormProps) => (
   <div
@@ -151,6 +159,14 @@ describe("GuildSettingsPage", () => {
     mockGetPublicSettings.mockResolvedValue({
       success: true,
       data: { isPublic: false, publicSlug: null },
+    });
+    mockGetOrCreateIcsFeedToken.mockResolvedValue({
+      success: true,
+      data: {
+        token: "mock-token-abc123",
+        feedUrl:
+          "https://test.supabase.co/functions/v1/ics-feed?guild_id=guild-1&token=mock-token-abc123",
+      },
     });
   });
 
@@ -314,6 +330,8 @@ describe("GuildSettingsPage", () => {
       // GuildSettingsForm が正しい props で呼ばれること
       expect(mockGuildSettingsForm).toHaveBeenCalledWith({
         currentChannelId: null,
+        feedUrl:
+          "https://test.supabase.co/functions/v1/ics-feed?guild_id=guild-1&token=mock-token-abc123",
         guild: {
           guildId: "guild-1",
           name: "Test Server",

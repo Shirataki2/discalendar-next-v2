@@ -93,11 +93,13 @@ export function escapeText(text: string): string {
 }
 
 export function foldLine(line: string): string {
-  const buf = Buffer.from(line, "utf-8");
+  const encoder = new TextEncoder();
+  const buf = encoder.encode(line);
   if (buf.length <= MAX_LINE_OCTETS) {
     return line;
   }
 
+  const decoder = new TextDecoder();
   const parts: string[] = [];
   let offset = 0;
   let isFirst = true;
@@ -113,7 +115,7 @@ export function foldLine(line: string): string {
         end--;
       }
     }
-    const chunk = buf.subarray(offset, end).toString("utf-8");
+    const chunk = decoder.decode(buf.subarray(offset, end));
     parts.push(isFirst ? chunk : ` ${chunk}`);
     offset = end;
     isFirst = false;

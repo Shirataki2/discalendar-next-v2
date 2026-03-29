@@ -8,6 +8,7 @@ vi.mock("@/app/dashboard/actions", () => ({
   updateNotificationChannel: vi.fn(),
   togglePublicCalendar: vi.fn(),
   regeneratePublicSlugAction: vi.fn(),
+  regenerateIcsFeedToken: vi.fn(),
 }));
 
 import { fetchGuildChannels } from "@/app/dashboard/actions";
@@ -26,6 +27,8 @@ describe("GuildSettingsForm", () => {
     currentChannelId: null as string | null,
     isPublic: false,
     publicSlug: null as string | null,
+    feedUrl:
+      "https://test.supabase.co/functions/v1/ics-feed?guild_id=123456789&token=abc123",
   };
 
   beforeEach(() => {
@@ -144,6 +147,39 @@ describe("GuildSettingsForm", () => {
         "href",
         "/dashboard?guild=123456789"
       );
+    });
+  });
+
+  describe("ICSフィード設定セクション", () => {
+    it("ICSフィード設定セクションを表示する", () => {
+      render(<GuildSettingsForm {...defaultProps} />);
+
+      expect(screen.getByText("ICSフィード")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "ICSフィードURLを外部カレンダーアプリに登録すると、予定を自動同期できます。"
+        )
+      ).toBeInTheDocument();
+    });
+
+    it("フィードURLを表示する", () => {
+      render(<GuildSettingsForm {...defaultProps} />);
+
+      expect(
+        screen.getByText(
+          "https://test.supabase.co/functions/v1/ics-feed?guild_id=123456789&token=abc123"
+        )
+      ).toBeInTheDocument();
+    });
+
+    it("feedUrlが空文字列の場合、フォールバックメッセージを表示する", () => {
+      render(<GuildSettingsForm {...defaultProps} feedUrl="" />);
+
+      expect(
+        screen.getByText(
+          "フィードURLの取得に失敗しました。ページを再読み込みしてください。"
+        )
+      ).toBeInTheDocument();
     });
   });
 

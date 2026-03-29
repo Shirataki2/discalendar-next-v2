@@ -125,14 +125,14 @@
   - トークン再生成ボタンのローディング状態と完了後のURL更新をテストする
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 6. 統合: ダッシュボードへのICSフィード機能の組み込み
-- [ ] 6.1 ダッシュボードページにICSフィードURLセクションを統合する
+- [x] 6. 統合: ダッシュボードへのICSフィード機能の組み込み
+- [x] 6.1 ダッシュボードページにICSフィードURLセクションを統合する
   - ダッシュボードのServer Componentでギルドの公開/非公開状態とアクティブトークンを取得する
   - IcsFeedUrlSectionコンポーネントにpropsとして渡す
   - Edge FunctionのURL（Supabaseプロジェクト参照値）を環境変数から取得して渡す
   - _Requirements: 6.1, 6.3, 6.4_
 
-- [ ] 6.2 Edge Functionのデプロイ設定を構成する
+- [x] 6.2 Edge Functionのデプロイ設定を構成する
   - `--no-verify-jwt` フラグ付きでEdge Functionをデプロイ可能にする
   - CORSヘッダー（Access-Control-Allow-Origin: *）を設定する
   - ローカル開発環境でsupabase functions serveによる動作確認手順を整備する

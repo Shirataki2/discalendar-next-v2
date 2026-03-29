@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getOrCreateIcsFeedToken } from "@/app/dashboard/actions";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { GuildSettingsForm } from "@/components/guilds/guild-settings-form";
 import { createPublicCalendarService } from "@/lib/calendar/public-calendar-service";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
  * 認証・権限チェック後にギルド設定フォームを表示する。
  * dashboard/page.tsx と同一の認証パターンを採用。
  *
- * Requirements: 1.1, 1.2, 1.3, 1.4, 2.3 (データ統合)
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 2.3, 6.1, 6.3, 6.4 (データ統合)
  */
 export default async function GuildSettingsPage({
   params,
@@ -85,6 +86,10 @@ export default async function GuildSettingsPage({
     ? publicSettingsResult.data.publicSlug
     : null;
 
+  // ICSフィードトークン取得 (Req 6.1, 6.3, 6.4)
+  const feedTokenResult = await getOrCreateIcsFeedToken(guildId, isPublic);
+  const feedUrl = feedTokenResult.success ? feedTokenResult.data.feedUrl : "";
+
   // ユーザー情報を整形
   const dashboardUser = buildDashboardUser(user);
 
@@ -94,6 +99,7 @@ export default async function GuildSettingsPage({
       <main className="container mx-auto flex flex-1 flex-col px-4 py-6">
         <GuildSettingsForm
           currentChannelId={currentChannelId}
+          feedUrl={feedUrl}
           guild={{
             guildId: targetGuild.guildId,
             name: targetGuild.name,

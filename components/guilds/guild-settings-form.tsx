@@ -14,6 +14,7 @@ import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { GuildSettingsPanel } from "@/components/guilds/guild-settings-panel";
+import { IcsFeedUrlSection } from "@/components/guilds/ics-feed-url-section";
 import { NotificationChannelSelect } from "@/components/guilds/notification-channel-select";
 import { PublicCalendarUrlSection } from "@/components/guilds/public-calendar-url-section";
 import { SettingsSection } from "@/components/settings/settings-section";
@@ -28,6 +29,7 @@ export type GuildSettingsFormProps = {
   currentChannelId: string | null;
   isPublic: boolean;
   publicSlug: string | null;
+  feedUrl: string;
 };
 
 function getGuildInitial(name: string): string {
@@ -43,6 +45,7 @@ export function GuildSettingsForm({
   currentChannelId,
   isPublic,
   publicSlug,
+  feedUrl,
 }: GuildSettingsFormProps) {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -103,6 +106,18 @@ export function GuildSettingsForm({
           guildId={guild.guildId}
           isPublic={isPublic}
           publicSlug={publicSlug}
+        />
+      </SettingsSection>
+
+      {/* ICSフィード設定セクション */}
+      <SettingsSection
+        description="ICSフィードURLを外部カレンダーアプリに登録すると、予定を自動同期できます。"
+        title="ICSフィード"
+      >
+        <IcsFeedUrlSection
+          feedUrl={feedUrl}
+          guildId={guild.guildId}
+          isPublic={isPublic}
         />
       </SettingsSection>
     </div>

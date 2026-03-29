@@ -88,9 +88,17 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const deps = createDeps(supabaseUrl, serviceRoleKey);
 
-    return await handleIcsFeed(guildId, token, deps);
+    const response = await handleIcsFeed(guildId, token, deps);
+    // Add CORS headers to all responses
+    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      response.headers.set(key, value);
+    }
+    return response;
   } catch (error) {
     console.error("ICS feed error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+    return new Response("Internal Server Error", {
+      status: 500,
+      headers: CORS_HEADERS,
+    });
   }
 });
