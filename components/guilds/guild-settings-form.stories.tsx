@@ -32,6 +32,8 @@ export const WithAvatar: Story = {
     currentChannelId: null,
     isPublic: false,
     publicSlug: null,
+    feedUrl:
+      "https://abc.supabase.co/functions/v1/ics-feed?guild_id=123456789&token=abc123def456",
   },
 };
 
@@ -46,6 +48,8 @@ export const WithoutAvatar: Story = {
     currentChannelId: null,
     isPublic: false,
     publicSlug: null,
+    feedUrl:
+      "https://abc.supabase.co/functions/v1/ics-feed?guild_id=987654321&token=xyz789",
   },
 };
 
@@ -60,6 +64,8 @@ export const RestrictedOn: Story = {
     currentChannelId: "11111111111111111",
     isPublic: false,
     publicSlug: null,
+    feedUrl:
+      "https://abc.supabase.co/functions/v1/ics-feed?guild_id=123456789&token=abc123def456",
   },
 };
 
@@ -74,6 +80,7 @@ export const PublicCalendarEnabled: Story = {
     currentChannelId: null,
     isPublic: true,
     publicSlug: "abc123def456",
+    feedUrl: "https://abc.supabase.co/functions/v1/ics-feed?guild_id=123456789",
   },
 };
 
@@ -88,6 +95,8 @@ export const Mobile: Story = {
     currentChannelId: null,
     isPublic: false,
     publicSlug: null,
+    feedUrl:
+      "https://abc.supabase.co/functions/v1/ics-feed?guild_id=123456789&token=abc123def456",
   },
   parameters: {
     viewport: { defaultViewport: "mobile1" },

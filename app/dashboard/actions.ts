@@ -64,6 +64,7 @@ import {
 } from "@/lib/guilds/guild-config-service";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
 import { createUserGuildsService } from "@/lib/guilds/user-guilds-service";
+import { createIcsFeedTokenService } from "@/lib/ics/ics-feed-token-service";
 import { createClient } from "@/lib/supabase/server";
 import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 import type { GuildPermissionInfo } from "./dashboard-with-calendar";
@@ -1244,5 +1245,187 @@ export async function regeneratePublicSlugAction(
   return {
     success: true,
     data: { publicSlug: result.data.slug },
+  };
+}
+
+// ──────────────────────────────────────────────
+// Task 4.1 (ics-feed-export): ICSフィードトークン管理
+// ──────────────────────────────────────────────
+
+/** getOrCreateIcsFeedToken の戻り値型 */
+export type IcsFeedTokenActionResult =
+  | { success: true; data: { token: string; feedUrl: string } }
+  | {
+      success: false;
+      error: { code: string; message: string };
+    };
+
+/**
+ * ICSフィードトークンを取得、または新規生成する Server Action
+ *
+ * 認証チェック → ギルドメンバーシップ検証 → トークン取得/生成
+ * 公開ギルドの場合はトークンなしのフィードURLを返す。
+ *
+ * Requirements: 4.5, 5.3, 6.3, 6.4
+ */
+export async function getOrCreateIcsFeedToken(
+  guildId: string
+): Promise<IcsFeedTokenActionResult> {
+  if (!GUILD_ID_PATTERN.test(guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(guildId);
+
+  if (!authResult.success) {
+    return {
+      success: false,
+      error: {
+        code: authResult.error.code,
+        message: authResult.error.message,
+      },
+    };
+  }
+
+  const { auth } = authResult;
+  const tokenService = createIcsFeedTokenService(auth.supabase);
+  const supabaseProjectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+
+  // サーバー側でギルドの公開状態を取得（クライアント入力に依存しない）
+  const publicCalendarService = createPublicCalendarService(auth.supabase);
+  const publicSettings = await publicCalendarService.getPublicSettings(guildId);
+  const isPublic = publicSettings.success && publicSettings.data.isPublic;
+
+  if (isPublic) {
+    return {
+      success: true,
+      data: {
+        token: "",
+        feedUrl: tokenService.buildFeedUrl({
+          guildId,
+          token: null,
+          isPublic: true,
+          supabaseProjectUrl,
+        }),
+      },
+    };
+  }
+
+  const tokenResult = await tokenService.getOrCreateToken(guildId);
+
+  if (!tokenResult.success) {
+    return {
+      success: false,
+      error: {
+        code: tokenResult.error.code,
+        message: tokenResult.error.message,
+      },
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      token: tokenResult.data.token,
+      feedUrl: tokenService.buildFeedUrl({
+        guildId,
+        token: tokenResult.data.token,
+        isPublic: false,
+        supabaseProjectUrl,
+      }),
+    },
+  };
+}
+
+/**
+ * ICSフィードトークンを再生成する Server Action
+ *
+ * 既存のアクティブトークンを無効化し、新しいトークンを生成する。
+ * 新しいトークンを含むフィードURLを返す。
+ *
+ * Requirements: 5.4, 6.5
+ */
+export async function regenerateIcsFeedToken(
+  guildId: string
+): Promise<IcsFeedTokenActionResult> {
+  if (!GUILD_ID_PATTERN.test(guildId)) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "ギルドIDの形式が不正です。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(guildId);
+
+  if (!authResult.success) {
+    return {
+      success: false,
+      error: {
+        code: authResult.error.code,
+        message: authResult.error.message,
+      },
+    };
+  }
+
+  const { auth } = authResult;
+
+  if (!canManageGuild(auth.permissions)) {
+    return {
+      success: false,
+      error: {
+        code: "PERMISSION_DENIED",
+        message: "ICSフィードトークンを再生成するには管理権限が必要です。",
+      },
+    };
+  }
+
+  // 公開ギルドはトークン不要のため再生成を拒否
+  const publicCalendarService = createPublicCalendarService(auth.supabase);
+  const publicSettings = await publicCalendarService.getPublicSettings(guildId);
+  if (publicSettings.success && publicSettings.data.isPublic) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "公開カレンダーではトークンの再生成は不要です。",
+      },
+    };
+  }
+
+  const tokenService = createIcsFeedTokenService(auth.supabase);
+
+  const tokenResult = await tokenService.regenerateToken(guildId);
+
+  if (!tokenResult.success) {
+    return {
+      success: false,
+      error: {
+        code: tokenResult.error.code,
+        message: tokenResult.error.message,
+      },
+    };
+  }
+
+  const supabaseProjectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  return {
+    success: true,
+    data: {
+      token: tokenResult.data.token,
+      feedUrl: tokenService.buildFeedUrl({
+        guildId,
+        token: tokenResult.data.token,
+        isPublic: false,
+        supabaseProjectUrl,
+      }),
+    },
   };
 }
