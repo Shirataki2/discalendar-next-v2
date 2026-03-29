@@ -51,6 +51,67 @@ function maxDaysInMonth(year: number, month: number): number {
   return 31;
 }
 
+export type DateTimeParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+};
+
+export type ParseDateTimeResult =
+  | { success: true; data: DateTimeParts }
+  | { success: false; error: string };
+
+// YYYY/MM/DD HH:mm or YYYY-MM-DD HH:mm
+const FULL_DATE_PATTERN =
+  /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})\s+(\d{1,2}):(\d{2})$/;
+
+// MM/DD HH:mm (年省略)
+const SHORT_DATE_PATTERN = /^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})$/;
+
+export function parseDateTimeText(text: string): ParseDateTimeResult {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    return { success: false, error: "日時を入力してください" };
+  }
+
+  let parts: DateTimeParts;
+
+  const fullMatch = trimmed.match(FULL_DATE_PATTERN);
+  if (fullMatch) {
+    parts = {
+      year: Number(fullMatch[1]),
+      month: Number(fullMatch[2]),
+      day: Number(fullMatch[3]),
+      hour: Number(fullMatch[4]),
+      minute: Number(fullMatch[5]),
+    };
+  } else {
+    const shortMatch = trimmed.match(SHORT_DATE_PATTERN);
+    if (shortMatch) {
+      parts = {
+        year: new Date().getFullYear(),
+        month: Number(shortMatch[1]),
+        day: Number(shortMatch[2]),
+        hour: Number(shortMatch[3]),
+        minute: Number(shortMatch[4]),
+      };
+    } else {
+      return {
+        success: false,
+        error: "日時のフォーマットが不正です。例: 2025/03/29 15:00",
+      };
+    }
+  }
+
+  if (!validateDate(parts)) {
+    return { success: false, error: "無効な日付です" };
+  }
+
+  return { success: true, data: parts };
+}
+
 export function validateDate(input: DateInput): boolean {
   const { year, month, day, hour = 0, minute = 0 } = input;
 
