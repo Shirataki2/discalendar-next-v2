@@ -1,5 +1,143 @@
-import { describe, expect, it } from "vitest";
-import { formatDate, formatDateTime, validateDate } from "./datetime.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  formatDate,
+  formatDateTime,
+  jstPartsToUtcIso,
+  parseDateTimeText,
+  validateDate,
+} from "./datetime.js";
+
+describe("jstPartsToUtcIso", () => {
+  it("should convert JST parts to UTC ISO string", () => {
+    // 15:00 JST = 06:00 UTC
+    const result = jstPartsToUtcIso({
+      year: 2025,
+      month: 3,
+      day: 29,
+      hour: 15,
+      minute: 0,
+    });
+    expect(result).toBe("2025-03-29T06:00:00.000Z");
+  });
+
+  it("should handle midnight JST (00:00 JST = 15:00 UTC previous day)", () => {
+    const result = jstPartsToUtcIso({
+      year: 2025,
+      month: 4,
+      day: 1,
+      hour: 0,
+      minute: 0,
+    });
+    expect(result).toBe("2025-03-31T15:00:00.000Z");
+  });
+});
+
+describe("parseDateTimeText", () => {
+  beforeEach(() => {
+    // 現在年を固定（年省略テスト用）
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-15T00:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("should parse YYYY/MM/DD HH:mm format", () => {
+    const result = parseDateTimeText("2025/03/29 15:00");
+    expect(result).toEqual({
+      success: true,
+      data: { year: 2025, month: 3, day: 29, hour: 15, minute: 0 },
+    });
+  });
+
+  it("should parse YYYY-MM-DD HH:mm format", () => {
+    const result = parseDateTimeText("2025-03-29 15:00");
+    expect(result).toEqual({
+      success: true,
+      data: { year: 2025, month: 3, day: 29, hour: 15, minute: 0 },
+    });
+  });
+
+  it("should parse MM/DD HH:mm format with current year", () => {
+    const result = parseDateTimeText("03/29 15:00");
+    expect(result).toEqual({
+      success: true,
+      data: { year: 2026, month: 3, day: 29, hour: 15, minute: 0 },
+    });
+  });
+
+  it("should handle single-digit month/day", () => {
+    const result = parseDateTimeText("2025/1/5 9:05");
+    expect(result).toEqual({
+      success: true,
+      data: { year: 2025, month: 1, day: 5, hour: 9, minute: 5 },
+    });
+  });
+
+  it("should trim whitespace", () => {
+    const result = parseDateTimeText("  2025/03/29 15:00  ");
+    expect(result).toEqual({
+      success: true,
+      data: { year: 2025, month: 3, day: 29, hour: 15, minute: 0 },
+    });
+  });
+
+  it("should return error for invalid format", () => {
+    const result = parseDateTimeText("not a date");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("フォーマット");
+    }
+  });
+
+  it("should return error for empty string", () => {
+    const result = parseDateTimeText("");
+    expect(result.success).toBe(false);
+  });
+
+  it("should return error for invalid date (Feb 30)", () => {
+    const result = parseDateTimeText("2025/02/30 10:00");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("無効な日付");
+    }
+  });
+
+  it("should return error for invalid time (25:00)", () => {
+    const result = parseDateTimeText("2025/03/29 25:00");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("無効な日付");
+    }
+  });
+
+  it("should handle leap year Feb 29", () => {
+    const result = parseDateTimeText("2024/02/29 10:00");
+    expect(result).toEqual({
+      success: true,
+      data: { year: 2024, month: 2, day: 29, hour: 10, minute: 0 },
+    });
+  });
+
+  it("should reject non-leap year Feb 29", () => {
+    const result = parseDateTimeText("2025/02/29 10:00");
+    expect(result.success).toBe(false);
+  });
+
+  it("should handle month boundary (day 31 for 31-day months)", () => {
+    const result = parseDateTimeText("2025/01/31 23:59");
+    expect(result).toEqual({
+      success: true,
+      data: { year: 2025, month: 1, day: 31, hour: 23, minute: 59 },
+    });
+  });
+
+  it("should reject day 31 for 30-day months", () => {
+    const result = parseDateTimeText("2025/04/31 10:00");
+    expect(result.success).toBe(false);
+  });
+});
 
 describe("formatDateTime", () => {
   it("should format UTC date as JST YYYY/MM/DD HH:MM", () => {

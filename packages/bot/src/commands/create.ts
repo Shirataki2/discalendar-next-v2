@@ -10,6 +10,7 @@ import type { Command } from "../types/command.js";
 import { validateDate } from "../utils/datetime.js";
 import { createEventEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
+import { buildCreateModal } from "../utils/modal.js";
 import { hasManagementPermission } from "../utils/permissions.js";
 import {
   addNotifyOption,
@@ -28,9 +29,9 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
     .addStringOption((opt) =>
       opt
         .setName("name")
-        .setDescription("予定の名称")
+        .setDescription("予定の名称（省略時はモーダル入力）")
         .setMaxLength(100)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -38,7 +39,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(年)")
         .setMinValue(MIN_YEAR)
         .setMaxValue(MAX_YEAR)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -46,7 +47,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(月)")
         .setMinValue(1)
         .setMaxValue(12)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -54,7 +55,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(日)")
         .setMinValue(1)
         .setMaxValue(31)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -62,7 +63,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(時)")
         .setMinValue(0)
         .setMaxValue(23)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -70,7 +71,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定開始時間(分)")
         .setMinValue(0)
         .setMaxValue(59)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -78,7 +79,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(年)")
         .setMinValue(MIN_YEAR)
         .setMaxValue(MAX_YEAR)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -86,7 +87,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(月)")
         .setMinValue(1)
         .setMaxValue(12)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -94,7 +95,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(日)")
         .setMinValue(1)
         .setMaxValue(31)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -102,7 +103,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(時)")
         .setMinValue(0)
         .setMaxValue(23)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addIntegerOption((opt) =>
       opt
@@ -110,7 +111,7 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
         .setDescription("予定終了時間(分)")
         .setMinValue(0)
         .setMaxValue(59)
-        .setRequired(true)
+        .setRequired(false)
     )
     .addStringOption((opt) =>
       opt
@@ -181,17 +182,38 @@ async function execute(
     }
   }
 
-  const name = interaction.options.getString("name", true);
-  const startYear = interaction.options.getInteger("start_year", true);
-  const startMonth = interaction.options.getInteger("start_month", true);
-  const startDay = interaction.options.getInteger("start_day", true);
-  const startHour = interaction.options.getInteger("start_hour", true);
-  const startMinute = interaction.options.getInteger("start_minute", true);
-  const endYear = interaction.options.getInteger("end_year", true);
-  const endMonth = interaction.options.getInteger("end_month", true);
-  const endDay = interaction.options.getInteger("end_day", true);
-  const endHour = interaction.options.getInteger("end_hour", true);
-  const endMinute = interaction.options.getInteger("end_minute", true);
+  const name = interaction.options.getString("name");
+  const startYear = interaction.options.getInteger("start_year");
+  const startMonth = interaction.options.getInteger("start_month");
+  const startDay = interaction.options.getInteger("start_day");
+  const startHour = interaction.options.getInteger("start_hour");
+  const startMinute = interaction.options.getInteger("start_minute");
+  const endYear = interaction.options.getInteger("end_year");
+  const endMonth = interaction.options.getInteger("end_month");
+  const endDay = interaction.options.getInteger("end_day");
+  const endHour = interaction.options.getInteger("end_hour");
+  const endMinute = interaction.options.getInteger("end_minute");
+
+  // Modal path: name または日時パラメータが不足 → モーダルを表示
+  if (
+    name === null ||
+    startYear === null ||
+    startMonth === null ||
+    startDay === null ||
+    startHour === null ||
+    startMinute === null ||
+    endYear === null ||
+    endMonth === null ||
+    endDay === null ||
+    endHour === null ||
+    endMinute === null
+  ) {
+    const modal = buildCreateModal();
+    await interaction.showModal(modal);
+    return;
+  }
+
+  // Inline path: 既存のスラッシュオプション処理（後方互換性）
   const description = interaction.options.getString("description") ?? null;
   const isAllDay = interaction.options.getBoolean("is_all_day") ?? false;
   const color = interaction.options.getString("color") ?? "blue";

@@ -1,7 +1,10 @@
 import {
+  type ChatInputCommandInteraction,
   Client,
   Collection,
   GatewayIntentBits,
+  type Interaction,
+  type ModalSubmitInteraction,
   REST,
   Routes,
 } from "discord.js";
@@ -14,10 +17,23 @@ import listCommand from "./commands/list.js";
 import rsvpCommand from "./commands/rsvp.js";
 import { getConfig } from "./config.js";
 import { onGuildCreate, onGuildDelete, onGuildUpdate } from "./events/guild.js";
+import { handleModalSubmit } from "./handlers/modal-submit.js";
 import { startNotifyTask } from "./tasks/notify.js";
 import { startPresenceTask } from "./tasks/presence.js";
 import type { Command } from "./types/command.js";
 import { logger } from "./utils/logger.js";
+
+async function safeReplyError(
+  interaction: ModalSubmitInteraction | ChatInputCommandInteraction,
+  message: string
+): Promise<void> {
+  const reply = { content: message, ephemeral: true };
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp(reply);
+  } else {
+    await interaction.reply(reply);
+  }
+}
 
 export class DiscalendarBot extends Client {
   commands = new Collection<string, Command>();
@@ -67,36 +83,48 @@ export class DiscalendarBot extends Client {
     }
   }
 
-  private registerEventHandlers(): void {
-    this.on("interactionCreate", async (interaction) => {
-      if (!interaction.isChatInputCommand()) {
-        return;
-      }
-
-      const command = this.commands.get(interaction.commandName);
-      if (!command) {
-        logger.warn(`Unknown command: ${interaction.commandName}`);
-        return;
-      }
-
+  private async handleInteraction(interaction: Interaction): Promise<void> {
+    if (interaction.isModalSubmit()) {
       try {
-        await command.execute(interaction);
+        await handleModalSubmit(interaction);
       } catch (error) {
-        logger.error(
-          { error, command: interaction.commandName },
-          "Command execution failed"
+        logger.error({ error }, "Modal submit handler failed");
+        await safeReplyError(
+          interaction,
+          "モーダルの処理中にエラーが発生しました。"
         );
-        const reply = {
-          content: "コマンドの実行中にエラーが発生しました。",
-          ephemeral: true,
-        };
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp(reply);
-        } else {
-          await interaction.reply(reply);
-        }
       }
-    });
+      return;
+    }
+
+    if (!interaction.isChatInputCommand()) {
+      return;
+    }
+
+    const command = this.commands.get(interaction.commandName);
+    if (!command) {
+      logger.warn(`Unknown command: ${interaction.commandName}`);
+      return;
+    }
+
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      logger.error(
+        { error, command: interaction.commandName },
+        "Command execution failed"
+      );
+      await safeReplyError(
+        interaction,
+        "コマンドの実行中にエラーが発生しました。"
+      );
+    }
+  }
+
+  private registerEventHandlers(): void {
+    this.on("interactionCreate", (interaction) =>
+      this.handleInteraction(interaction)
+    );
 
     this.on("guildCreate", async (guild) => {
       try {

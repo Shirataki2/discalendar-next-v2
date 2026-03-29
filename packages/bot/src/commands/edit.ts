@@ -14,9 +14,14 @@ import type {
   EventUpdate,
   NotificationPayload,
 } from "../types/event.js";
-import { validateDate } from "../utils/datetime.js";
+import {
+  type DateTimeParts,
+  jstPartsToUtcIso,
+  validateDate,
+} from "../utils/datetime.js";
 import { createErrorEmbed, createEventEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
+import { buildEditModal } from "../utils/modal.js";
 import { hasManagementPermission } from "../utils/permissions.js";
 import {
   addNotifyOption,
@@ -30,14 +35,6 @@ import {
 } from "./constants.js";
 
 const MAX_RECENT_EVENTS = 5;
-
-type DateTimeParts = {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-};
 
 type DateTimeOverrides = {
   year?: number | null;
@@ -72,20 +69,6 @@ function isoToJstParts(iso: string): DateTimeParts {
     hour: jst.getUTCHours(),
     minute: jst.getUTCMinutes(),
   };
-}
-
-/** JSTパーツをUTC ISO文字列に変換する */
-function jstPartsToUtcIso(parts: DateTimeParts): string {
-  const utc = new Date(
-    Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour - JST_OFFSET_HOURS,
-      parts.minute
-    )
-  );
-  return utc.toISOString();
 }
 
 /** 既存日時に対して指定パーツを上書きマージする */
@@ -437,20 +420,68 @@ function buildCommandData(): SlashCommandOptionsOnlyBuilder {
 
 const data = buildCommandData();
 
-async function execute(
-  interaction: ChatInputCommandInteraction
+async function handleModalPath(
+  interaction: ChatInputCommandInteraction,
+  guildId: string,
+  eventQuery: string
 ): Promise<void> {
-  if (!interaction.guild) {
+  const guildConfigResult = await getGuildConfig(guildId);
+  if (!guildConfigResult.success) {
+    logger.error(
+      { error: guildConfigResult.error, guildId },
+      "Failed to fetch guild config"
+    );
     await interaction.reply({
-      content: "このコマンドはサーバーでのみ実行可能です",
+      content: "ギルド設定の取得に失敗しました",
       ephemeral: true,
     });
     return;
   }
 
-  await interaction.deferReply();
+  if (guildConfigResult.data?.restricted) {
+    const member = interaction.member as GuildMember | null;
+    if (!hasManagementPermission(member)) {
+      await interaction.reply({
+        content:
+          "このコマンドを実行するためには「管理者」「サーバー管理」「ロールの管理」「メッセージの管理」のいずれかの権限が必要です",
+        ephemeral: true,
+      });
+      return;
+    }
+  }
 
-  const guildId = interaction.guild.id;
+  const eventResult = await findEventByName(guildId, eventQuery);
+  if (!eventResult.success) {
+    logger.error(
+      { error: eventResult.error, guildId },
+      "Failed to search event for modal edit"
+    );
+    await interaction.reply({
+      content: "イベントの検索に失敗しました",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (!eventResult.data) {
+    await interaction.reply({
+      content: `「${eventQuery}」に一致するイベントが見つかりません`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const modal = buildEditModal(eventResult.data);
+  await interaction.showModal(modal);
+}
+
+async function handleInlinePath(
+  interaction: ChatInputCommandInteraction,
+  guildId: string,
+  eventQuery: string,
+  opts: ParsedEditOptions
+): Promise<void> {
+  await interaction.deferReply();
 
   const guildConfigResult = await getGuildConfig(guildId);
   if (!guildConfigResult.success) {
@@ -473,7 +504,6 @@ async function execute(
     }
   }
 
-  const eventQuery = interaction.options.getString("event", true);
   const eventResult = await findEventByName(guildId, eventQuery);
   if (!eventResult.success) {
     logger.error(
@@ -493,19 +523,6 @@ async function execute(
   }
 
   const event = eventResult.data;
-  const opts = parseEditOptions(interaction);
-
-  if (!opts.hasAnyEdit) {
-    await interaction.editReply({
-      embeds: [
-        createErrorEmbed(
-          "編集項目なし",
-          "編集する項目を1つ以上指定してください"
-        ),
-      ],
-    });
-    return;
-  }
 
   const payloadResult = buildUpdatePayload(opts, event);
   if (!payloadResult.success) {
@@ -530,6 +547,29 @@ async function execute(
     content: "正常に予定を更新しました",
     embeds: [embed],
   });
+}
+
+async function execute(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
+  if (!interaction.guild) {
+    await interaction.reply({
+      content: "このコマンドはサーバーでのみ実行可能です",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const guildId = interaction.guild.id;
+  const eventQuery = interaction.options.getString("event", true);
+  const opts = parseEditOptions(interaction);
+
+  if (!opts.hasAnyEdit) {
+    await handleModalPath(interaction, guildId, eventQuery);
+    return;
+  }
+
+  await handleInlinePath(interaction, guildId, eventQuery, opts);
 }
 
 export default { data, execute } satisfies Command;

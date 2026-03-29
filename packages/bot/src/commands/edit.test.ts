@@ -87,6 +87,7 @@ function createMockInteraction(options: {
     deferReply: vi.fn(),
     editReply: vi.fn(),
     reply: vi.fn(),
+    showModal: vi.fn(),
   };
 }
 
@@ -134,7 +135,7 @@ describe("edit command", () => {
     );
   });
 
-  it("replies with error when restricted and no permission", async () => {
+  it("replies with error when restricted and no permission (inline path)", async () => {
     mockGetGuildConfig.mockResolvedValue({
       success: true,
       data: { restricted: true },
@@ -144,7 +145,7 @@ describe("edit command", () => {
     const interaction = createMockInteraction({
       guildId: "guild-1",
       memberPermissions: false,
-      optionValues: { strings: { event: "test" } },
+      optionValues: { strings: { event: "test", name: "新しい名前" } },
     });
 
     const editCommand = (await import("./edit.js")).default;
@@ -211,7 +212,7 @@ describe("edit command", () => {
     );
   });
 
-  it("shows error when no edit options specified", async () => {
+  it("shows modal when no edit options specified", async () => {
     const interaction = createMockInteraction({
       guildId: "guild-1",
       optionValues: { strings: { event: "テスト" } },
@@ -220,17 +221,8 @@ describe("edit command", () => {
     const editCommand = (await import("./edit.js")).default;
     await editCommand.execute(interaction as never);
 
-    expect(interaction.editReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        embeds: expect.arrayContaining([
-          expect.objectContaining({
-            data: expect.objectContaining({
-              description: expect.stringContaining("1つ以上指定"),
-            }),
-          }),
-        ]),
-      })
-    );
+    expect(interaction.showModal).toHaveBeenCalledTimes(1);
+    expect(interaction.deferReply).not.toHaveBeenCalled();
   });
 
   it("updates only name when only name is specified", async () => {
@@ -540,6 +532,109 @@ describe("edit command", () => {
         ]),
       })
     );
+  });
+
+  describe("modal path (編集オプション未指定)", () => {
+    it("shows prefilled modal when no edit options specified", async () => {
+      const interaction = createMockInteraction({
+        guildId: "guild-1",
+        optionValues: { strings: { event: "テスト" } },
+      });
+
+      const editCommand = (await import("./edit.js")).default;
+      await editCommand.execute(interaction as never);
+
+      expect(interaction.showModal).toHaveBeenCalledTimes(1);
+      expect(interaction.deferReply).not.toHaveBeenCalled();
+    });
+
+    it("returns error when event not found on modal path", async () => {
+      mockFindEventByName.mockResolvedValue({
+        success: true,
+        data: null,
+      });
+
+      const interaction = createMockInteraction({
+        guildId: "guild-1",
+        optionValues: { strings: { event: "存在しない" } },
+      });
+
+      const editCommand = (await import("./edit.js")).default;
+      await editCommand.execute(interaction as never);
+
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.stringContaining("見つかりません"),
+          ephemeral: true,
+        })
+      );
+      expect(interaction.showModal).not.toHaveBeenCalled();
+    });
+
+    it("returns permission error for restricted guild on modal path", async () => {
+      mockGetGuildConfig.mockResolvedValue({
+        success: true,
+        data: { restricted: true },
+      });
+      mockHasManagementPermission.mockReturnValue(false);
+
+      const interaction = createMockInteraction({
+        guildId: "guild-1",
+        memberPermissions: false,
+        optionValues: { strings: { event: "テスト" } },
+      });
+
+      const editCommand = (await import("./edit.js")).default;
+      await editCommand.execute(interaction as never);
+
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.stringContaining("権限"),
+          ephemeral: true,
+        })
+      );
+      expect(interaction.showModal).not.toHaveBeenCalled();
+    });
+
+    it("shows modal for restricted guild with permission", async () => {
+      mockGetGuildConfig.mockResolvedValue({
+        success: true,
+        data: { restricted: true },
+      });
+      mockHasManagementPermission.mockReturnValue(true);
+
+      const interaction = createMockInteraction({
+        guildId: "guild-1",
+        memberPermissions: true,
+        optionValues: { strings: { event: "テスト" } },
+      });
+
+      const editCommand = (await import("./edit.js")).default;
+      await editCommand.execute(interaction as never);
+
+      expect(interaction.showModal).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to inline path when edit options are provided", async () => {
+      mockUpdateEvent.mockResolvedValue({
+        success: true,
+        data: { ...MOCK_EVENT, name: "変更後" },
+      });
+
+      const interaction = createMockInteraction({
+        guildId: "guild-1",
+        optionValues: {
+          strings: { event: "テスト", name: "変更後" },
+        },
+      });
+
+      const editCommand = (await import("./edit.js")).default;
+      await editCommand.execute(interaction as never);
+
+      expect(interaction.deferReply).toHaveBeenCalled();
+      expect(interaction.showModal).not.toHaveBeenCalled();
+      expect(mockUpdateEvent).toHaveBeenCalled();
+    });
   });
 });
 
