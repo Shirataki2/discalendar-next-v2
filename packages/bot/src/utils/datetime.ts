@@ -59,6 +59,21 @@ export type DateTimeParts = {
   minute: number;
 };
 
+/** JSTパーツをUTC ISO文字列に変換する */
+export function jstPartsToUtcIso(parts: DateTimeParts): string {
+  const JST_OFFSET_HOURS = 9;
+  const utc = new Date(
+    Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour - JST_OFFSET_HOURS,
+      parts.minute
+    )
+  );
+  return utc.toISOString();
+}
+
 export type ParseDateTimeResult =
   | { success: true; data: DateTimeParts }
   | { success: false; error: string };

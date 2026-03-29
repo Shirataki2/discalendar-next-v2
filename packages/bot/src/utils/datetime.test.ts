@@ -2,9 +2,35 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   formatDate,
   formatDateTime,
+  jstPartsToUtcIso,
   parseDateTimeText,
   validateDate,
 } from "./datetime.js";
+
+describe("jstPartsToUtcIso", () => {
+  it("should convert JST parts to UTC ISO string", () => {
+    // 15:00 JST = 06:00 UTC
+    const result = jstPartsToUtcIso({
+      year: 2025,
+      month: 3,
+      day: 29,
+      hour: 15,
+      minute: 0,
+    });
+    expect(result).toBe("2025-03-29T06:00:00.000Z");
+  });
+
+  it("should handle midnight JST (00:00 JST = 15:00 UTC previous day)", () => {
+    const result = jstPartsToUtcIso({
+      year: 2025,
+      month: 4,
+      day: 1,
+      hour: 0,
+      minute: 0,
+    });
+    expect(result).toBe("2025-03-31T15:00:00.000Z");
+  });
+});
 
 describe("parseDateTimeText", () => {
   beforeEach(() => {

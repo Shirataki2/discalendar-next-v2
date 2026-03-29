@@ -42,7 +42,7 @@ import type { EventRecord } from "../types/event.js";
 
 function makeEvent(overrides: Partial<EventRecord> = {}): EventRecord {
   return {
-    id: "evt-integration-1",
+    id: "550e8400-e29b-41d4-a716-446655440000",
     guild_id: "guild-1",
     name: "統合テストイベント",
     description: "統合テスト用の説明",
@@ -256,7 +256,7 @@ describe("結合テスト: /create モーダルフロー", () => {
 describe("結合テスト: /edit モーダルフロー", () => {
   it("/edit（編集オプションなし）→ イベント検索 → モーダル表示（プリフィル）→ Submit → 更新 → Embed返信", async () => {
     const existingEvent = makeEvent({
-      id: "evt-edit-1",
+      id: "660e8400-e29b-41d4-b716-446655440001",
       name: "既存イベント",
       description: "既存の説明",
     });
@@ -294,7 +294,7 @@ describe("結合テスト: /edit モーダルフロー", () => {
 
     // Step 2: ModalSubmit → 更新
     const updatedEvent = makeEvent({
-      id: "evt-edit-1",
+      id: "660e8400-e29b-41d4-b716-446655440001",
       name: "更新後イベント",
       description: "更新後の説明",
     });
@@ -316,9 +316,12 @@ describe("結合テスト: /edit モーダルフロー", () => {
     const { handleModalSubmit } = await import("./modal-submit.js");
     await handleModalSubmit(submitInteraction);
 
-    expect(mockGetEventById).toHaveBeenCalledWith("evt-edit-1", "guild-1");
+    expect(mockGetEventById).toHaveBeenCalledWith(
+      "660e8400-e29b-41d4-b716-446655440001",
+      "guild-1"
+    );
     expect(mockUpdateEvent).toHaveBeenCalledWith(
-      "evt-edit-1",
+      "660e8400-e29b-41d4-b716-446655440001",
       "guild-1",
       expect.objectContaining({
         name: "更新後イベント",
@@ -357,7 +360,7 @@ describe("結合テスト: /edit モーダルフロー", () => {
     mockGetEventById.mockResolvedValue({ success: true, data: null });
 
     const submitInteraction = makeModalSubmitInteraction({
-      customId: "event-edit:evt-deleted",
+      customId: "event-edit:770e8400-e29b-41d4-8716-446655440002",
       guildId: "guild-1",
       fields: {
         "event-title": "テスト",

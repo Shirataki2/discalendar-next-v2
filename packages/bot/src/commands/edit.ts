@@ -14,7 +14,7 @@ import type {
   EventUpdate,
   NotificationPayload,
 } from "../types/event.js";
-import { validateDate } from "../utils/datetime.js";
+import { jstPartsToUtcIso, validateDate } from "../utils/datetime.js";
 import { createErrorEmbed, createEventEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
 import { hasManagementPermission } from "../utils/permissions.js";
@@ -72,20 +72,6 @@ function isoToJstParts(iso: string): DateTimeParts {
     hour: jst.getUTCHours(),
     minute: jst.getUTCMinutes(),
   };
-}
-
-/** JSTパーツをUTC ISO文字列に変換する */
-function jstPartsToUtcIso(parts: DateTimeParts): string {
-  const utc = new Date(
-    Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour - JST_OFFSET_HOURS,
-      parts.minute
-    )
-  );
-  return utc.toISOString();
 }
 
 /** 既存日時に対して指定パーツを上書きマージする */

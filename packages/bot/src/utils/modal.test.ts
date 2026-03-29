@@ -11,7 +11,7 @@ import {
 
 function makeEvent(overrides: Partial<EventRecord> = {}): EventRecord {
   return {
-    id: "event-uuid-123",
+    id: "550e8400-e29b-41d4-a716-446655440000",
     guild_id: "guild-1",
     name: "テストイベント",
     description: "テスト説明",
@@ -119,7 +119,9 @@ describe("buildEditModal", () => {
     const event = makeEvent();
     const modal = buildEditModal(event);
     const json = modal.toJSON();
-    expect(json.custom_id).toBe("event-edit:event-uuid-123");
+    expect(json.custom_id).toBe(
+      "event-edit:550e8400-e29b-41d4-a716-446655440000"
+    );
     expect(json.title).toBe("イベント編集");
   });
 
@@ -183,7 +185,9 @@ describe("buildEditModal", () => {
 
 describe("parseEditCustomId", () => {
   it("should extract event ID from edit customId", () => {
-    expect(parseEditCustomId("event-edit:abc-123")).toBe("abc-123");
+    expect(
+      parseEditCustomId("event-edit:550e8400-e29b-41d4-a716-446655440000")
+    ).toBe("550e8400-e29b-41d4-a716-446655440000");
   });
 
   it("should return null for create customId", () => {
@@ -196,5 +200,10 @@ describe("parseEditCustomId", () => {
 
   it("should return null for empty edit prefix", () => {
     expect(parseEditCustomId("event-edit:")).toBeNull();
+  });
+
+  it("should return null for non-UUID format", () => {
+    expect(parseEditCustomId("event-edit:abc-123")).toBeNull();
+    expect(parseEditCustomId("event-edit:not-a-uuid")).toBeNull();
   });
 });

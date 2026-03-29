@@ -5,8 +5,7 @@ import {
   updateEvent,
 } from "../services/event-service.js";
 import { getGuildConfig } from "../services/guild-service.js";
-import type { DateTimeParts } from "../utils/datetime.js";
-import { parseDateTimeText } from "../utils/datetime.js";
+import { jstPartsToUtcIso, parseDateTimeText } from "../utils/datetime.js";
 import { createEventEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
 import {
@@ -15,21 +14,6 @@ import {
   parseEditCustomId,
 } from "../utils/modal.js";
 import { hasManagementPermission } from "../utils/permissions.js";
-
-const JST_OFFSET_HOURS = 9;
-
-function jstPartsToUtcIso(parts: DateTimeParts): string {
-  const utc = new Date(
-    Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour - JST_OFFSET_HOURS,
-      parts.minute
-    )
-  );
-  return utc.toISOString();
-}
 
 function parseIsAllDay(
   value: string
@@ -46,6 +30,9 @@ function parseIsAllDay(
     error: "終日の値は true または false で入力してください",
   };
 }
+
+const MAX_TITLE_LENGTH = 100;
+const MAX_DESCRIPTION_LENGTH = 1024;
 
 type ModalFields = {
   title: string;
@@ -74,6 +61,18 @@ function extractAndValidateFields(
 
   if (!title) {
     return { success: false, error: "タイトルは必須です" };
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    return {
+      success: false,
+      error: `タイトルは${MAX_TITLE_LENGTH}文字以内で入力してください`,
+    };
+  }
+  if (description && description.length > MAX_DESCRIPTION_LENGTH) {
+    return {
+      success: false,
+      error: `説明は${MAX_DESCRIPTION_LENGTH}文字以内で入力してください`,
+    };
   }
 
   const startResult = parseDateTimeText(startAtText);
@@ -280,11 +279,9 @@ export async function handleModalSubmit(
     return;
   }
 
-  // isEdit is true here, so eventId is guaranteed non-null
-  await handleEdit(
-    interaction,
-    guildId,
-    eventId as string,
-    validationResult.data
-  );
+  if (!eventId) {
+    return;
+  }
+
+  await handleEdit(interaction, guildId, eventId, validationResult.data);
 }

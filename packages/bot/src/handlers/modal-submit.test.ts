@@ -23,7 +23,7 @@ const mockedGetGuildConfig = vi.mocked(getGuildConfig);
 
 function makeEvent(overrides: Partial<EventRecord> = {}): EventRecord {
   return {
-    id: "event-uuid-123",
+    id: "550e8400-e29b-41d4-a716-446655440000",
     guild_id: "guild-1",
     name: "テストイベント",
     description: "テスト説明",
@@ -340,7 +340,7 @@ describe("handleModalSubmit", () => {
         data: updatedEvent,
       });
       const interaction = makeInteraction({
-        customId: "event-edit:event-uuid-123",
+        customId: "event-edit:550e8400-e29b-41d4-a716-446655440000",
         fields: {
           "event-title": "更新後イベント",
           "event-description": "更新説明",
@@ -351,7 +351,7 @@ describe("handleModalSubmit", () => {
       });
       await handleModalSubmit(interaction);
       expect(mockedUpdateEvent).toHaveBeenCalledWith(
-        "event-uuid-123",
+        "550e8400-e29b-41d4-a716-446655440000",
         "guild-1",
         expect.objectContaining({ name: "更新後イベント" })
       );
@@ -366,7 +366,7 @@ describe("handleModalSubmit", () => {
     it("should reply error when event not found", async () => {
       mockedGetEventById.mockResolvedValue({ success: true, data: null });
       const interaction = makeInteraction({
-        customId: "event-edit:non-existent-id",
+        customId: "event-edit:660e8400-e29b-41d4-b716-446655440001",
       });
       await handleModalSubmit(interaction);
       expect(interaction.reply).toHaveBeenCalledWith(
@@ -383,7 +383,7 @@ describe("handleModalSubmit", () => {
         error: { code: "FETCH_FAILED", message: "DB error" },
       });
       const interaction = makeInteraction({
-        customId: "event-edit:event-uuid-123",
+        customId: "event-edit:550e8400-e29b-41d4-a716-446655440000",
       });
       await handleModalSubmit(interaction);
       expect(interaction.reply).toHaveBeenCalledWith(
@@ -404,7 +404,7 @@ describe("handleModalSubmit", () => {
         error: { code: "UPDATE_FAILED", message: "DB error" },
       });
       const interaction = makeInteraction({
-        customId: "event-edit:event-uuid-123",
+        customId: "event-edit:550e8400-e29b-41d4-a716-446655440000",
       });
       await handleModalSubmit(interaction);
       expect(interaction.reply).toHaveBeenCalledWith(
