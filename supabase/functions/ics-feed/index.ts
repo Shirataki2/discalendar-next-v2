@@ -45,6 +45,8 @@ function createDeps(supabaseUrl: string, serviceRoleKey: string): IcsFeedDeps {
       return data?.token ?? null;
     },
 
+    // ICSフィードの上限: 各クエリ1000件。超過分はサイレントに切り捨て。
+    // Discordコミュニティカレンダーで1000イベント超はまれなため許容する。
     async findSingleEvents(guildId: string): Promise<EventRow[]> {
       const { data } = await supabase
         .from("events")

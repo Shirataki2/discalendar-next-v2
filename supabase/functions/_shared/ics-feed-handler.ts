@@ -75,15 +75,13 @@ function buildIcsHeaders(isPublic: boolean): HeadersInit {
 // --- Constant-time string comparison ---
 
 function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
+  const len = Math.max(a.length, b.length);
   let result = 0;
-  for (let i = 0; i < a.length; i++) {
+  for (let i = 0; i < len; i++) {
     // biome-ignore lint/suspicious/noBitwiseOperators: intentional constant-time comparison
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    result |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
   }
-  return result === 0;
+  return result === 0 && a.length === b.length;
 }
 
 // --- snake_case → camelCase converters ---
