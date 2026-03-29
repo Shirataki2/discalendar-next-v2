@@ -57,12 +57,20 @@ export type IcsFeedDeps = {
 
 // --- Response Headers ---
 
-const ICS_HEADERS: HeadersInit = {
+const BASE_ICS_HEADERS: HeadersInit = {
   "Content-Type": "text/calendar; charset=utf-8",
   "Content-Disposition": 'attachment; filename="calendar.ics"',
-  "Cache-Control": "public, max-age=3600, stale-while-revalidate=600",
   "Access-Control-Allow-Origin": "*",
 };
+
+function buildIcsHeaders(isPublic: boolean): HeadersInit {
+  return {
+    ...BASE_ICS_HEADERS,
+    "Cache-Control": isPublic
+      ? "public, max-age=3600, stale-while-revalidate=600"
+      : "private, no-store",
+  };
+}
 
 // --- Constant-time string comparison ---
 
@@ -182,6 +190,6 @@ export async function handleIcsFeed(
 
   return new Response(icsText, {
     status: 200,
-    headers: ICS_HEADERS,
+    headers: buildIcsHeaders(guild.is_public),
   });
 }

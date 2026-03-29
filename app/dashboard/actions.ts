@@ -1388,6 +1388,19 @@ export async function regenerateIcsFeedToken(
     };
   }
 
+  // 公開ギルドはトークン不要のため再生成を拒否
+  const publicCalendarService = createPublicCalendarService(auth.supabase);
+  const publicSettings = await publicCalendarService.getPublicSettings(guildId);
+  if (publicSettings.success && publicSettings.data.isPublic) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "公開カレンダーではトークンの再生成は不要です。",
+      },
+    };
+  }
+
   const tokenService = createIcsFeedTokenService(auth.supabase);
 
   const tokenResult = await tokenService.regenerateToken(guildId);

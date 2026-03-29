@@ -284,6 +284,10 @@ describe("getOrCreateIcsFeedToken", () => {
 describe("regenerateIcsFeedToken", () => {
   it("管理権限ありで旧トークンを無効化し新トークンでURLを返す", async () => {
     setupManagerAuth(TEST_GUILD_ID);
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: false, publicSlug: null },
+    });
     mockRegenerateToken.mockResolvedValueOnce({
       success: true,
       data: { token: "c".repeat(64) },
@@ -334,8 +338,28 @@ describe("regenerateIcsFeedToken", () => {
     }
   });
 
+  it("公開ギルドではトークン再生成を拒否する", async () => {
+    setupManagerAuth(TEST_GUILD_ID);
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: true, publicSlug: "slug123" },
+    });
+
+    const result = await regenerateIcsFeedToken(TEST_GUILD_ID);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VALIDATION_ERROR");
+    }
+    expect(mockRegenerateToken).not.toHaveBeenCalled();
+  });
+
   it("トークン再生成失敗時はINTERNAL_ERRORを返す", async () => {
     setupManagerAuth(TEST_GUILD_ID);
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: false, publicSlug: null },
+    });
     mockRegenerateToken.mockResolvedValueOnce({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "revoke error" },

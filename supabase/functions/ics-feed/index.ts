@@ -50,7 +50,8 @@ function createDeps(supabaseUrl: string, serviceRoleKey: string): IcsFeedDeps {
         .from("events")
         .select(EVENT_SELECT)
         .eq("guild_id", guildId)
-        .is("series_id", null);
+        .is("series_id", null)
+        .limit(1000);
       return data ?? [];
     },
 
@@ -58,7 +59,8 @@ function createDeps(supabaseUrl: string, serviceRoleKey: string): IcsFeedDeps {
       const { data } = await supabase
         .from("event_series")
         .select(SERIES_SELECT)
-        .eq("guild_id", guildId);
+        .eq("guild_id", guildId)
+        .limit(1000);
       return data ?? [];
     },
 
@@ -67,7 +69,8 @@ function createDeps(supabaseUrl: string, serviceRoleKey: string): IcsFeedDeps {
         .from("events")
         .select(EVENT_SELECT)
         .eq("guild_id", guildId)
-        .not("series_id", "is", null);
+        .not("series_id", "is", null)
+        .limit(1000);
       return data ?? [];
     },
   };
