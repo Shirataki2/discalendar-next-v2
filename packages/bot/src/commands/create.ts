@@ -10,6 +10,7 @@ import type { Command } from "../types/command.js";
 import { validateDate } from "../utils/datetime.js";
 import { createEventEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
+import { buildCreateModal } from "../utils/modal.js";
 import { hasManagementPermission } from "../utils/permissions.js";
 import {
   addNotifyOption,
@@ -182,26 +183,37 @@ async function execute(
   }
 
   const name = interaction.options.getString("name");
+  const startYear = interaction.options.getInteger("start_year");
+  const startMonth = interaction.options.getInteger("start_month");
+  const startDay = interaction.options.getInteger("start_day");
+  const startHour = interaction.options.getInteger("start_hour");
+  const startMinute = interaction.options.getInteger("start_minute");
+  const endYear = interaction.options.getInteger("end_year");
+  const endMonth = interaction.options.getInteger("end_month");
+  const endDay = interaction.options.getInteger("end_day");
+  const endHour = interaction.options.getInteger("end_hour");
+  const endMinute = interaction.options.getInteger("end_minute");
 
-  // Modal path: name未指定 → モーダルを表示
-  if (!name) {
-    const { buildCreateModal } = await import("../utils/modal.js");
+  // Modal path: name または日時パラメータが不足 → モーダルを表示
+  if (
+    name === null ||
+    startYear === null ||
+    startMonth === null ||
+    startDay === null ||
+    startHour === null ||
+    startMinute === null ||
+    endYear === null ||
+    endMonth === null ||
+    endDay === null ||
+    endHour === null ||
+    endMinute === null
+  ) {
     const modal = buildCreateModal();
     await interaction.showModal(modal);
     return;
   }
 
   // Inline path: 既存のスラッシュオプション処理（後方互換性）
-  const startYear = interaction.options.getInteger("start_year", true);
-  const startMonth = interaction.options.getInteger("start_month", true);
-  const startDay = interaction.options.getInteger("start_day", true);
-  const startHour = interaction.options.getInteger("start_hour", true);
-  const startMinute = interaction.options.getInteger("start_minute", true);
-  const endYear = interaction.options.getInteger("end_year", true);
-  const endMonth = interaction.options.getInteger("end_month", true);
-  const endDay = interaction.options.getInteger("end_day", true);
-  const endHour = interaction.options.getInteger("end_hour", true);
-  const endMinute = interaction.options.getInteger("end_minute", true);
   const description = interaction.options.getString("description") ?? null;
   const isAllDay = interaction.options.getBoolean("is_all_day") ?? false;
   const color = interaction.options.getString("color") ?? "blue";

@@ -199,6 +199,26 @@ describe("handleModalSubmit", () => {
       );
     });
 
+    it("should allow equal start/end for all-day events", async () => {
+      mockedCreateEvent.mockResolvedValue({
+        success: true,
+        data: makeEvent({ is_all_day: true }),
+      });
+      const interaction = makeInteraction({
+        fields: {
+          "event-title": "終日イベント",
+          "event-description": "",
+          "event-start-at": "2025/03/29 00:00",
+          "event-end-at": "2025/03/29 00:00",
+          "event-is-all-day": "true",
+        },
+      });
+      await handleModalSubmit(interaction);
+      expect(mockedCreateEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ is_all_day: true })
+      );
+    });
+
     it("should treat empty is_all_day as false", async () => {
       mockedCreateEvent.mockResolvedValue({
         success: true,

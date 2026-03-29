@@ -14,9 +14,14 @@ import type {
   EventUpdate,
   NotificationPayload,
 } from "../types/event.js";
-import { jstPartsToUtcIso, validateDate } from "../utils/datetime.js";
+import {
+  type DateTimeParts,
+  jstPartsToUtcIso,
+  validateDate,
+} from "../utils/datetime.js";
 import { createErrorEmbed, createEventEmbed } from "../utils/embeds.js";
 import { logger } from "../utils/logger.js";
+import { buildEditModal } from "../utils/modal.js";
 import { hasManagementPermission } from "../utils/permissions.js";
 import {
   addNotifyOption,
@@ -30,14 +35,6 @@ import {
 } from "./constants.js";
 
 const MAX_RECENT_EVENTS = 5;
-
-type DateTimeParts = {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-};
 
 type DateTimeOverrides = {
   year?: number | null;
@@ -474,7 +471,6 @@ async function handleModalPath(
     return;
   }
 
-  const { buildEditModal } = await import("../utils/modal.js");
   const modal = buildEditModal(eventResult.data);
   await interaction.showModal(modal);
 }

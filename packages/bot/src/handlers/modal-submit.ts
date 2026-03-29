@@ -91,18 +91,21 @@ function extractAndValidateFields(
     };
   }
 
+  const isAllDayResult = parseIsAllDay(isAllDayText);
+  if (!isAllDayResult.success) {
+    return { success: false, error: isAllDayResult.error };
+  }
+
   const startIso = jstPartsToUtcIso(startResult.data);
   const endIso = jstPartsToUtcIso(endResult.data);
-  if (startIso >= endIso) {
+  const startGteEnd = isAllDayResult.data
+    ? startIso > endIso
+    : startIso >= endIso;
+  if (startGteEnd) {
     return {
       success: false,
       error: "開始時間が終了時間以降になっています",
     };
-  }
-
-  const isAllDayResult = parseIsAllDay(isAllDayText);
-  if (!isAllDayResult.success) {
-    return { success: false, error: isAllDayResult.error };
   }
 
   return {
@@ -260,6 +263,11 @@ export async function handleModalSubmit(
 
   const guildId = interaction.guild.id;
 
+  const permitted = await checkPermission(interaction, guildId);
+  if (!permitted) {
+    return;
+  }
+
   const validationResult = extractAndValidateFields(interaction);
   if (!validationResult.success) {
     await interaction.reply({
@@ -269,16 +277,12 @@ export async function handleModalSubmit(
     return;
   }
 
-  const permitted = await checkPermission(interaction, guildId);
-  if (!permitted) {
-    return;
-  }
-
   if (isCreate) {
     await handleCreate(interaction, guildId, validationResult.data);
     return;
   }
 
+  // Type narrowing: control flow guarantees non-null but TS cannot infer
   if (!eventId) {
     return;
   }

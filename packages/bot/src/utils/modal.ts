@@ -54,7 +54,7 @@ function buildStartAtInput(value?: string): ActionRowBuilder<TextInputBuilder> {
     .setLabel("開始日時")
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
-    .setPlaceholder("2025/03/29 15:00");
+    .setPlaceholder(`${new Date().getFullYear()}/03/29 15:00`);
   if (value !== undefined) {
     input.setValue(value);
   }
@@ -67,7 +67,7 @@ function buildEndAtInput(value?: string): ActionRowBuilder<TextInputBuilder> {
     .setLabel("終了日時")
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
-    .setPlaceholder("2025/03/29 16:00");
+    .setPlaceholder(`${new Date().getFullYear()}/03/29 16:00`);
   if (value !== undefined) {
     input.setValue(value);
   }
