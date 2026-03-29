@@ -112,10 +112,15 @@ function toIcsSeries(row: EventSeriesRow): IcsSeries {
   };
 }
 
-function toIcsException(row: EventRow): IcsException {
+function toIcsException(row: EventRow): IcsException | null {
+  // series_id と original_date は findExceptionEvents のクエリで
+  // .not("series_id", "is", null) フィルタ済みだが、型安全のためガード
+  if (!(row.series_id && row.original_date)) {
+    return null;
+  }
   return {
     id: row.id,
-    seriesId: row.series_id as string,
+    seriesId: row.series_id,
     name: row.name,
     description: row.description,
     color: row.color,
@@ -123,7 +128,7 @@ function toIcsException(row: EventRow): IcsException {
     startAt: row.start_at,
     endAt: row.end_at,
     location: row.location,
-    originalDate: row.original_date as string,
+    originalDate: row.original_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -170,7 +175,9 @@ export async function handleIcsFeed(
     calendarName: guild.name,
     events: singleEvents.map(toIcsEvent),
     series: eventSeries.map(toIcsSeries),
-    exceptions: exceptionEvents.map(toIcsException),
+    exceptions: exceptionEvents
+      .map(toIcsException)
+      .filter((e): e is IcsException => e !== null),
   });
 
   return new Response(icsText, {

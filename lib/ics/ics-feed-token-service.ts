@@ -9,9 +9,6 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** PostgREST: .single() でレコードが見つからない場合のエラーコード */
-const POSTGREST_NOT_FOUND = "PGRST116";
-
 /** トークンの長さ（hex文字数、32バイト = 64文字） */
 const TOKEN_HEX_LENGTH = 64;
 
@@ -69,91 +66,45 @@ export function createIcsFeedTokenService(
 ): IcsFeedTokenServiceInterface {
   return {
     async getOrCreateToken(guildId) {
-      // アクティブなトークンを検索
-      const { data: existing, error: selectError } = await supabase
-        .from("ics_feed_tokens")
-        .select("token")
-        .eq("guild_id", guildId)
-        .is("revoked_at", null)
-        .single();
+      const newToken = generateToken();
+      const { data, error } = await supabase.rpc(
+        "get_or_create_ics_feed_token",
+        { p_guild_id: guildId, p_new_token: newToken },
+      );
 
-      if (!selectError && existing) {
-        return { success: true, data: { token: existing.token } };
-      }
-
-      // PGRST116 以外のエラーは異常
-      if (selectError && selectError.code !== POSTGREST_NOT_FOUND) {
+      if (error) {
         return {
           success: false,
           error: {
             code: "INTERNAL_ERROR",
-            message: "トークンの取得に失敗しました。",
-            details: selectError.message,
+            message: "トークンの取得・生成に失敗しました。",
+            details: error.message,
           },
         };
       }
 
-      // 新規トークンを生成
-      const token = generateToken();
-      const { data: inserted, error: insertError } = await supabase
-        .from("ics_feed_tokens")
-        .insert({ guild_id: guildId, token })
-        .select("token")
-        .single();
-
-      if (insertError || !inserted) {
-        return {
-          success: false,
-          error: {
-            code: "INTERNAL_ERROR",
-            message: "トークンの生成に失敗しました。",
-            details: insertError?.message,
-          },
-        };
-      }
-
-      return { success: true, data: { token: inserted.token } };
+      return { success: true, data: { token: data as string } };
     },
 
     async regenerateToken(guildId) {
-      // 既存のアクティブトークンを無効化
-      const { error: revokeError } = await supabase
-        .from("ics_feed_tokens")
-        .update({ revoked_at: new Date().toISOString() })
-        .eq("guild_id", guildId)
-        .is("revoked_at", null);
+      const newToken = generateToken();
+      const { data, error } = await supabase.rpc(
+        "regenerate_ics_feed_token",
+        { p_guild_id: guildId, p_new_token: newToken },
+      );
 
-      if (revokeError) {
+      if (error) {
         return {
           success: false,
           error: {
             code: "INTERNAL_ERROR",
-            message: "トークンの無効化に失敗しました。",
-            details: revokeError.message,
+            message: "トークンの再生成に失敗しました。",
+            details: error.message,
           },
         };
       }
 
-      // 新しいトークンを生成
-      const token = generateToken();
-      const { data: inserted, error: insertError } = await supabase
-        .from("ics_feed_tokens")
-        .insert({ guild_id: guildId, token })
-        .select("token")
-        .single();
-
-      if (insertError || !inserted) {
-        return {
-          success: false,
-          error: {
-            code: "INTERNAL_ERROR",
-            message: "新しいトークンの生成に失敗しました。",
-            details: insertError?.message,
-          },
-        };
-      }
-
-      return { success: true, data: { token: inserted.token } };
+      return { success: true, data: { token: data as string } };
     },
 
     buildFeedUrl({ guildId, token, isPublic, supabaseProjectUrl }) {

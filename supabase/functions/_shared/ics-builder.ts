@@ -232,7 +232,7 @@ export function buildCalendar(params: BuildCalendarParams): string {
   parts.push("BEGIN:VCALENDAR");
   parts.push("VERSION:2.0");
   parts.push(`PRODID:${PRODID}`);
-  parts.push(`X-WR-CALNAME:${params.calendarName}`);
+  parts.push(foldLine(`X-WR-CALNAME:${escapeText(params.calendarName)}`));
 
   // Single events (Req 2.1-2.6)
   for (const event of params.events) {
