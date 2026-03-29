@@ -95,7 +95,10 @@ Deno.serve(async (req) => {
     }
     return response;
   } catch (error) {
-    console.error("ICS feed error:", error);
+    console.error(
+      "ICS feed error:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
     return new Response("Internal Server Error", {
       status: 500,
       headers: CORS_HEADERS,

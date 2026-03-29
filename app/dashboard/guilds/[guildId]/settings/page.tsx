@@ -87,7 +87,7 @@ export default async function GuildSettingsPage({
     : null;
 
   // ICSフィードトークン取得 (Req 6.1, 6.3, 6.4)
-  const feedTokenResult = await getOrCreateIcsFeedToken(guildId, isPublic);
+  const feedTokenResult = await getOrCreateIcsFeedToken(guildId);
   const feedUrl = feedTokenResult.success ? feedTokenResult.data.feedUrl : "";
 
   // ユーザー情報を整形

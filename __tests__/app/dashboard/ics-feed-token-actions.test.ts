@@ -73,6 +73,7 @@ vi.mock("@/lib/guilds/guild-config-service", () => ({
 }));
 
 // PublicCalendarService モック
+const mockGetPublicSettings = vi.fn();
 vi.mock("@/lib/calendar/public-calendar-service", () => ({
   createPublicCalendarService: vi.fn(() => ({
     enablePublicCalendar: vi.fn(),
@@ -80,7 +81,7 @@ vi.mock("@/lib/calendar/public-calendar-service", () => ({
     regeneratePublicSlug: vi.fn(),
     getPublicGuildBySlug: vi.fn(),
     fetchPublicEvents: vi.fn(),
-    getPublicSettings: vi.fn(),
+    getPublicSettings: mockGetPublicSettings,
   })),
 }));
 
@@ -105,6 +106,32 @@ function setupMemberAuth(guildId: string) {
         permissions: {
           administrator: false,
           manageGuild: false,
+          manageChannels: false,
+          manageMessages: false,
+          manageRoles: false,
+          manageEvents: false,
+          raw: 0n,
+        },
+      },
+    ],
+    invitableGuilds: [],
+  });
+}
+
+/** 管理権限ありのキャッシュモック設定 */
+function setupManagerAuth(guildId: string) {
+  mockGetUser.mockResolvedValueOnce({
+    data: { user: { id: "user-1" } },
+    error: null,
+  });
+  mockGetCachedGuilds.mockReturnValueOnce({
+    guilds: [
+      {
+        guildId,
+        name: "Test Guild",
+        permissions: {
+          administrator: false,
+          manageGuild: true,
           manageChannels: false,
           manageMessages: false,
           manageRoles: false,
@@ -160,6 +187,10 @@ afterEach(() => {
 describe("getOrCreateIcsFeedToken", () => {
   it("非公開ギルドで初回呼び出し時にトークンを新規生成しURLを返す", async () => {
     setupMemberAuth(TEST_GUILD_ID);
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: false, publicSlug: null },
+    });
     mockGetOrCreateToken.mockResolvedValueOnce({
       success: true,
       data: { token: "a".repeat(64) },
@@ -168,7 +199,7 @@ describe("getOrCreateIcsFeedToken", () => {
       `https://test.supabase.co/functions/v1/ics-feed?guild_id=${TEST_GUILD_ID}&token=${"a".repeat(64)}`
     );
 
-    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID, false);
+    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -181,11 +212,15 @@ describe("getOrCreateIcsFeedToken", () => {
 
   it("公開ギルドの場合はトークン生成せずトークンなしURLを返す", async () => {
     setupMemberAuth(TEST_GUILD_ID);
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: true, publicSlug: "slug123" },
+    });
     mockBuildFeedUrl.mockReturnValueOnce(
       `https://test.supabase.co/functions/v1/ics-feed?guild_id=${TEST_GUILD_ID}`
     );
 
-    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID, true);
+    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -198,7 +233,7 @@ describe("getOrCreateIcsFeedToken", () => {
   it("未認証ユーザーはUNAUTHORIZEDエラーを返す", async () => {
     setupUnauthenticated();
 
-    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID, false);
+    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -209,7 +244,7 @@ describe("getOrCreateIcsFeedToken", () => {
   it("非メンバーはPERMISSION_DENIEDエラーを返す", async () => {
     setupNonMember();
 
-    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID, false);
+    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -218,7 +253,7 @@ describe("getOrCreateIcsFeedToken", () => {
   });
 
   it("不正なguild_idはVALIDATION_ERRORを返す", async () => {
-    const result = await getOrCreateIcsFeedToken("invalid", false);
+    const result = await getOrCreateIcsFeedToken("invalid");
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -228,12 +263,16 @@ describe("getOrCreateIcsFeedToken", () => {
 
   it("トークンサービスエラー時はINTERNAL_ERRORを返す", async () => {
     setupMemberAuth(TEST_GUILD_ID);
+    mockGetPublicSettings.mockResolvedValueOnce({
+      success: true,
+      data: { isPublic: false, publicSlug: null },
+    });
     mockGetOrCreateToken.mockResolvedValueOnce({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "DB error" },
     });
 
-    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID, false);
+    const result = await getOrCreateIcsFeedToken(TEST_GUILD_ID);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -243,8 +282,8 @@ describe("getOrCreateIcsFeedToken", () => {
 });
 
 describe("regenerateIcsFeedToken", () => {
-  it("旧トークンを無効化し新トークンでURLを返す", async () => {
-    setupMemberAuth(TEST_GUILD_ID);
+  it("管理権限ありで旧トークンを無効化し新トークンでURLを返す", async () => {
+    setupManagerAuth(TEST_GUILD_ID);
     mockRegenerateToken.mockResolvedValueOnce({
       success: true,
       data: { token: "c".repeat(64) },
@@ -261,6 +300,18 @@ describe("regenerateIcsFeedToken", () => {
       expect(result.data.feedUrl).toContain("token=");
     }
     expect(mockRegenerateToken).toHaveBeenCalledWith(TEST_GUILD_ID);
+  });
+
+  it("管理権限なしのメンバーはPERMISSION_DENIEDエラーを返す", async () => {
+    setupMemberAuth(TEST_GUILD_ID);
+
+    const result = await regenerateIcsFeedToken(TEST_GUILD_ID);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("PERMISSION_DENIED");
+    }
+    expect(mockRegenerateToken).not.toHaveBeenCalled();
   });
 
   it("未認証ユーザーはUNAUTHORIZEDエラーを返す", async () => {
@@ -284,7 +335,7 @@ describe("regenerateIcsFeedToken", () => {
   });
 
   it("トークン再生成失敗時はINTERNAL_ERRORを返す", async () => {
-    setupMemberAuth(TEST_GUILD_ID);
+    setupManagerAuth(TEST_GUILD_ID);
     mockRegenerateToken.mockResolvedValueOnce({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "revoke error" },

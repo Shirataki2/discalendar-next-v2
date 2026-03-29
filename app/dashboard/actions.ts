@@ -1269,8 +1269,7 @@ export type IcsFeedTokenActionResult =
  * Requirements: 4.5, 5.3, 6.3, 6.4
  */
 export async function getOrCreateIcsFeedToken(
-  guildId: string,
-  isPublic: boolean
+  guildId: string
 ): Promise<IcsFeedTokenActionResult> {
   if (!GUILD_ID_PATTERN.test(guildId)) {
     return {
@@ -1297,6 +1296,11 @@ export async function getOrCreateIcsFeedToken(
   const { auth } = authResult;
   const tokenService = createIcsFeedTokenService(auth.supabase);
   const supabaseProjectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+
+  // サーバー側でギルドの公開状態を取得（クライアント入力に依存しない）
+  const publicCalendarService = createPublicCalendarService(auth.supabase);
+  const publicSettings = await publicCalendarService.getPublicSettings(guildId);
+  const isPublic = publicSettings.success && publicSettings.data.isPublic;
 
   if (isPublic) {
     return {
@@ -1373,6 +1377,17 @@ export async function regenerateIcsFeedToken(
   }
 
   const { auth } = authResult;
+
+  if (!canManageGuild(auth.permissions)) {
+    return {
+      success: false,
+      error: {
+        code: "PERMISSION_DENIED",
+        message: "ICSフィードトークンを再生成するには管理権限が必要です。",
+      },
+    };
+  }
+
   const tokenService = createIcsFeedTokenService(auth.supabase);
 
   const tokenResult = await tokenService.regenerateToken(guildId);
