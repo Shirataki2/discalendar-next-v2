@@ -57,15 +57,15 @@
   - コンポーネントのテストを作成する（画像プレビュー表示・PDFリンク表示・空時の非表示）
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 5. イベントフォーム統合
-- [ ] 5.1 EventForm・useEventFormの拡張とFileUploader統合
+- [x] 5. イベントフォーム統合
+- [x] 5.1 EventForm・useEventFormの拡張とFileUploader統合
   - EventFormDataにattachmentsフィールドを追加し、useEventFormの状態管理を拡張する
   - EventForm内のNotificationFieldセクションと同階層にFileUploaderセクションを配置する
   - 編集時に既存添付ファイルをFileUploaderの初期値として渡す
   - FileUploaderからのattachments変更をフォームデータに反映するコールバックを接続する
   - _Requirements: 4.1, 4.2_
 
-- [ ] 5.2 EventDialog・Server Actionsの更新
+- [x] 5.2 EventDialog・Server Actionsの更新
   - EventDialogのデータ変換関数（toCreateEventInput・toUpdateEventInput）にattachmentsを含める
   - イベント作成・更新のServer Actionでattachmentsメタデータをデータベースに保存する
   - イベント更新時に削除対象ファイル（pendingDeletions）をSupabase Storageから削除する処理を追加する

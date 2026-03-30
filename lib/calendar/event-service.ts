@@ -184,6 +184,8 @@ export interface UpdateSeriesInput {
   location?: string;
   /** 通知設定 */
   notifications?: NotificationSetting[];
+  /** 添付ファイルメタデータ */
+  attachments?: AttachmentMeta[];
   /** RFC 5545 RRULE 文字列 */
   rrule?: string;
   /** 例外リセットフラグ（trueの場合、関連する例外レコードを削除） */
@@ -224,6 +226,8 @@ export interface CreateSeriesInput {
   channelName?: string;
   /** 通知設定 */
   notifications?: NotificationSetting[];
+  /** 添付ファイルメタデータ */
+  attachments?: AttachmentMeta[];
   /** RFC 5545 RRULE 文字列 */
   rrule: string;
 }
@@ -770,6 +774,7 @@ export function createEventService(
         channelId,
         channelName,
         notifications,
+        attachments,
         rrule,
       } = input;
 
@@ -838,6 +843,7 @@ export function createEventService(
           channel_id: channelId || null,
           channel_name: channelName || null,
           notifications: notifications ?? [],
+          attachments: attachments ?? [],
           exdates: [],
         };
 
@@ -1360,6 +1366,7 @@ export function createEventService(
         color,
         location,
         notifications,
+        attachments,
         rrule,
         resetExceptions,
       } = input;
@@ -1479,6 +1486,9 @@ export function createEventService(
         }
         if (notifications !== undefined) {
           updateData.notifications = notifications;
+        }
+        if (attachments !== undefined) {
+          updateData.attachments = attachments;
         }
         if (rrule !== undefined) {
           updateData.rrule = rrule;

@@ -16,6 +16,7 @@
 
 import { captureException } from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
+import { createAttachmentService } from "@/lib/calendar/attachment-service";
 import {
   type CalendarError,
   type CreateEventInput,
@@ -1428,4 +1429,46 @@ export async function regenerateIcsFeedToken(
       }),
     },
   };
+}
+
+// ──────────────────────────────────────────────
+// 添付ファイル削除
+// ──────────────────────────────────────────────
+
+type DeleteAttachmentFilesInput = {
+  guildId: string;
+  paths: string[];
+};
+
+/**
+ * 権限チェック付き添付ファイル削除 Server Action
+ *
+ * イベント更新時に削除対象の添付ファイルをSupabase Storageから削除する。
+ * 削除失敗はログ記録のみで、エラーをクライアントに返さない（孤立ファイルは定期クリーンアップで対応）。
+ *
+ * Requirements: 7.2
+ */
+export async function deleteAttachmentFilesAction(
+  input: DeleteAttachmentFilesInput
+): Promise<MutationResult<void>> {
+  if (input.paths.length === 0) {
+    return { success: true, data: undefined };
+  }
+
+  const auth = await authorizeEventOperation(input.guildId, "update");
+  if (!auth.success) {
+    return auth.error;
+  }
+
+  const attachmentService = createAttachmentService(auth.supabase);
+  const result = await attachmentService.deleteFiles(input.paths);
+
+  if (!result.success) {
+    captureException(
+      new Error(`Attachment deletion failed: ${result.error.details}`)
+    );
+  }
+
+  // 削除失敗でも成功として返す（孤立ファイルは定期クリーンアップで対応）
+  return { success: true, data: undefined };
 }

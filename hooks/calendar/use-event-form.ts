@@ -289,10 +289,14 @@ export function useEventForm(
           }
         } else if (field === "isAllDay") {
           newValues[field] = Boolean(value);
-        } else if (field === "notifications" || field === "attachments") {
+        } else if (field === "notifications") {
           // notifications は addNotification/removeNotification で管理
-          // attachments は FileUploader で管理
           // handleChange では何もしない
+        } else if (field === "attachments") {
+          // attachments は FileUploader から直接更新
+          if (Array.isArray(value)) {
+            newValues.attachments = value as AttachmentMeta[];
+          }
         } else {
           // 文字列フィールド
           newValues[field] = String(value ?? "");

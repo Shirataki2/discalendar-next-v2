@@ -22,6 +22,7 @@ import { buildRruleString } from "@discalendar/rrule-utils";
 import { useCallback, useState } from "react";
 import {
   createRecurringEventAction,
+  deleteAttachmentFilesAction,
   updateOccurrenceAction,
 } from "@/app/dashboard/actions";
 import {
@@ -61,6 +62,7 @@ function toCreateEventInput(
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
   };
 }
 
@@ -77,6 +79,7 @@ function toUpdateEventInput(data: EventFormData): UpdateEventInput {
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
   };
 }
 
@@ -97,6 +100,7 @@ function toUpdateSeriesInput(
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
     resetExceptions,
   };
 
@@ -134,6 +138,7 @@ function toCreateSeriesInput(
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
     rrule: buildRruleString({
       frequency: recurrence.frequency,
       interval: recurrence.interval,
@@ -291,14 +296,34 @@ export function EventDialog({
   );
 
   /**
+   * 削除対象の添付ファイルをStorageから削除する
+   */
+  const deletePendingFiles = useCallback(
+    async (pendingDeletions: string[]) => {
+      if (pendingDeletions.length > 0) {
+        await deleteAttachmentFilesAction({
+          guildId,
+          paths: pendingDeletions,
+        });
+      }
+    },
+    [guildId]
+  );
+
+  /**
    * フォーム送信ハンドラー
    */
   const handleSubmit = useCallback(
-    async (data: EventFormData, recurrence: RecurrenceFormData) => {
+    async (
+      data: EventFormData,
+      recurrence: RecurrenceFormData,
+      pendingDeletions: string[]
+    ) => {
       setError(null);
 
       if (mode === "edit") {
         if (await handleScopedEdit(data, recurrence)) {
+          await deletePendingFiles(pendingDeletions);
           return;
         }
 
@@ -313,6 +338,9 @@ export function EventDialog({
             changed_fields: getChangedEventFields(initialData ?? {}, data),
           });
         });
+        if (result.success) {
+          await deletePendingFiles(pendingDeletions);
+        }
         return;
       }
 
@@ -358,6 +386,7 @@ export function EventDialog({
       handleResult,
       createEvent,
       updateEvent,
+      deletePendingFiles,
     ]
   );
 
@@ -406,6 +435,8 @@ export function EventDialog({
         {/* イベントフォーム */}
         <EventForm
           defaultValues={initialData}
+          eventId={eventId}
+          guildId={guildId}
           hideRecurrence={Boolean(isScopedEdit) && editScope === "this"}
           isSubmitting={isSubmitting}
           onCancel={handleCancel}
