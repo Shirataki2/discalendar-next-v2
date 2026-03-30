@@ -10,6 +10,7 @@
  * Requirements: 1.6, 3.5
  */
 import { useCallback, useMemo, useState } from "react";
+import type { AttachmentMeta } from "@/lib/calendar/attachment-types";
 import {
   type NotificationSetting,
   generateNotificationKey,
@@ -35,6 +36,8 @@ export interface EventFormData {
   location: string;
   /** 通知設定 */
   notifications: NotificationSetting[];
+  /** 添付ファイルメタデータ */
+  attachments: AttachmentMeta[];
 }
 
 /**
@@ -83,6 +86,7 @@ const DEFAULT_FORM_STATIC = {
   color: "#3B82F6",
   location: "",
   notifications: [] as EventFormData["notifications"],
+  attachments: [] as EventFormData["attachments"],
 };
 
 /** デフォルトのフォーム値を生成（endAt は startAt + 1時間） */
@@ -258,6 +262,7 @@ export function useEventForm(
     color: false,
     location: false,
     notifications: false,
+    attachments: false,
   });
 
   // バリデーションエラー
@@ -284,8 +289,9 @@ export function useEventForm(
           }
         } else if (field === "isAllDay") {
           newValues[field] = Boolean(value);
-        } else if (field === "notifications") {
+        } else if (field === "notifications" || field === "attachments") {
           // notifications は addNotification/removeNotification で管理
+          // attachments は FileUploader で管理
           // handleChange では何もしない
         } else {
           // 文字列フィールド
@@ -359,6 +365,7 @@ export function useEventForm(
       color: true,
       location: true,
       notifications: true,
+      attachments: true,
     });
 
     return Object.keys(newErrors).length === 0;
@@ -398,6 +405,7 @@ export function useEventForm(
       color: false,
       location: false,
       notifications: false,
+      attachments: false,
     });
   }, []);
 

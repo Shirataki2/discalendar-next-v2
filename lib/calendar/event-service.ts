@@ -15,6 +15,7 @@
  * Requirements: 1.4, 5.1, 5.3, 5.4
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AttachmentMeta } from "./attachment-types";
 import {
   type CalendarEvent,
   type EventRecord,
@@ -133,6 +134,8 @@ export interface CreateEventInput {
   channelName?: string;
   /** 通知設定 */
   notifications?: NotificationSetting[];
+  /** 添付ファイルメタデータ */
+  attachments?: AttachmentMeta[];
 }
 
 /**
@@ -156,6 +159,8 @@ export interface UpdateEventInput {
   location?: string;
   /** 通知設定 */
   notifications?: NotificationSetting[];
+  /** 添付ファイルメタデータ */
+  attachments?: AttachmentMeta[];
 }
 
 /**
@@ -524,6 +529,7 @@ export function createEventService(
         channelId,
         channelName,
         notifications,
+        attachments,
       } = input;
 
       try {
@@ -575,6 +581,7 @@ export function createEventService(
           channel_id: channelId || null,
           channel_name: channelName || null,
           notifications: notifications ?? [],
+          attachments: attachments ?? [],
           series_id: null,
           original_date: null,
         };
@@ -631,6 +638,7 @@ export function createEventService(
         color,
         location,
         notifications,
+        attachments,
       } = input;
 
       try {
@@ -699,6 +707,9 @@ export function createEventService(
         }
         if (notifications !== undefined) {
           updateData.notifications = notifications;
+        }
+        if (attachments !== undefined) {
+          updateData.attachments = attachments;
         }
 
         // SupabaseへのUPDATE操作（guild_idでスコープしてIDOR防止）
@@ -1092,6 +1103,7 @@ export function createEventService(
         color,
         location,
         notifications,
+        attachments,
       } = input;
 
       try {
@@ -1169,6 +1181,7 @@ export function createEventService(
           channel_id: series.channel_id,
           channel_name: series.channel_name,
           notifications: notifications ?? series.notifications,
+          attachments: attachments ?? series.attachments,
           series_id: seriesId,
           original_date: originalDate.toISOString(),
         };
