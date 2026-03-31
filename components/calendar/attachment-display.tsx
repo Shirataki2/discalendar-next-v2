@@ -142,7 +142,9 @@ function ImageLightbox({
           </Button>
           {/* biome-ignore lint/performance/noImgElement: Signed URLの外部画像 */}
           {/* biome-ignore lint/correctness/useImageSize: ライトボックスはw-fullで制御 */}
-          <img alt={name} className="w-full rounded-lg" src={url} />
+          {url ? (
+            <img alt={name} className="w-full rounded-lg" src={url} />
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

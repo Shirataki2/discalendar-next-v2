@@ -134,14 +134,7 @@ export function useFileUpload({
         size: file.size,
       };
 
-      setUploadingFiles((prev) =>
-        prev.map((f) =>
-          f.id === uploadId
-            ? { ...f, status: "completed" as const, meta, progress: 100 }
-            : f,
-        ),
-      );
-
+      setUploadingFiles((prev) => prev.filter((f) => f.id !== uploadId));
       setAttachments((prev) => [...prev, meta]);
     },
     [guildId, eventId],
