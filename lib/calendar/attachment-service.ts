@@ -46,7 +46,8 @@ export function buildStoragePath(
   fileName: string,
 ): string {
   const uuid = crypto.randomUUID();
-  return `${guildId}/${eventId}/${uuid}_${fileName}`;
+  const sanitized = fileName.replace(/[/\\]/g, "_").replace(/\.\./g, "_");
+  return `${guildId}/${eventId}/${uuid}_${sanitized}`;
 }
 
 /**
@@ -81,10 +82,12 @@ export function createAttachmentService(
         return { success: false, error: calendarError };
       }
 
-      const results: SignedUrlResult[] = data.map((item) => ({
-        path: item.path ?? "",
-        signedUrl: item.signedUrl,
-      }));
+      const results: SignedUrlResult[] = data
+        .filter((item) => item.path)
+        .map((item) => ({
+          path: item.path as string,
+          signedUrl: item.signedUrl,
+        }));
 
       return { success: true, data: results };
     },

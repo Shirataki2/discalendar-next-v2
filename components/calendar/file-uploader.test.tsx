@@ -31,6 +31,7 @@ vi.mock("@/hooks/calendar/use-file-upload", () => ({
     uploadingFiles: [],
     addFiles: mockAddFiles,
     removeAttachment: mockRemoveAttachment,
+    cleanup: vi.fn(),
     pendingDeletions: [],
     isUploading: false,
     isAtLimit: false,
@@ -77,6 +78,7 @@ describe("Task 3.2: FileUploader", () => {
         uploadingFiles: [],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: false,
         isAtLimit: false,
@@ -109,6 +111,7 @@ describe("Task 3.2: FileUploader", () => {
         uploadingFiles: [],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: false,
         isAtLimit: false,
@@ -165,6 +168,7 @@ describe("Task 3.2: FileUploader", () => {
         uploadingFiles: [],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: false,
         isAtLimit: true,
@@ -194,6 +198,7 @@ describe("Task 3.2: FileUploader", () => {
         uploadingFiles: [],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: false,
         isAtLimit: false,
@@ -227,6 +232,7 @@ describe("Task 3.2: FileUploader", () => {
         uploadingFiles: [],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: false,
         isAtLimit: false,
@@ -248,7 +254,7 @@ describe("Task 3.2: FileUploader", () => {
   });
 
   describe("アップロード中の表示", () => {
-    it("アップロード中のファイルにプログレスバーを表示する", () => {
+    it("アップロード中のファイルにインジケーターを表示する", () => {
       mockUseFileUpload.mockReturnValue({
         attachments: [],
         uploadingFiles: [
@@ -261,6 +267,7 @@ describe("Task 3.2: FileUploader", () => {
         ],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: true,
         isAtLimit: false,
@@ -270,7 +277,7 @@ describe("Task 3.2: FileUploader", () => {
       render(<FileUploader {...defaultProps} />);
 
       expect(screen.getByText("uploading.jpg")).toBeInTheDocument();
-      expect(screen.getByRole("progressbar")).toBeInTheDocument();
+      expect(screen.getByText("アップロード中...")).toBeInTheDocument();
     });
 
     it("エラー状態のファイルにエラーメッセージを表示する", () => {
@@ -287,6 +294,7 @@ describe("Task 3.2: FileUploader", () => {
         ],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: false,
         isAtLimit: false,
@@ -309,6 +317,7 @@ describe("Task 3.2: FileUploader", () => {
         uploadingFiles: [],
         addFiles: mockAddFiles,
         removeAttachment: mockRemoveAttachment,
+        cleanup: vi.fn(),
         pendingDeletions: [],
         isUploading: false,
         isAtLimit: false,

@@ -60,6 +60,8 @@ export type EventFormProps = {
   onCancel: () => void;
   /** 繰り返し設定を非表示にするか（単一オカレンス編集時） */
   hideRecurrence?: boolean;
+  /** FileUploaderのcleanup関数が準備できた時のコールバック */
+  onCleanupReady?: (cleanup: () => Promise<void>) => void;
 };
 
 // エラーメッセージのID（aria-describedby用）
@@ -303,6 +305,7 @@ export function EventForm({
   isSubmitting,
   onCancel,
   hideRecurrence = false,
+  onCleanupReady,
 }: EventFormProps) {
   const form = useEventForm(defaultValues);
   const recurrenceForm = useRecurrenceForm(recurrenceDefaultValues);
@@ -389,6 +392,7 @@ export function EventForm({
         existingAttachments={defaultValues?.attachments}
         guildId={guildId}
         onAttachmentsChange={handleAttachmentsChange}
+        onCleanupReady={onCleanupReady}
         onPendingDeletionsChange={handlePendingDeletionsChange}
       />
 

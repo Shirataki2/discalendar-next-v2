@@ -19,7 +19,7 @@
  */
 
 import { buildRruleString } from "@discalendar/rrule-utils";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   createRecurringEventAction,
   deleteAttachmentFilesAction,
@@ -255,9 +255,12 @@ export function EventDialog({
    * Task 7.4: スコープ付き編集を実行する
    */
   const handleScopedEdit = useCallback(
-    async (data: EventFormData, recurrence: RecurrenceFormData) => {
+    async (
+      data: EventFormData,
+      recurrence: RecurrenceFormData
+    ): Promise<{ handled: boolean; success: boolean }> => {
       if (!(editScope && seriesId)) {
-        return false;
+        return { handled: false, success: false };
       }
       setIsScopedUpdating(true);
       try {
@@ -279,10 +282,10 @@ export function EventDialog({
             changed_fields: getChangedEventFields(initialData ?? {}, data),
           });
         });
+        return { handled: true, success: result.success };
       } finally {
         setIsScopedUpdating(false);
       }
-      return true;
     },
     [
       editScope,
@@ -322,8 +325,11 @@ export function EventDialog({
       setError(null);
 
       if (mode === "edit") {
-        if (await handleScopedEdit(data, recurrence)) {
-          await deletePendingFiles(pendingDeletions);
+        const scopedResult = await handleScopedEdit(data, recurrence);
+        if (scopedResult.handled) {
+          if (scopedResult.success) {
+            await deletePendingFiles(pendingDeletions);
+          }
           return;
         }
 
@@ -390,11 +396,18 @@ export function EventDialog({
     ]
   );
 
+  const cleanupRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleCleanupReady = useCallback((cleanup: () => Promise<void>) => {
+    cleanupRef.current = cleanup;
+  }, []);
+
   /**
-   * キャンセルハンドラー
+   * キャンセルハンドラー — 新規アップロード済みファイルをStorageから削除
    */
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback(async () => {
     setError(null);
+    await cleanupRef.current?.();
     onClose();
   }, [onClose]);
 
@@ -403,9 +416,10 @@ export function EventDialog({
    * ダイアログ外クリック時やEscキー押下時に呼ばれる
    */
   const handleOpenChange = useCallback(
-    (newOpen: boolean) => {
+    async (newOpen: boolean) => {
       if (!newOpen) {
         setError(null);
+        await cleanupRef.current?.();
         onClose();
       }
     },
@@ -440,6 +454,7 @@ export function EventDialog({
           hideRecurrence={Boolean(isScopedEdit) && editScope === "this"}
           isSubmitting={isSubmitting}
           onCancel={handleCancel}
+          onCleanupReady={handleCleanupReady}
           onSubmit={handleSubmit}
           recurrenceDefaultValues={recurrenceDefaultValues}
         />

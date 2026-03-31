@@ -24,7 +24,6 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { useFileUpload } from "@/hooks/calendar/use-file-upload";
 import type {
   AttachmentMeta,
@@ -42,6 +41,7 @@ export type FileUploaderProps = {
   existingAttachments?: AttachmentMeta[];
   onAttachmentsChange: (attachments: AttachmentMeta[]) => void;
   onPendingDeletionsChange: (paths: string[]) => void;
+  onCleanupReady?: (cleanup: () => Promise<void>) => void;
   disabled?: boolean;
 };
 
@@ -51,6 +51,7 @@ export function FileUploader({
   existingAttachments,
   onAttachmentsChange,
   onPendingDeletionsChange,
+  onCleanupReady,
   disabled = false,
 }: FileUploaderProps) {
   const {
@@ -58,6 +59,7 @@ export function FileUploader({
     uploadingFiles,
     addFiles,
     removeAttachment,
+    cleanup,
     pendingDeletions,
     isAtLimit,
     errors,
@@ -76,6 +78,10 @@ export function FileUploader({
   useEffect(() => {
     onPendingDeletionsChange(pendingDeletions);
   }, [pendingDeletions, onPendingDeletionsChange]);
+
+  useEffect(() => {
+    onCleanupReady?.(cleanup);
+  }, [cleanup, onCleanupReady]);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,8 +161,8 @@ export function FileUploader({
         />
       )}
 
-      {errors.map((error) => (
-        <p className="text-destructive text-sm" key={error}>
+      {errors.map((error, index) => (
+        <p className="text-destructive text-sm" key={`error-${index}`}>
           {error}
         </p>
       ))}
@@ -268,7 +274,9 @@ function UploadingFileItem({ file }: { file: UploadingFile }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">{file.file.name}</p>
         {isPending ? (
-          <Progress className="mt-1 h-1.5" value={file.progress} />
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-primary/20">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+          </div>
         ) : null}
         {file.status === "error" ? (
           <p className="text-destructive text-xs">{file.error}</p>

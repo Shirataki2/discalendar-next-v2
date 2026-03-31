@@ -8,7 +8,7 @@
  * Requirements: 3.1, 3.2, 6.1, 6.2
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AttachmentMeta, AttachmentWithUrl } from "@/lib/calendar/attachment-types";
 
 /** Signed URL取得結果 */
@@ -38,6 +38,7 @@ export interface UseAttachmentUrlsOptions {
 interface UseAttachmentUrlsReturn {
   attachmentsWithUrls: AttachmentWithUrl[];
   isLoading: boolean;
+  error: string | null;
 }
 
 export function useAttachmentUrls({
@@ -50,11 +51,18 @@ export function useAttachmentUrls({
     AttachmentWithUrl[]
   >([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const attachmentsKey = useMemo(
+    () => (attachments ? JSON.stringify(attachments.map((a) => a.path)) : ""),
+    [attachments]
+  );
 
   useEffect(() => {
     if (!enabled || !guildId || !attachments || attachments.length === 0) {
       setAttachmentsWithUrls([]);
       setIsLoading(false);
+      setError(null);
       return;
     }
 
@@ -62,6 +70,8 @@ export function useAttachmentUrls({
     const currentAttachments = attachments;
     let cancelled = false;
     setIsLoading(true);
+    setAttachmentsWithUrls([]);
+    setError(null);
 
     async function load() {
       try {
@@ -79,6 +89,8 @@ export function useAttachmentUrls({
             }))
             .filter((a) => a.signedUrl !== "");
           setAttachmentsWithUrls(resolved);
+        } else {
+          setError(result.error.message);
         }
       } finally {
         if (!cancelled) {
@@ -91,7 +103,8 @@ export function useAttachmentUrls({
     return () => {
       cancelled = true;
     };
-  }, [enabled, guildId, attachments, fetchUrls]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- attachmentsKeyでメモ化してオブジェクト参照変更による不要な再フェッチを防止
+  }, [enabled, guildId, attachmentsKey, fetchUrls]);
 
-  return { attachmentsWithUrls, isLoading };
+  return { attachmentsWithUrls, isLoading, error };
 }

@@ -29,6 +29,8 @@ export interface UseFileUploadReturn {
   uploadingFiles: UploadingFile[];
   addFiles: (files: FileList | File[]) => void;
   removeAttachment: (path: string) => void;
+  /** フォームキャンセル時に新規アップロード済みファイルをStorageから削除する */
+  cleanup: () => Promise<void>;
   pendingDeletions: string[];
   isUploading: boolean;
   isAtLimit: boolean;
@@ -175,11 +177,26 @@ export function useFileUpload({
     setPendingDeletions((prev) => [...prev, path]);
   }, []);
 
+  const cleanup = useCallback(async () => {
+    const existingPaths = new Set(
+      (existingAttachments ?? []).map((a) => a.path),
+    );
+    const newPaths = attachments
+      .filter((a) => !existingPaths.has(a.path))
+      .map((a) => a.path);
+
+    if (newPaths.length === 0) return;
+
+    const supabase = createClient();
+    await supabase.storage.from(BUCKET_NAME).remove(newPaths);
+  }, [attachments, existingAttachments]);
+
   return {
     attachments,
     uploadingFiles,
     addFiles,
     removeAttachment,
+    cleanup,
     pendingDeletions,
     isUploading,
     isAtLimit,
