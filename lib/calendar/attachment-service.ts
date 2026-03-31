@@ -83,9 +83,9 @@ export function createAttachmentService(
       }
 
       const results: SignedUrlResult[] = data
-        .filter((item) => item.path)
+        .filter((item): item is typeof item & { path: string } => Boolean(item.path))
         .map((item) => ({
-          path: item.path as string,
+          path: item.path,
           signedUrl: item.signedUrl,
         }));
 

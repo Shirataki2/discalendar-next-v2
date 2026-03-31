@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAttachmentUrls } from "@/hooks/calendar/use-attachment-urls";
 import { useRsvpData } from "@/hooks/calendar/use-rsvp-data";
+import type { AttachmentWithUrl } from "@/lib/calendar/attachment-types";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { AttachmentDisplay } from "./attachment-display";
 import { AttendeeList } from "./attendee-list";
@@ -158,13 +159,16 @@ export function EventPopover({
   const hasAttachments =
     !!event?.attachments && event.attachments.length > 0 && !!guildId;
 
-  const { attachmentsWithUrls, isLoading: isLoadingAttachments } =
-    useAttachmentUrls({
-      attachments: event?.attachments,
-      guildId,
-      enabled: open && hasAttachments,
-      fetchUrls: getAttachmentUrlsAction,
-    });
+  const {
+    attachmentsWithUrls,
+    isLoading: isLoadingAttachments,
+    error: attachmentError,
+  } = useAttachmentUrls({
+    attachments: event?.attachments,
+    guildId,
+    enabled: open && hasAttachments,
+    fetchUrls: getAttachmentUrlsAction,
+  });
 
   /**
    * 編集ボタンクリック時のハンドラー
@@ -273,16 +277,11 @@ export function EventPopover({
           {/* 添付ファイル (Task 6.2 event-attachments) */}
           {hasAttachments ? (
             <div className="border-t pt-3" data-testid="attachment-section">
-              {isLoadingAttachments ? (
-                <div
-                  className="flex items-center justify-center py-2"
-                  data-testid="attachment-loading"
-                >
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <AttachmentDisplay attachments={attachmentsWithUrls} />
-              )}
+              <AttachmentSection
+                attachmentError={attachmentError}
+                attachmentsWithUrls={attachmentsWithUrls}
+                isLoading={isLoadingAttachments}
+              />
             </div>
           ) : null}
 
@@ -349,4 +348,35 @@ export function EventPopover({
       </DialogContent>
     </Dialog>
   );
+}
+
+function AttachmentSection({
+  isLoading,
+  attachmentError,
+  attachmentsWithUrls,
+}: {
+  isLoading: boolean;
+  attachmentError: string | null;
+  attachmentsWithUrls: AttachmentWithUrl[];
+}) {
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center py-2"
+        data-testid="attachment-loading"
+      >
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (attachmentError) {
+    return (
+      <p className="text-destructive text-xs" data-testid="attachment-error">
+        添付ファイルの読み込みに失敗しました
+      </p>
+    );
+  }
+
+  return <AttachmentDisplay attachments={attachmentsWithUrls} />;
 }

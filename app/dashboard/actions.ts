@@ -1498,6 +1498,7 @@ export async function deleteAttachmentFilesAction(
   }
 
   // 削除失敗でも成功として返す（孤立ファイルは定期クリーンアップで対応）
+  // TODO: 孤立ファイルの定期クリーンアップジョブを実装する (DIS-128 follow-up)
   return { success: true, data: undefined };
 }
 

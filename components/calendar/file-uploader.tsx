@@ -161,11 +161,16 @@ export function FileUploader({
         />
       )}
 
-      {errors.map((error) => (
-        <p className="text-destructive text-sm" key={error}>
-          {error}
-        </p>
-      ))}
+      {errors.length > 0 && (
+        <div className="space-y-1">
+          {errors.map((error, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: エラーメッセージは一時的な表示で並び替えなし
+            <p className="text-destructive text-sm" key={index}>
+              {error}
+            </p>
+          ))}
+        </div>
+      )}
 
       {uploadingFiles.length > 0 && (
         <ul className="space-y-2">

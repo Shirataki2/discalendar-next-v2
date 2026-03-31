@@ -89,6 +89,8 @@ export function useFileUpload({
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [pendingDeletions, setPendingDeletions] = useState<string[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  /** アップロード中・完了済みのStorageパスを追跡（cleanup用） */
+  const [uploadedPaths, setUploadedPaths] = useState<Set<string>>(new Set());
 
   const isUploading = useMemo(
     () => uploadingFiles.some((f) => f.status === "pending" || f.status === "uploading"),
@@ -107,6 +109,9 @@ export function useFileUpload({
       const resolvedEventId = eventId ?? "draft";
       const path = buildStoragePath(guildId, resolvedEventId, file.name);
 
+      // アップロード開始時にパスを記録（cleanup用）
+      setUploadedPaths((prev) => new Set(prev).add(path));
+
       setUploadingFiles((prev) =>
         prev.map((f) =>
           f.id === uploadId ? { ...f, status: "uploading" as const } : f,
@@ -119,6 +124,12 @@ export function useFileUpload({
         .upload(path, file);
 
       if (error || !data) {
+        // アップロード失敗時はパスを追跡から除外
+        setUploadedPaths((prev) => {
+          const next = new Set(prev);
+          next.delete(path);
+          return next;
+        });
         setUploadingFiles((prev) =>
           prev.map((f) =>
             f.id === uploadId
@@ -181,15 +192,14 @@ export function useFileUpload({
     const existingPaths = new Set(
       (existingAttachments ?? []).map((a) => a.path),
     );
-    const newPaths = attachments
-      .filter((a) => !existingPaths.has(a.path))
-      .map((a) => a.path);
+    // uploadedPathsから既存ファイルを除外（アップロード中のファイルも含む）
+    const newPaths = [...uploadedPaths].filter((p) => !existingPaths.has(p));
 
     if (newPaths.length === 0) return;
 
     const supabase = createClient();
     await supabase.storage.from(BUCKET_NAME).remove(newPaths);
-  }, [attachments, existingAttachments]);
+  }, [uploadedPaths, existingAttachments]);
 
   return {
     attachments,
