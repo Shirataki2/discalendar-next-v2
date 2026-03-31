@@ -161,8 +161,8 @@ export function FileUploader({
         />
       )}
 
-      {errors.map((error, index) => (
-        <p className="text-destructive text-sm" key={`error-${index}`}>
+      {errors.map((error) => (
+        <p className="text-destructive text-sm" key={error}>
           {error}
         </p>
       ))}

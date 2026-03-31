@@ -135,9 +135,9 @@ function ImageLightbox({
           >
             <X className="h-5 w-5" />
           </Button>
-          {/* biome-ignore lint/performance/noImgElement: Signed URLの外部画像 */}
-          {/* biome-ignore lint/correctness/useImageSize: ライトボックスはw-fullで制御 */}
           {url ? (
+            // biome-ignore lint/performance/noImgElement: Signed URLの外部画像のためNext.js Image使用不可
+            // biome-ignore lint/correctness/useImageSize: ライトボックスはw-fullで制御
             <img alt={name} className="w-full rounded-lg" src={url} />
           ) : null}
         </div>

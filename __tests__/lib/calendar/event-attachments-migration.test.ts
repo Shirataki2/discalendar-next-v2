@@ -86,7 +86,7 @@ describe("Task 1: DBマイグレーション・Storageインフラ構築", () =>
       // DEFAULT '[]'::jsonb が両テーブルに設定されている
       const defaultMatches = sql.match(/DEFAULT\s+'\[\]'::jsonb/gi);
       expect(defaultMatches).not.toBeNull();
-      expect(defaultMatches!.length).toBeGreaterThanOrEqual(2);
+      expect(defaultMatches?.length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -150,7 +150,7 @@ describe("Task 1: DBマイグレーション・Storageインフラ構築", () =>
       // 3つのポリシー全てがTO authenticatedを持つ
       const authenticatedMatches = sql.match(/TO\s+authenticated/gi);
       expect(authenticatedMatches).not.toBeNull();
-      expect(authenticatedMatches!.length).toBeGreaterThanOrEqual(3);
+      expect(authenticatedMatches?.length).toBeGreaterThanOrEqual(3);
     });
   });
 });

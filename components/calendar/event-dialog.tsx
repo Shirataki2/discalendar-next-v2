@@ -314,6 +314,47 @@ export function EventDialog({
   );
 
   /**
+   * 編集モードの送信処理
+   */
+  const handleEditSubmit = useCallback(
+    async (
+      data: EventFormData,
+      recurrence: RecurrenceFormData,
+      pendingDeletions: string[]
+    ) => {
+      const scopedResult = await handleScopedEdit(data, recurrence);
+      if (scopedResult.handled) {
+        if (scopedResult.success) {
+          await deletePendingFiles(pendingDeletions);
+        }
+        return;
+      }
+
+      if (!eventId) {
+        setError("イベントIDが指定されていません。");
+        return;
+      }
+      const result = await updateEvent(eventId, toUpdateEventInput(data));
+      handleResult(result, () => {
+        trackEvent("event_updated", {
+          changed_fields: getChangedEventFields(initialData ?? {}, data),
+        });
+      });
+      if (result.success) {
+        await deletePendingFiles(pendingDeletions);
+      }
+    },
+    [
+      eventId,
+      initialData,
+      handleScopedEdit,
+      handleResult,
+      updateEvent,
+      deletePendingFiles,
+    ]
+  );
+
+  /**
    * フォーム送信ハンドラー
    */
   const handleSubmit = useCallback(
@@ -325,28 +366,7 @@ export function EventDialog({
       setError(null);
 
       if (mode === "edit") {
-        const scopedResult = await handleScopedEdit(data, recurrence);
-        if (scopedResult.handled) {
-          if (scopedResult.success) {
-            await deletePendingFiles(pendingDeletions);
-          }
-          return;
-        }
-
-        // 通常の単発イベント編集
-        if (!eventId) {
-          setError("イベントIDが指定されていません。");
-          return;
-        }
-        const result = await updateEvent(eventId, toUpdateEventInput(data));
-        handleResult(result, () => {
-          trackEvent("event_updated", {
-            changed_fields: getChangedEventFields(initialData ?? {}, data),
-          });
-        });
-        if (result.success) {
-          await deletePendingFiles(pendingDeletions);
-        }
+        await handleEditSubmit(data, recurrence, pendingDeletions);
         return;
       }
 
@@ -383,17 +403,7 @@ export function EventDialog({
         });
       });
     },
-    [
-      mode,
-      guildId,
-      eventId,
-      initialData,
-      handleScopedEdit,
-      handleResult,
-      createEvent,
-      updateEvent,
-      deletePendingFiles,
-    ]
+    [mode, guildId, handleEditSubmit, handleResult, createEvent]
   );
 
   const cleanupRef = useRef<(() => Promise<void>) | null>(null);
