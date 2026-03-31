@@ -8,6 +8,7 @@
  *
  * Requirements: 3.1, 9.1
  */
+import type { AttachmentMeta } from "./attachment-types";
 
 /**
  * 通知タイミングの単位
@@ -79,6 +80,8 @@ export interface EventSeriesRecord {
   notifications: NotificationSetting[];
   /** 除外日リスト (ISO 8601 文字列配列: "2026-01-15T10:00:00Z" 形式) */
   exdates: string[];
+  /** 添付ファイルメタデータ (JSONB) */
+  attachments: AttachmentMeta[];
   /** 作成日時 (ISO 8601形式) */
   created_at: string;
   /** 更新日時 (ISO 8601形式) */
@@ -114,6 +117,8 @@ export interface EventRecord {
   channel_name: string | null;
   /** 通知設定 (JSONB) */
   notifications: NotificationSetting[];
+  /** 添付ファイルメタデータ (JSONB) */
+  attachments: AttachmentMeta[];
   /** イベントシリーズID（例外オカレンスの場合のみ） */
   series_id: string | null;
   /** 元のオカレンス日付（例外オカレンスの場合のみ、ISO 8601形式） */
@@ -165,6 +170,8 @@ type BaseCalendarEvent = {
   channel?: ChannelInfo;
   /** 通知設定 */
   notifications?: NotificationSetting[];
+  /** 添付ファイルメタデータ */
+  attachments?: AttachmentMeta[];
   /** オカレンスの元の日付（例外レコードの場合） */
   originalDate?: Date;
 };
@@ -188,6 +195,24 @@ export type CalendarEvent =
 /**
  * JSONB から取得した値が有効な NotificationSetting か判定する型ガード
  */
+/**
+ * JSONB から取得した値が有効な AttachmentMeta か判定する型ガード
+ */
+function isValidAttachmentMeta(a: unknown): a is AttachmentMeta {
+  return (
+    typeof a === "object" &&
+    a !== null &&
+    "name" in a &&
+    "path" in a &&
+    "type" in a &&
+    "size" in a &&
+    typeof (a as Record<string, unknown>).name === "string" &&
+    typeof (a as Record<string, unknown>).path === "string" &&
+    typeof (a as Record<string, unknown>).type === "string" &&
+    typeof (a as Record<string, unknown>).size === "number"
+  );
+}
+
 function isValidNotificationSetting(
   n: unknown,
 ): n is NotificationSetting & { key?: string } {
@@ -234,6 +259,9 @@ export function toCalendarEvent(record: EventRecord): CalendarEvent {
                 ? n.key
                 : generateNotificationKey(),
           }))
+      : [],
+    attachments: Array.isArray(record.attachments)
+      ? record.attachments.filter(isValidAttachmentMeta)
       : [],
   };
 }

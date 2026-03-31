@@ -19,9 +19,10 @@
  */
 
 import { buildRruleString } from "@discalendar/rrule-utils";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   createRecurringEventAction,
+  deleteAttachmentFilesAction,
   updateOccurrenceAction,
 } from "@/app/dashboard/actions";
 import {
@@ -61,6 +62,7 @@ function toCreateEventInput(
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
   };
 }
 
@@ -77,6 +79,7 @@ function toUpdateEventInput(data: EventFormData): UpdateEventInput {
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
   };
 }
 
@@ -97,6 +100,7 @@ function toUpdateSeriesInput(
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
     resetExceptions,
   };
 
@@ -134,6 +138,7 @@ function toCreateSeriesInput(
     color: data.color,
     location: data.location || undefined,
     notifications: data.notifications,
+    attachments: data.attachments,
     rrule: buildRruleString({
       frequency: recurrence.frequency,
       interval: recurrence.interval,
@@ -250,9 +255,12 @@ export function EventDialog({
    * Task 7.4: スコープ付き編集を実行する
    */
   const handleScopedEdit = useCallback(
-    async (data: EventFormData, recurrence: RecurrenceFormData) => {
+    async (
+      data: EventFormData,
+      recurrence: RecurrenceFormData
+    ): Promise<{ handled: boolean; success: boolean }> => {
       if (!(editScope && seriesId)) {
-        return false;
+        return { handled: false, success: false };
       }
       setIsScopedUpdating(true);
       try {
@@ -274,10 +282,10 @@ export function EventDialog({
             changed_fields: getChangedEventFields(initialData ?? {}, data),
           });
         });
+        return { handled: true, success: result.success };
       } finally {
         setIsScopedUpdating(false);
       }
-      return true;
     },
     [
       editScope,
@@ -291,28 +299,74 @@ export function EventDialog({
   );
 
   /**
+   * 削除対象の添付ファイルをStorageから削除する
+   */
+  const deletePendingFiles = useCallback(
+    async (pendingDeletions: string[]) => {
+      if (pendingDeletions.length > 0) {
+        await deleteAttachmentFilesAction({
+          guildId,
+          paths: pendingDeletions,
+        });
+      }
+    },
+    [guildId]
+  );
+
+  /**
+   * 編集モードの送信処理
+   */
+  const handleEditSubmit = useCallback(
+    async (
+      data: EventFormData,
+      recurrence: RecurrenceFormData,
+      pendingDeletions: string[]
+    ) => {
+      const scopedResult = await handleScopedEdit(data, recurrence);
+      if (scopedResult.handled) {
+        if (scopedResult.success) {
+          await deletePendingFiles(pendingDeletions);
+        }
+        return;
+      }
+
+      if (!eventId) {
+        setError("イベントIDが指定されていません。");
+        return;
+      }
+      const result = await updateEvent(eventId, toUpdateEventInput(data));
+      handleResult(result, () => {
+        trackEvent("event_updated", {
+          changed_fields: getChangedEventFields(initialData ?? {}, data),
+        });
+      });
+      if (result.success) {
+        await deletePendingFiles(pendingDeletions);
+      }
+    },
+    [
+      eventId,
+      initialData,
+      handleScopedEdit,
+      handleResult,
+      updateEvent,
+      deletePendingFiles,
+    ]
+  );
+
+  /**
    * フォーム送信ハンドラー
    */
   const handleSubmit = useCallback(
-    async (data: EventFormData, recurrence: RecurrenceFormData) => {
+    async (
+      data: EventFormData,
+      recurrence: RecurrenceFormData,
+      pendingDeletions: string[]
+    ) => {
       setError(null);
 
       if (mode === "edit") {
-        if (await handleScopedEdit(data, recurrence)) {
-          return;
-        }
-
-        // 通常の単発イベント編集
-        if (!eventId) {
-          setError("イベントIDが指定されていません。");
-          return;
-        }
-        const result = await updateEvent(eventId, toUpdateEventInput(data));
-        handleResult(result, () => {
-          trackEvent("event_updated", {
-            changed_fields: getChangedEventFields(initialData ?? {}, data),
-          });
-        });
+        await handleEditSubmit(data, recurrence, pendingDeletions);
         return;
       }
 
@@ -349,23 +403,21 @@ export function EventDialog({
         });
       });
     },
-    [
-      mode,
-      guildId,
-      eventId,
-      initialData,
-      handleScopedEdit,
-      handleResult,
-      createEvent,
-      updateEvent,
-    ]
+    [mode, guildId, handleEditSubmit, handleResult, createEvent]
   );
 
+  const cleanupRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleCleanupReady = useCallback((cleanup: () => Promise<void>) => {
+    cleanupRef.current = cleanup;
+  }, []);
+
   /**
-   * キャンセルハンドラー
+   * キャンセルハンドラー — 新規アップロード済みファイルをStorageから削除
    */
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback(async () => {
     setError(null);
+    await cleanupRef.current?.();
     onClose();
   }, [onClose]);
 
@@ -374,9 +426,10 @@ export function EventDialog({
    * ダイアログ外クリック時やEscキー押下時に呼ばれる
    */
   const handleOpenChange = useCallback(
-    (newOpen: boolean) => {
+    async (newOpen: boolean) => {
       if (!newOpen) {
         setError(null);
+        await cleanupRef.current?.();
         onClose();
       }
     },
@@ -406,9 +459,12 @@ export function EventDialog({
         {/* イベントフォーム */}
         <EventForm
           defaultValues={initialData}
+          eventId={eventId}
+          guildId={guildId}
           hideRecurrence={Boolean(isScopedEdit) && editScope === "this"}
           isSubmitting={isSubmitting}
           onCancel={handleCancel}
+          onCleanupReady={handleCleanupReady}
           onSubmit={handleSubmit}
           recurrenceDefaultValues={recurrenceDefaultValues}
         />

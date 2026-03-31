@@ -17,6 +17,14 @@
 import { captureException } from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import {
+  createAttachmentService,
+  type SignedUrlResult,
+} from "@/lib/calendar/attachment-service";
+import {
+  ATTACHMENT_LIMITS,
+  type AttachmentMeta,
+} from "@/lib/calendar/attachment-types";
+import {
   type CalendarError,
   type CreateEventInput,
   type CreateSeriesInput,
@@ -1428,4 +1436,123 @@ export async function regenerateIcsFeedToken(
       }),
     },
   };
+}
+
+// ──────────────────────────────────────────────
+// 添付ファイル削除
+// ──────────────────────────────────────────────
+
+type DeleteAttachmentFilesInput = {
+  guildId: string;
+  paths: string[];
+};
+
+/**
+ * 権限チェック付き添付ファイル削除 Server Action
+ *
+ * イベント更新時に削除対象の添付ファイルをSupabase Storageから削除する。
+ * 削除失敗はログ記録のみで、エラーをクライアントに返さない（孤立ファイルは定期クリーンアップで対応）。
+ *
+ * Requirements: 7.2
+ */
+export async function deleteAttachmentFilesAction(
+  input: DeleteAttachmentFilesInput
+): Promise<MutationResult<void>> {
+  if (input.paths.length === 0) {
+    return { success: true, data: undefined };
+  }
+
+  if (input.paths.length > ATTACHMENT_LIMITS.MAX_FILES_PER_EVENT) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "削除対象のファイル数が上限を超えています。",
+      },
+    };
+  }
+
+  const prefix = `${input.guildId}/`;
+  if (input.paths.some((p) => !p.startsWith(prefix))) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "不正なファイルパスが含まれています。",
+      },
+    };
+  }
+
+  const auth = await authorizeEventOperation(input.guildId, "update");
+  if (!auth.success) {
+    return auth.error;
+  }
+
+  const attachmentService = createAttachmentService(auth.supabase);
+  const result = await attachmentService.deleteFiles(input.paths);
+
+  if (!result.success) {
+    captureException(
+      new Error(`Attachment deletion failed: ${result.error.details}`)
+    );
+  }
+
+  // 削除失敗でも成功として返す（孤立ファイルは定期クリーンアップで対応）
+  // TODO: 孤立ファイルの定期クリーンアップジョブを実装する (DIS-128 follow-up)
+  return { success: true, data: undefined };
+}
+
+// ──────────────────────────────────────────────
+// 添付ファイルURL取得
+// ──────────────────────────────────────────────
+
+type GetAttachmentUrlsInput = {
+  guildId: string;
+  attachments: AttachmentMeta[];
+};
+
+/**
+ * 添付ファイルのSigned URLを取得する Server Action
+ *
+ * 認証・ギルドメンバーシップチェック後にattachment-serviceのgetSignedUrlsを呼び出す。
+ *
+ * Requirements: 3.1, 3.2, 6.1, 6.2
+ */
+export async function getAttachmentUrlsAction(
+  input: GetAttachmentUrlsInput
+): Promise<MutationResult<SignedUrlResult[]>> {
+  if (input.attachments.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  if (input.attachments.length > ATTACHMENT_LIMITS.MAX_FILES_PER_EVENT) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "添付ファイル数が上限を超えています。",
+      },
+    };
+  }
+
+  const prefix = `${input.guildId}/`;
+  if (input.attachments.some((a) => !a.path.startsWith(prefix))) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "不正なファイルパスが含まれています。",
+      },
+    };
+  }
+
+  const authResult = await resolveServerAuth(input.guildId);
+  if (!authResult.success) {
+    return { success: false, error: authResult.error };
+  }
+
+  const attachmentService = createAttachmentService(authResult.auth.supabase);
+  const result = await attachmentService.getSignedUrls(input.attachments);
+
+  return sanitizeResult(result);
 }

@@ -5,6 +5,7 @@
  * タスク7.2: ダイアログの表示位置と閉じ動作
  * タスク6.1: RsvpButtons と AttendeeList を EventPopover に組み込む
  * タスク6.2: 繰り返しイベントの RSVP に対応する
+ * Task 6.2 (event-attachments): AttachmentDisplay を EventPopover に統合
  *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 9.5, 2.1, 3.1, 3.2, 6.1, 6.2, 6.3
  */
@@ -16,6 +17,7 @@ import {
   Calendar,
   Clock,
   Hash,
+  Loader2,
   MapPin,
   Pencil,
   Repeat,
@@ -23,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback } from "react";
+import { getAttachmentUrlsAction } from "@/app/dashboard/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,8 +33,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAttachmentUrls } from "@/hooks/calendar/use-attachment-urls";
 import { useRsvpData } from "@/hooks/calendar/use-rsvp-data";
+import type { AttachmentWithUrl } from "@/lib/calendar/attachment-types";
 import type { CalendarEvent } from "@/lib/calendar/types";
+import { AttachmentDisplay } from "./attachment-display";
 import { AttendeeList } from "./attendee-list";
 import { RsvpButtons } from "./rsvp-buttons";
 
@@ -135,9 +141,9 @@ function formatEventDateTime(event: CalendarEvent): React.ReactNode {
  * EventPopover コンポーネント
  *
  * イベント詳細情報をダイアログで表示する。
- * guildId が提供された場合、RSVP 機能（出欠ボタン・参加者一覧）を表示する。
+ * guildId が提供された場合、RSVP 機能（出欠ボタン・参加者一覧）と添付ファイルを表示する。
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: EventPopover renders multiple optional sections (recurrence, location, channel, description, RSVP, edit/delete) with inherent conditional complexity
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: EventPopover renders multiple optional sections (recurrence, location, channel, description, attachments, RSVP, edit/delete) with inherent conditional complexity
 export function EventPopover({
   event,
   open,
@@ -149,6 +155,20 @@ export function EventPopover({
 }: EventPopoverProps) {
   const { attendeeData, showRsvp, rsvpIds, handleRsvpStatusChange } =
     useRsvpData(event, guildId, open);
+
+  const hasAttachments =
+    !!event?.attachments && event.attachments.length > 0 && !!guildId;
+
+  const {
+    attachmentsWithUrls,
+    isLoading: isLoadingAttachments,
+    error: attachmentError,
+  } = useAttachmentUrls({
+    attachments: event?.attachments,
+    guildId,
+    enabled: open && hasAttachments,
+    fetchUrls: getAttachmentUrlsAction,
+  });
 
   /**
    * 編集ボタンクリック時のハンドラー
@@ -254,6 +274,17 @@ export function EventPopover({
             </div>
           ) : null}
 
+          {/* 添付ファイル (Task 6.2 event-attachments) */}
+          {hasAttachments ? (
+            <div className="border-t pt-3" data-testid="attachment-section">
+              <AttachmentSection
+                attachmentError={attachmentError}
+                attachmentsWithUrls={attachmentsWithUrls}
+                isLoading={isLoadingAttachments}
+              />
+            </div>
+          ) : null}
+
           {/* RSVP セクション (Task 6.1, 6.2) */}
           {/* biome-ignore lint/nursery/noLeakedRender: guildId and rsvpIds are string/object, checked via showRsvp boolean */}
           {showRsvp && guildId && rsvpIds ? (
@@ -317,4 +348,35 @@ export function EventPopover({
       </DialogContent>
     </Dialog>
   );
+}
+
+function AttachmentSection({
+  isLoading,
+  attachmentError,
+  attachmentsWithUrls,
+}: {
+  isLoading: boolean;
+  attachmentError: string | null;
+  attachmentsWithUrls: AttachmentWithUrl[];
+}) {
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center py-2"
+        data-testid="attachment-loading"
+      >
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (attachmentError) {
+    return (
+      <p className="text-destructive text-xs" data-testid="attachment-error">
+        添付ファイルの読み込みに失敗しました
+      </p>
+    );
+  }
+
+  return <AttachmentDisplay attachments={attachmentsWithUrls} />;
 }

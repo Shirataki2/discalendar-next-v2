@@ -13,6 +13,7 @@
  * Requirements: 1.3, 1.6, 3.2, 3.5
  */
 
+import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -28,8 +29,10 @@ import {
   type RecurrenceFormData,
   useRecurrenceForm,
 } from "@/hooks/calendar/use-recurrence-form";
+import type { AttachmentMeta } from "@/lib/calendar/attachment-types";
 import { cn } from "@/lib/utils";
 import { ColorPicker } from "./color-picker";
+import { FileUploader } from "./file-uploader";
 import { NotificationField } from "./notification-field";
 import { RecurrenceSettingsControl } from "./recurrence-settings-control";
 
@@ -37,18 +40,28 @@ import { RecurrenceSettingsControl } from "./recurrence-settings-control";
  * EventFormコンポーネントのProps
  */
 export type EventFormProps = {
+  /** ギルドID（FileUploader用） */
+  guildId: string;
+  /** イベントID（FileUploader用、編集時のみ） */
+  eventId?: string;
   /** フォームの初期値 */
   defaultValues?: Partial<EventFormData>;
   /** 繰り返し設定の初期値 */
   recurrenceDefaultValues?: Partial<RecurrenceFormData>;
   /** フォーム送信時のコールバック */
-  onSubmit: (data: EventFormData, recurrence: RecurrenceFormData) => void;
+  onSubmit: (
+    data: EventFormData,
+    recurrence: RecurrenceFormData,
+    pendingDeletions: string[]
+  ) => void;
   /** 送信中かどうか */
   isSubmitting: boolean;
   /** キャンセル時のコールバック */
   onCancel: () => void;
   /** 繰り返し設定を非表示にするか（単一オカレンス編集時） */
   hideRecurrence?: boolean;
+  /** FileUploaderのcleanup関数が準備できた時のコールバック */
+  onCleanupReady?: (cleanup: () => Promise<void>) => void;
 };
 
 // エラーメッセージのID（aria-describedby用）
@@ -284,20 +297,35 @@ function LocationField({ form, isSubmitting }: FormFieldProps) {
  * 予定入力フォームコンポーネント
  */
 export function EventForm({
+  guildId,
+  eventId,
   defaultValues,
   recurrenceDefaultValues,
   onSubmit,
   isSubmitting,
   onCancel,
   hideRecurrence = false,
+  onCleanupReady,
 }: EventFormProps) {
   const form = useEventForm(defaultValues);
   const recurrenceForm = useRecurrenceForm(recurrenceDefaultValues);
+  const pendingDeletionsRef = useRef<string[]>([]);
+
+  const handleAttachmentsChange = useCallback(
+    (attachments: AttachmentMeta[]) => {
+      form.handleChange("attachments", attachments);
+    },
+    [form.handleChange]
+  );
+
+  const handlePendingDeletionsChange = useCallback((paths: string[]) => {
+    pendingDeletionsRef.current = paths;
+  }, []);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (form.validate()) {
-      onSubmit(form.values, recurrenceForm.values);
+      onSubmit(form.values, recurrenceForm.values, pendingDeletionsRef.current);
     }
   }
 
@@ -357,6 +385,15 @@ export function EventForm({
         notifications={form.values.notifications}
         onAdd={form.addNotification}
         onRemove={form.removeNotification}
+      />
+      <FileUploader
+        disabled={isSubmitting}
+        eventId={eventId}
+        existingAttachments={defaultValues?.attachments}
+        guildId={guildId}
+        onAttachmentsChange={handleAttachmentsChange}
+        onCleanupReady={onCleanupReady}
+        onPendingDeletionsChange={handlePendingDeletionsChange}
       />
 
       <div className="flex justify-end space-x-2 pt-4">
