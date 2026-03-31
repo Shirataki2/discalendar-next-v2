@@ -72,14 +72,14 @@
   - 繰り返しイベント用のServer Action（createRecurringEventAction等）にも同様のattachments対応を追加する
   - _Requirements: 4.1, 4.2, 7.2_
 
-- [ ] 6. イベント表示統合
-- [ ] 6.1 添付ファイルURL取得Server Actionの実装
+- [x] 6. イベント表示統合
+- [x] 6.1 添付ファイルURL取得Server Actionの実装
   - attachment-serviceのgetSignedUrlsを呼び出すServer Actionを追加する
   - 認証・ギルドメンバーシップチェックを既存パターンに従い実施する
   - エラー時のフォールバック表示用にResult型で返す
   - _Requirements: 3.1, 3.2, 6.1, 6.2_
 
-- [ ] 6.2 EventPopoverへのAttachmentDisplay統合
+- [x] 6.2 EventPopoverへのAttachmentDisplay統合
   - EventPopoverのdescriptionセクションの下にAttachmentDisplayを配置する
   - イベント詳細表示時にSigned URL取得Server Actionを呼び出してURLを解決する
   - CalendarEvent型のattachmentsフィールドをAttachmentDisplayに渡す

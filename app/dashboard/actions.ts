@@ -1472,3 +1472,39 @@ export async function deleteAttachmentFilesAction(
   // 削除失敗でも成功として返す（孤立ファイルは定期クリーンアップで対応）
   return { success: true, data: undefined };
 }
+
+// ──────────────────────────────────────────────
+// 添付ファイルURL取得
+// ──────────────────────────────────────────────
+
+type GetAttachmentUrlsInput = {
+  guildId: string;
+  attachments: import("@/lib/calendar/attachment-types").AttachmentMeta[];
+};
+
+/**
+ * 添付ファイルのSigned URLを取得する Server Action
+ *
+ * 認証・ギルドメンバーシップチェック後にattachment-serviceのgetSignedUrlsを呼び出す。
+ *
+ * Requirements: 3.1, 3.2, 6.1, 6.2
+ */
+export async function getAttachmentUrlsAction(
+  input: GetAttachmentUrlsInput
+): Promise<
+  MutationResult<import("@/lib/calendar/attachment-service").SignedUrlResult[]>
+> {
+  if (input.attachments.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const authResult = await resolveServerAuth(input.guildId);
+  if (!authResult.success) {
+    return { success: false, error: authResult.error };
+  }
+
+  const attachmentService = createAttachmentService(authResult.auth.supabase);
+  const result = await attachmentService.getSignedUrls(input.attachments);
+
+  return sanitizeResult(result);
+}
