@@ -16,7 +16,14 @@
 
 import { captureException } from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
-import { createAttachmentService } from "@/lib/calendar/attachment-service";
+import {
+  createAttachmentService,
+  type SignedUrlResult,
+} from "@/lib/calendar/attachment-service";
+import {
+  ATTACHMENT_LIMITS,
+  type AttachmentMeta,
+} from "@/lib/calendar/attachment-types";
 import {
   type CalendarError,
   type CreateEventInput,
@@ -1455,6 +1462,27 @@ export async function deleteAttachmentFilesAction(
     return { success: true, data: undefined };
   }
 
+  if (input.paths.length > ATTACHMENT_LIMITS.MAX_FILES_PER_EVENT) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "削除対象のファイル数が上限を超えています。",
+      },
+    };
+  }
+
+  const prefix = `${input.guildId}/`;
+  if (input.paths.some((p) => !p.startsWith(prefix))) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "不正なファイルパスが含まれています。",
+      },
+    };
+  }
+
   const auth = await authorizeEventOperation(input.guildId, "update");
   if (!auth.success) {
     return auth.error;
@@ -1479,7 +1507,7 @@ export async function deleteAttachmentFilesAction(
 
 type GetAttachmentUrlsInput = {
   guildId: string;
-  attachments: import("@/lib/calendar/attachment-types").AttachmentMeta[];
+  attachments: AttachmentMeta[];
 };
 
 /**
@@ -1491,11 +1519,30 @@ type GetAttachmentUrlsInput = {
  */
 export async function getAttachmentUrlsAction(
   input: GetAttachmentUrlsInput
-): Promise<
-  MutationResult<import("@/lib/calendar/attachment-service").SignedUrlResult[]>
-> {
+): Promise<MutationResult<SignedUrlResult[]>> {
   if (input.attachments.length === 0) {
     return { success: true, data: [] };
+  }
+
+  if (input.attachments.length > ATTACHMENT_LIMITS.MAX_FILES_PER_EVENT) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "添付ファイル数が上限を超えています。",
+      },
+    };
+  }
+
+  const prefix = `${input.guildId}/`;
+  if (input.attachments.some((a) => !a.path.startsWith(prefix))) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "不正なファイルパスが含まれています。",
+      },
+    };
   }
 
   const authResult = await resolveServerAuth(input.guildId);

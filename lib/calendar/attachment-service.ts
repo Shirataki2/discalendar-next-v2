@@ -24,8 +24,12 @@ export interface SignedUrlResult {
 export interface AttachmentServiceInterface {
   getSignedUrls(
     attachments: AttachmentMeta[],
+    signal?: AbortSignal,
   ): Promise<MutationResult<SignedUrlResult[]>>;
-  deleteFiles(paths: string[]): Promise<MutationResult<void>>;
+  deleteFiles(
+    paths: string[],
+    signal?: AbortSignal,
+  ): Promise<MutationResult<void>>;
 }
 
 /**
@@ -57,6 +61,7 @@ export function createAttachmentService(
   return {
     async getSignedUrls(
       attachments: AttachmentMeta[],
+      _signal?: AbortSignal,
     ): Promise<MutationResult<SignedUrlResult[]>> {
       if (attachments.length === 0) {
         return { success: true, data: [] };
@@ -84,7 +89,7 @@ export function createAttachmentService(
       return { success: true, data: results };
     },
 
-    async deleteFiles(paths: string[]): Promise<MutationResult<void>> {
+    async deleteFiles(paths: string[], _signal?: AbortSignal): Promise<MutationResult<void>> {
       if (paths.length === 0) {
         return { success: true, data: undefined };
       }

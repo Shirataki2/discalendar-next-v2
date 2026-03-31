@@ -9,12 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import type { AttachmentMeta } from "@/lib/calendar/attachment-types";
-
-/** Signed URL付き添付ファイル（attachment-display の AttachmentWithUrl と同等） */
-export type AttachmentWithUrl = AttachmentMeta & {
-  signedUrl: string;
-};
+import type { AttachmentMeta, AttachmentWithUrl } from "@/lib/calendar/attachment-types";
 
 /** Signed URL取得結果 */
 type SignedUrlItem = {
@@ -63,26 +58,35 @@ export function useAttachmentUrls({
       return;
     }
 
+    const currentGuildId = guildId;
+    const currentAttachments = attachments;
     let cancelled = false;
     setIsLoading(true);
 
-    fetchUrls({ guildId, attachments }).then((result) => {
-      if (cancelled) return;
+    async function load() {
+      try {
+        const result = await fetchUrls({ guildId: currentGuildId, attachments: currentAttachments });
+        if (cancelled) return;
 
-      if (result.success) {
-        const urlMap = new Map(
-          result.data.map((r) => [r.path, r.signedUrl])
-        );
-        const resolved = attachments
-          .map((a) => ({
-            ...a,
-            signedUrl: urlMap.get(a.path) ?? "",
-          }))
-          .filter((a) => a.signedUrl !== "");
-        setAttachmentsWithUrls(resolved);
+        if (result.success) {
+          const urlMap = new Map(
+            result.data.map((r) => [r.path, r.signedUrl])
+          );
+          const resolved = currentAttachments
+            .map((a) => ({
+              ...a,
+              signedUrl: urlMap.get(a.path) ?? "",
+            }))
+            .filter((a) => a.signedUrl !== "");
+          setAttachmentsWithUrls(resolved);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
-    });
+    }
+    load();
 
     return () => {
       cancelled = true;

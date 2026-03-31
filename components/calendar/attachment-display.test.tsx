@@ -15,11 +15,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { AttachmentDisplay } from "@/components/calendar/attachment-display";
-import type { AttachmentMeta } from "@/lib/calendar/attachment-types";
-
-interface AttachmentWithUrl extends AttachmentMeta {
-  signedUrl: string;
-}
+import type { AttachmentWithUrl } from "@/lib/calendar/attachment-types";
 
 function createImageAttachment(
   overrides?: Partial<AttachmentWithUrl>

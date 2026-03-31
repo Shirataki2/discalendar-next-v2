@@ -21,13 +21,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { AttachmentMeta } from "@/lib/calendar/attachment-types";
+import type { AttachmentWithUrl } from "@/lib/calendar/attachment-types";
 import { formatFileSize, isImageType } from "@/lib/calendar/attachment-types";
-
-/** Signed URL付き添付ファイル */
-export type AttachmentWithUrl = AttachmentMeta & {
-  signedUrl: string;
-};
 
 export type AttachmentDisplayProps = {
   attachments: AttachmentWithUrl[];

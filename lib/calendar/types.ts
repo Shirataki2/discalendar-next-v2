@@ -195,6 +195,24 @@ export type CalendarEvent =
 /**
  * JSONB から取得した値が有効な NotificationSetting か判定する型ガード
  */
+/**
+ * JSONB から取得した値が有効な AttachmentMeta か判定する型ガード
+ */
+function isValidAttachmentMeta(a: unknown): a is AttachmentMeta {
+  return (
+    typeof a === "object" &&
+    a !== null &&
+    "name" in a &&
+    "path" in a &&
+    "type" in a &&
+    "size" in a &&
+    typeof (a as Record<string, unknown>).name === "string" &&
+    typeof (a as Record<string, unknown>).path === "string" &&
+    typeof (a as Record<string, unknown>).type === "string" &&
+    typeof (a as Record<string, unknown>).size === "number"
+  );
+}
+
 function isValidNotificationSetting(
   n: unknown,
 ): n is NotificationSetting & { key?: string } {
@@ -243,7 +261,7 @@ export function toCalendarEvent(record: EventRecord): CalendarEvent {
           }))
       : [],
     attachments: Array.isArray(record.attachments)
-      ? record.attachments
+      ? record.attachments.filter(isValidAttachmentMeta)
       : [],
   };
 }

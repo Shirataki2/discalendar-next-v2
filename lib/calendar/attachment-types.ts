@@ -66,6 +66,11 @@ export function isAllowedMimeType(mimeType: string): boolean {
   );
 }
 
+/** Signed URL付き添付ファイル */
+export type AttachmentWithUrl = AttachmentMeta & {
+  signedUrl: string;
+};
+
 /** バイト数を人間可読な文字列に変換する */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
