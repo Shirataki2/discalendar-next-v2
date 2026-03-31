@@ -24,6 +24,9 @@ vi.mock("@/app/dashboard/actions", () => ({
     mockFetchAttendeesAction(...args),
   upsertRsvpAction: (...args: unknown[]) => mockUpsertRsvpAction(...args),
   deleteRsvpAction: (...args: unknown[]) => mockDeleteRsvpAction(...args),
+  getAttachmentUrlsAction: vi
+    .fn()
+    .mockResolvedValue({ success: true, data: [] }),
 }));
 
 import { EventPopover, type EventPopoverProps } from "./event-popover";

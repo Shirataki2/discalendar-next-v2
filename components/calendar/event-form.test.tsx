@@ -323,7 +323,8 @@ describe("EventForm", () => {
             description: "説明文",
             location: "会議室",
           }),
-          expect.any(Object)
+          expect.any(Object),
+          expect.any(Array)
         );
       });
     });
@@ -816,7 +817,8 @@ describe("EventForm", () => {
               expect.objectContaining({ num: 10, unit: "minutes" }),
             ]),
           }),
-          expect.any(Object)
+          expect.any(Object),
+          expect.any(Array)
         );
       });
     });
@@ -847,7 +849,8 @@ describe("EventForm", () => {
           expect.objectContaining({
             notifications: [],
           }),
-          expect.any(Object)
+          expect.any(Object),
+          expect.any(Array)
         );
       });
     });
@@ -902,7 +905,8 @@ describe("EventForm", () => {
           expect.objectContaining({
             color: "#F59E0B",
           }),
-          expect.any(Object)
+          expect.any(Object),
+          expect.any(Array)
         );
       });
     });
