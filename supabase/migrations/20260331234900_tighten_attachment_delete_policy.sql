@@ -3,7 +3,7 @@
 -- 修正理由: 元のポリシーではギルドメンバーなら他人がアップロードしたファイルも
 -- 削除できてしまう。storage.objects.owner でアップロード者に制限する。
 
-DROP POLICY "guild_members_can_delete_attachments" ON storage.objects;
+DROP POLICY IF EXISTS "guild_members_can_delete_attachments" ON storage.objects;
 
 CREATE POLICY "owner_can_delete_attachments"
 ON storage.objects FOR DELETE TO authenticated
