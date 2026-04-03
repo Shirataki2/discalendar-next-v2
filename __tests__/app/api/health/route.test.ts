@@ -91,6 +91,22 @@ describe("GET /api/health", () => {
     expect(body.bot).toBe("unknown");
   });
 
+  it("returns unhealthy with db error when createClient throws", async () => {
+    const { createClient } = await import("@/lib/supabase/server");
+    vi.mocked(createClient).mockRejectedValueOnce(
+      new Error("connection failed")
+    );
+
+    const { GET } = await import("@/app/api/health/route");
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe("unhealthy");
+    expect(body.db).toBe("error");
+    expect(body.bot).toBe("unknown");
+  });
+
   it("sets Cache-Control: no-store header", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
 

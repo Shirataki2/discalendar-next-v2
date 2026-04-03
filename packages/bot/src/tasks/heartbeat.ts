@@ -14,6 +14,7 @@ export function startHeartbeatTask(client: Client): NodeJS.Timeout {
     try {
       const result = await upsertHeartbeat({ guildCount, wsPing });
       if (result.success) {
+        logger.debug({ guildCount, wsPing }, "Heartbeat sent");
         try {
           writeFileSync(SENTINEL_PATH, String(Date.now()));
         } catch (fsError) {
@@ -21,9 +22,7 @@ export function startHeartbeatTask(client: Client): NodeJS.Timeout {
             { error: fsError },
             "Failed to write heartbeat sentinel file"
           );
-          return;
         }
-        logger.debug({ guildCount, wsPing }, "Heartbeat sent");
       } else {
         logger.error({ error: result.error }, "Heartbeat upsert failed");
       }

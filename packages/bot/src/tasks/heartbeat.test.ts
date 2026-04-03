@@ -73,6 +73,31 @@ describe("heartbeat task", () => {
     clearInterval(timer);
   });
 
+  it("logs error when sentinel file write fails", async () => {
+    const { logger } = await import("../utils/logger.js");
+    const mockLogger = vi.mocked(logger);
+    mockWriteFileSync.mockImplementation(() => {
+      throw new Error("EACCES");
+    });
+
+    const client = createMockClient();
+    const timer = startHeartbeatTask(client);
+
+    vi.advanceTimersByTime(60_000);
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      expect.objectContaining({ guildCount: 3, wsPing: 50 }),
+      "Heartbeat sent"
+    );
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.any(Error) }),
+      "Failed to write heartbeat sentinel file"
+    );
+
+    clearInterval(timer);
+  });
+
   it("does not write sentinel file on failure", async () => {
     mockUpsertHeartbeat.mockResolvedValue({
       success: false,

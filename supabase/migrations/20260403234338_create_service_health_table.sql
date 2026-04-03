@@ -17,5 +17,5 @@ ALTER TABLE service_health ENABLE ROW LEVEL SECURITY;
 -- anon ロールに SELECT を許可する。書き込みは Bot の service_role key のみ。
 -- service_role は RLS をバイパスするため INSERT/UPDATE ポリシーは不要。
 -- authenticated/anon への書き込みポリシーは意図的に作成しない（デフォルト拒否）。
-CREATE POLICY "anon_can_read_service_health"
-  ON service_health FOR SELECT TO anon USING (true);
+CREATE POLICY "allow_read_service_health"
+  ON service_health FOR SELECT TO anon, authenticated USING (true);
