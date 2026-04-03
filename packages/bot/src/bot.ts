@@ -18,6 +18,7 @@ import rsvpCommand from "./commands/rsvp.js";
 import { getConfig } from "./config.js";
 import { onGuildCreate, onGuildDelete, onGuildUpdate } from "./events/guild.js";
 import { handleModalSubmit } from "./handlers/modal-submit.js";
+import { startHeartbeatTask } from "./tasks/heartbeat.js";
 import { startNotifyTask } from "./tasks/notify.js";
 import { startPresenceTask } from "./tasks/presence.js";
 import type { Command } from "./types/command.js";
@@ -171,6 +172,9 @@ export class DiscalendarBot extends Client {
 
     this.taskTimers.push(startPresenceTask(this));
     logger.info("Presence task started");
+
+    this.taskTimers.push(startHeartbeatTask(this));
+    logger.info("Heartbeat task started");
   }
 
   private async registerSlashCommands(): Promise<void> {
