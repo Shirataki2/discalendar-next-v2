@@ -169,8 +169,8 @@ importers:
         specifier: ^10.2.19
         version: 10.2.19(@testing-library/dom@10.4.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       supabase:
-        specifier: ^2.65.0
-        version: 2.76.14
+        specifier: ^2.84.7
+        version: 2.84.7
       tailwindcss:
         specifier: ^3.4.1
         version: 3.4.18(tsx@4.21.0)
@@ -3385,6 +3385,10 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
+  agent-base@8.0.0:
+    resolution: {integrity: sha512-QT8i0hCz6C/KQ+KTAbSNwCHDGdmUJl2tp2ZpNlGSWCfhUNVbYG2WLE3MdZGBAgXPV4GAvjGMxo+C1hroyxmZEg==}
+    engines: {node: '>= 14'}
+
   ajv-formats@2.1.1:
     resolution: {integrity: sha512-Wx0Kx52hxE7C18hkMEggYlEifqWZtYaRgouJor+WMdPnQyEK13vgEWyVNup7SoeeoLMsr4kf5h6dOW11I15MUA==}
     peerDependencies:
@@ -4394,6 +4398,10 @@ packages:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
 
+  https-proxy-agent@8.0.0:
+    resolution: {integrity: sha512-YYeW+iCnAS3xhvj2dvVoWgsbca3RfQy/IlaNHHOtDmU0jMqPI9euIq3Y9BJETdxk16h9NHHCKqp/KB9nIMStCQ==}
+    engines: {node: '>= 14'}
+
   husky@9.1.7:
     resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
     engines: {node: '>=18'}
@@ -4751,6 +4759,10 @@ packages:
 
   minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
+    engines: {node: '>=16 || 14 >=14.17'}
+
+  minipass@7.1.3:
+    resolution: {integrity: sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==}
     engines: {node: '>=16 || 14 >=14.17'}
 
   minizlib@3.1.0:
@@ -5723,8 +5735,8 @@ packages:
     engines: {node: '>=16 || 14 >=14.17'}
     hasBin: true
 
-  supabase@2.76.14:
-    resolution: {integrity: sha512-2XmYs8+A4WXd+w/OND9u9qbSTnGdLCuddnii01H1LkmgwcZ9krXwxElE+YYmzhsEKCUHv5wVjAf5HTUwQ4PnVA==}
+  supabase@2.84.7:
+    resolution: {integrity: sha512-s3tA5U3U1Wr4OH4dNn/phDk3+kjgOaDs7Q86rSKvkZK14qsy00t4w5r6yn3jxQBC23mQ95lzfMvpSzI+WXcDbQ==}
     engines: {npm: '>=8'}
     hasBin: true
 
@@ -5760,8 +5772,8 @@ packages:
     resolution: {integrity: sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg==}
     engines: {node: '>=6'}
 
-  tar@7.5.9:
-    resolution: {integrity: sha512-BTLcK0xsDh2+PUe9F6c2TlRp4zOOBMTkoQHQIWSIzI0R7KG46uEwq4OPk2W7bZcprBMsuaeFsqwYr7pjh6CuHg==}
+  tar@7.5.13:
+    resolution: {integrity: sha512-tOG/7GyXpFevhXVh8jOPJrmtRpOTsYqUIkVdVooZYJS/z8WhfQUX8RJILmeuJNinGAMSu1veBr4asSHFt5/hng==}
     engines: {node: '>=18'}
 
   terser-webpack-plugin@5.3.16:
@@ -7463,7 +7475,7 @@ snapshots:
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -9572,6 +9584,8 @@ snapshots:
 
   agent-base@7.1.4: {}
 
+  agent-base@8.0.0: {}
+
   ajv-formats@2.1.1(ajv@8.18.0):
     optionalDependencies:
       ajv: 8.18.0
@@ -10546,7 +10560,7 @@ snapshots:
       foreground-child: 3.3.1
       jackspeak: 3.4.3
       minimatch: 9.0.6
-      minipass: 7.1.2
+      minipass: 7.1.3
       package-json-from-dist: 1.0.1
       path-scurry: 1.11.1
 
@@ -10668,6 +10682,13 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.4
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
+  https-proxy-agent@8.0.0:
+    dependencies:
+      agent-base: 8.0.0
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
@@ -10997,9 +11018,11 @@ snapshots:
 
   minipass@7.1.2: {}
 
+  minipass@7.1.3: {}
+
   minizlib@3.1.0:
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   module-details-from-path@1.0.4: {}
 
@@ -11239,7 +11262,7 @@ snapshots:
   path-scurry@1.11.1:
     dependencies:
       lru-cache: 10.4.3
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   path-scurry@2.0.1:
     dependencies:
@@ -12149,12 +12172,12 @@ snapshots:
       tinyglobby: 0.2.15
       ts-interface-checker: 0.1.13
 
-  supabase@2.76.14:
+  supabase@2.84.7:
     dependencies:
       bin-links: 6.0.0
-      https-proxy-agent: 7.0.6
+      https-proxy-agent: 8.0.0
       node-fetch: 3.3.2
-      tar: 7.5.9
+      tar: 7.5.13
     transitivePeerDependencies:
       - supports-color
 
@@ -12206,11 +12229,11 @@ snapshots:
 
   tapable@2.3.0: {}
 
-  tar@7.5.9:
+  tar@7.5.13:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
-      minipass: 7.1.2
+      minipass: 7.1.3
       minizlib: 3.1.0
       yallist: 5.0.0
 
