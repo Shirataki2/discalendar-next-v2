@@ -67,7 +67,8 @@ export async function updateSession(request: NextRequest) {
     pathname === "/terms" ||
     pathname === "/privacy" ||
     pathname.startsWith("/docs") ||
-    pathname.startsWith("/cal");
+    pathname.startsWith("/cal") ||
+    pathname === "/api/health";
 
   if (!user && !isPublicRoute) {
     // No user, redirect to login page
