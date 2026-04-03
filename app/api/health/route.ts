@@ -13,6 +13,8 @@ type ServiceHealthRow = {
   metadata: BotMetadata | null;
 };
 
+// 認証不要のパブリックエンドポイント（proxy.ts の isPublicRoute に登録済み）。
+// createClient() は anon key で Supabase に接続し、RLS の SELECT ポリシーで読み取る。
 export async function GET(): Promise<Response> {
   const start = Date.now();
 

@@ -7,29 +7,28 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 const SENTINEL_PATH = "/tmp/bot-healthy";
 
 export function startHeartbeatTask(client: Client): NodeJS.Timeout {
-  return setInterval(() => {
+  return setInterval(async () => {
     const guildCount = client.guilds.cache.size;
     const wsPing = client.ws.ping;
 
-    upsertHeartbeat({ guildCount, wsPing })
-      .then((result) => {
-        if (result.success) {
-          try {
-            writeFileSync(SENTINEL_PATH, String(Date.now()));
-          } catch (fsError) {
-            logger.error(
-              { error: fsError },
-              "Failed to write heartbeat sentinel file"
-            );
-            return;
-          }
-          logger.debug({ guildCount, wsPing }, "Heartbeat sent");
-        } else {
-          logger.error({ error: result.error }, "Heartbeat upsert failed");
+    try {
+      const result = await upsertHeartbeat({ guildCount, wsPing });
+      if (result.success) {
+        try {
+          writeFileSync(SENTINEL_PATH, String(Date.now()));
+        } catch (fsError) {
+          logger.error(
+            { error: fsError },
+            "Failed to write heartbeat sentinel file"
+          );
+          return;
         }
-      })
-      .catch((error) => {
-        logger.error({ error }, "Heartbeat task failed");
-      });
+        logger.debug({ guildCount, wsPing }, "Heartbeat sent");
+      } else {
+        logger.error({ error: result.error }, "Heartbeat upsert failed");
+      }
+    } catch (error) {
+      logger.error({ error }, "Heartbeat task failed");
+    }
   }, HEARTBEAT_INTERVAL_MS);
 }
