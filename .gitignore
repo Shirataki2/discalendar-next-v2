@@ -61,3 +61,18 @@ debug.log
 .env.sentry-build-plugin
 .env.local
 .collaborator
+
+# pnpm store
+.pnpm-store/
+
+# skill packages
+*.skill
+
+# python cache
+__pycache__/
+
+# claude worktrees
+.claude/worktrees/
+
+# supabase snippets
+supabase/snippets/
