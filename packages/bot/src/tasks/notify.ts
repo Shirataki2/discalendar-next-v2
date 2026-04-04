@@ -242,6 +242,7 @@ async function sendNotification(
   event: EventRecord,
   notification: NotificationPayload
 ): Promise<void> {
+  // DB障害時はフェイルオープン: 未送信よりも重複送信を許容する設計
   const sentResult = await hasSent(event.id, event.guild_id, notification.key);
   if (sentResult.success && sentResult.data) {
     logger.debug(
@@ -268,7 +269,21 @@ async function sendNotification(
       { eventName: event.name, guildId: event.guild_id },
       "Sent notification"
     );
-    await markSent(event.id, event.guild_id, notification.key);
+    const markResult = await markSent(
+      event.id,
+      event.guild_id,
+      notification.key
+    );
+    if (!markResult.success) {
+      logger.warn(
+        {
+          eventId: event.id,
+          guildId: event.guild_id,
+          notificationKey: notification.key,
+        },
+        "Failed to record sent notification; may resend on restart"
+      );
+    }
   } catch (error) {
     logger.warn(
       { error, guildId: event.guild_id },
@@ -306,11 +321,18 @@ async function runCleanupIfNeeded(nowMs: number): Promise<void> {
 
   try {
     const result = await cleanupOldRecords(CLEANUP_RETENTION_DAYS);
-    lastCleanupMs = nowMs;
-    if (result.success && result.data > 0) {
-      logger.info(
-        { deletedCount: result.data },
-        "Cleaned up old sent notification records"
+    if (result.success) {
+      lastCleanupMs = nowMs;
+      if (result.data > 0) {
+        logger.info(
+          { deletedCount: result.data },
+          "Cleaned up old sent notification records"
+        );
+      }
+    } else {
+      logger.warn(
+        { error: result.error },
+        "Cleanup failed; will retry on next interval"
       );
     }
   } catch (error) {
