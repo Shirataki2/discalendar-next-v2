@@ -27,6 +27,12 @@ vi.mock("../services/event-service.js", () => ({
   getEventSettingsByGuildIds: vi.fn(),
 }));
 
+vi.mock("../services/sent-notification-service.js", () => ({
+  hasSent: vi.fn(),
+  markSent: vi.fn(),
+  cleanupOldRecords: vi.fn(),
+}));
+
 vi.mock("@discalendar/rrule-utils", () => ({
   expandOccurrences: vi.fn(),
 }));
@@ -44,18 +50,26 @@ vi.mock("../config.js", () => ({
 }));
 
 // Import after mocks
-const { startNotifyTask, toEventRecord } = await import("./notify.js");
+const { startNotifyTask, toEventRecord, _resetState } = await import(
+  "./notify.js"
+);
 const {
   getFutureEventsForAllGuilds,
   getFutureSeriesForAllGuilds,
   getEventSettingsByGuildIds,
 } = await import("../services/event-service.js");
 const { expandOccurrences } = await import("@discalendar/rrule-utils");
+const { hasSent, markSent, cleanupOldRecords } = await import(
+  "../services/sent-notification-service.js"
+);
 
 const mockGetFutureEvents = vi.mocked(getFutureEventsForAllGuilds);
 const mockGetFutureSeries = vi.mocked(getFutureSeriesForAllGuilds);
 const mockGetSettings = vi.mocked(getEventSettingsByGuildIds);
 const mockExpandOccurrences = vi.mocked(expandOccurrences);
+const mockHasSent = vi.mocked(hasSent);
+const mockMarkSent = vi.mocked(markSent);
+const mockCleanupOldRecords = vi.mocked(cleanupOldRecords);
 
 function createMockEvent(overrides: Partial<EventRecord> = {}): EventRecord {
   return {
@@ -122,9 +136,13 @@ describe("notify task", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    _resetState();
     mockSend.mockResolvedValue(undefined);
     mockGetFutureSeries.mockResolvedValue({ success: true, data: [] });
     mockExpandOccurrences.mockReturnValue({ dates: [], truncated: false });
+    mockHasSent.mockResolvedValue({ success: true, data: false });
+    mockMarkSent.mockResolvedValue({ success: true, data: undefined });
+    mockCleanupOldRecords.mockResolvedValue({ success: true, data: 0 });
   });
 
   afterEach(() => {
@@ -638,6 +656,283 @@ describe("notify task", () => {
         "Failed to fetch events for notifications"
       );
       expect(mockSend).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("dedup integration", () => {
+    it("skips notification when already sent", async () => {
+      const now = new Date("2024-06-15T11:59:00Z");
+      vi.setSystemTime(now);
+
+      const event = createMockEvent({
+        start_at: "2024-06-15T12:00:00Z",
+        notifications: [],
+      });
+
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+      mockHasSent.mockResolvedValue({ success: true, data: true });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: "event-1",
+          notificationKey: "__start__",
+        }),
+        "Notification already sent, skipping"
+      );
+    });
+
+    it("marks notification as sent after successful send", async () => {
+      const now = new Date("2024-06-15T11:59:00Z");
+      vi.setSystemTime(now);
+
+      const event = createMockEvent({
+        start_at: "2024-06-15T12:00:00Z",
+        notifications: [],
+      });
+
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockSend).toHaveBeenCalled();
+      expect(mockMarkSent).toHaveBeenCalledWith(
+        "event-1",
+        "guild-1",
+        "__start__"
+      );
+    });
+
+    it("logs warning when markSent fails after successful send", async () => {
+      const now = new Date("2024-06-15T11:59:00Z");
+      vi.setSystemTime(now);
+
+      const event = createMockEvent({
+        start_at: "2024-06-15T12:00:00Z",
+        notifications: [],
+      });
+
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+      mockMarkSent.mockResolvedValue({
+        success: false,
+        error: { code: "INSERT_FAILED", message: "db error" },
+      });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockSend).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: "event-1",
+          guildId: "guild-1",
+          notificationKey: "__start__",
+        }),
+        "Failed to record sent notification; may resend on restart"
+      );
+    });
+
+    it("sends notification on hasSent DB failure (fail-open)", async () => {
+      const now = new Date("2024-06-15T11:59:00Z");
+      vi.setSystemTime(now);
+
+      const event = createMockEvent({
+        start_at: "2024-06-15T12:00:00Z",
+        notifications: [],
+      });
+
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+      mockHasSent.mockResolvedValue({
+        success: false,
+        error: { code: "FETCH_FAILED", message: "connection error" },
+      });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockSend).toHaveBeenCalled();
+    });
+
+    it("manages multiple notification types independently", async () => {
+      const now = new Date("2024-06-15T11:29:00Z");
+      vi.setSystemTime(now);
+
+      const notifications: NotificationPayload[] = [
+        { key: "30m", num: 30, unit: "minutes" },
+      ];
+      const event = createMockEvent({
+        start_at: "2024-06-15T12:00:00Z",
+        notifications,
+      });
+
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+      // 30m notification: not sent yet; __start__ sentinel: not in window
+      mockHasSent.mockResolvedValue({ success: true, data: false });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      // Only the 30m notification fires (sentinel is not in window)
+      expect(mockHasSent).toHaveBeenCalledWith("event-1", "guild-1", "30m");
+      expect(mockMarkSent).toHaveBeenCalledWith("event-1", "guild-1", "30m");
+    });
+
+    it("applies dedup to series occurrence pseudo-IDs", async () => {
+      const now = new Date("2024-06-17T09:59:00Z");
+      vi.setSystemTime(now);
+
+      const series = createMockSeries({
+        id: "s1",
+        notifications: [],
+      });
+
+      mockGetFutureEvents.mockResolvedValue({ success: true, data: [] });
+      mockGetFutureSeries.mockResolvedValue({
+        success: true,
+        data: [series],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+      mockExpandOccurrences.mockReturnValue({
+        dates: [new Date("2024-06-17T10:00:00Z")],
+        truncated: false,
+      });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockHasSent).toHaveBeenCalledWith(
+        "series:s1:occ:2024-06-17T10:00:00.000Z",
+        "guild-1",
+        "__start__"
+      );
+      expect(mockMarkSent).toHaveBeenCalledWith(
+        "series:s1:occ:2024-06-17T10:00:00.000Z",
+        "guild-1",
+        "__start__"
+      );
+    });
+
+    it("does not mark as sent when channel.send fails", async () => {
+      const now = new Date("2024-06-15T11:59:00Z");
+      vi.setSystemTime(now);
+
+      const event = createMockEvent({
+        start_at: "2024-06-15T12:00:00Z",
+        notifications: [],
+      });
+
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+      mockSend.mockRejectedValue(new Error("Discord API error"));
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockMarkSent).not.toHaveBeenCalled();
+    });
+
+    it("runs cleanup periodically", async () => {
+      // Set time far in the future to ensure lastCleanupMs interval has passed
+      const now = new Date("2025-01-01T00:00:00Z");
+      vi.setSystemTime(now);
+
+      const event = createMockEvent({
+        start_at: "2025-01-05T12:00:00Z",
+        notifications: [],
+      });
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockCleanupOldRecords).toHaveBeenCalledWith(7);
     });
   });
 
