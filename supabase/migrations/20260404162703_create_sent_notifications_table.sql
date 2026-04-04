@@ -12,4 +12,6 @@ CREATE TABLE sent_notifications (
 CREATE INDEX idx_sent_notifications_sent_at
   ON sent_notifications (sent_at);
 
--- RLS不要: BotはSupabase service_role keyでアクセスする
+-- RLS有効化（ポリシーなし）: service_role keyはRLSをバイパスするためBot動作に影響なし
+-- anon key経由の意図しないアクセスを防御する
+ALTER TABLE sent_notifications ENABLE ROW LEVEL SECURITY;
