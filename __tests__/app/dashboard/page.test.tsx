@@ -512,7 +512,7 @@ describe("DashboardPage", () => {
   });
 
   describe("Task 4.2: 直近の予定セクション統合", () => {
-    it("upcomingEventsSlot が渡された場合に予定セクションを表示する", () => {
+    it("サイドバーに直近の予定カードが表示される", () => {
       render(
         <DashboardPageLayout
           guilds={[]}
@@ -529,24 +529,15 @@ describe("DashboardPage", () => {
         />
       );
 
-      expect(screen.getByTestId("upcoming-events-slot")).toBeInTheDocument();
-      expect(screen.getByText("予定セクション")).toBeInTheDocument();
+      // サイドバーに直近の予定カードが表示される
+      expect(screen.getByTestId("upcoming-events-card")).toBeInTheDocument();
+      expect(screen.getByText("直近の予定")).toBeInTheDocument();
     });
 
-    it("upcomingEventsSlot が DashboardWithCalendar の前に配置される", () => {
-      const mockGuilds = [
-        {
-          id: 1,
-          guildId: "123456789012345678",
-          name: "Test Server",
-          avatarUrl: null,
-          locale: "ja",
-        },
-      ];
-
+    it("ページ上部に独立した直近の予定セクションが表示されない", () => {
       const { container } = render(
         <DashboardPageLayout
-          guilds={mockGuilds}
+          guilds={[]}
           invitableGuilds={[]}
           upcomingEventsSlot={
             <div data-testid="upcoming-events-slot">予定セクション</div>
@@ -562,9 +553,9 @@ describe("DashboardPage", () => {
 
       const main = container.querySelector("main");
       expect(main).toBeInTheDocument();
-      // 予定セクション slot が main 内の最初の子要素であることを確認
-      const slotEl = screen.getByTestId("upcoming-events-slot");
-      expect(main?.firstElementChild?.contains(slotEl)).toBe(true);
+      // main の直下に mb-4 の独立セクションがないことを確認
+      const topSection = main?.querySelector(":scope > .mb-4");
+      expect(topSection).toBeNull();
     });
 
     it("upcomingEventsSlot が渡されない場合も正常に動作する", () => {
@@ -572,6 +563,7 @@ describe("DashboardPage", () => {
         <DashboardPageLayout
           guilds={[]}
           invitableGuilds={[]}
+          upcomingEventsSlot={null}
           user={{
             id: "user-123",
             email: "test@example.com",
