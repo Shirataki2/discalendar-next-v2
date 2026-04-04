@@ -67,7 +67,7 @@ export type DashboardSelection =
  */
 function selectionFromSearchParams(
   params: URLSearchParams,
-  guilds: Guild[],
+  guilds: Guild[]
 ): DashboardSelection {
   const view = params.get("view");
   if (view === "upcoming") {
@@ -85,7 +85,7 @@ function selectionFromSearchParams(
  */
 function selectionToSearchParams(
   selection: DashboardSelection,
-  current: URLSearchParams,
+  current: URLSearchParams
 ): URLSearchParams {
   const params = new URLSearchParams(current.toString());
   if (selection === null) {
@@ -99,6 +99,25 @@ function selectionToSearchParams(
     params.delete("guild");
   }
   return params;
+}
+
+/**
+ * 2つの DashboardSelection が同値かを判定する
+ */
+function isSelectionEqual(
+  a: DashboardSelection,
+  b: DashboardSelection
+): boolean {
+  if (a === null && b === null) {
+    return true;
+  }
+  if (a?.type !== b?.type) {
+    return false;
+  }
+  if (a?.type === "guild" && b?.type === "guild") {
+    return a.guildId === b.guildId;
+  }
+  return true;
 }
 
 /**
@@ -263,7 +282,7 @@ function MobileGuildSelector({
         onGuildSelect(value);
       }
     },
-    [onGuildSelect, onSelectUpcoming],
+    [onGuildSelect, onSelectUpcoming]
   );
 
   const selectValue = isUpcomingSelected
@@ -278,18 +297,13 @@ function MobileGuildSelector({
         {hasError ? <ErrorDisplay error={guildError} /> : null}
         {hasError || hasGuilds ? null : <EmptyState />}
 
-        {!hasError ? (
-          <Select
-            onValueChange={handleValueChange}
-            value={selectValue}
-          >
+        {hasError ? null : (
+          <Select onValueChange={handleValueChange} value={selectValue}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="サーバーを選択..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={UPCOMING_SELECT_VALUE}>
-                直近の予定
-              </SelectItem>
+              <SelectItem value={UPCOMING_SELECT_VALUE}>直近の予定</SelectItem>
               {guilds.map((guild) => (
                 <SelectItem key={guild.guildId} value={guild.guildId}>
                   {guild.name}
@@ -297,7 +311,7 @@ function MobileGuildSelector({
               ))}
             </SelectContent>
           </Select>
-        ) : null}
+        )}
 
         {/* bot-invite-flow: モバイル用未参加ギルドセクション（折りたたみ可能） */}
         <InvitableGuildSection collapsible invitableGuilds={invitableGuilds} />
@@ -350,6 +364,97 @@ function SidebarHeader({
 }
 
 /**
+ * サイドバー折りたたみ時のコンテンツ
+ */
+function CollapsedSidebarContent({
+  guilds,
+  hasError,
+  hasGuilds,
+  isUpcomingSelected,
+  selectedGuildId,
+  onGuildSelect,
+  onSelectUpcoming,
+}: {
+  guilds: Guild[];
+  hasError: boolean;
+  hasGuilds: boolean;
+  isUpcomingSelected: boolean;
+  selectedGuildId: string | null;
+  onGuildSelect: (guildId: string) => void;
+  onSelectUpcoming: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <UpcomingEventsIconButton
+        isSelected={isUpcomingSelected}
+        onSelect={onSelectUpcoming}
+      />
+      {!hasError && hasGuilds
+        ? guilds.map((guild) => (
+            <GuildIconButton
+              guild={guild}
+              isSelected={selectedGuildId === guild.guildId}
+              key={guild.guildId}
+              onSelect={onGuildSelect}
+            />
+          ))
+        : null}
+    </div>
+  );
+}
+
+/**
+ * サイドバー展開時のコンテンツ
+ */
+function ExpandedSidebarContent({
+  guilds,
+  invitableGuilds,
+  guildError,
+  hasError,
+  hasGuilds,
+  isUpcomingSelected,
+  selectedGuildId,
+  onGuildSelect,
+  onSelectUpcoming,
+}: {
+  guilds: Guild[];
+  invitableGuilds: InvitableGuild[];
+  guildError?: GuildListError;
+  hasError: boolean;
+  hasGuilds: boolean;
+  isUpcomingSelected: boolean;
+  selectedGuildId: string | null;
+  onGuildSelect: (guildId: string) => void;
+  onSelectUpcoming: () => void;
+}) {
+  return (
+    <>
+      {hasError && guildError ? <ErrorDisplay error={guildError} /> : null}
+      {hasError || hasGuilds ? null : <EmptyState />}
+
+      <div className="space-y-2">
+        <UpcomingEventsCard
+          isSelected={isUpcomingSelected}
+          onSelect={onSelectUpcoming}
+        />
+        {!hasError && hasGuilds
+          ? guilds.map((guild) => (
+              <SelectableGuildCard
+                guild={guild}
+                isSelected={selectedGuildId === guild.guildId}
+                key={guild.guildId}
+                onSelect={onGuildSelect}
+              />
+            ))
+          : null}
+      </div>
+
+      <InvitableGuildSection invitableGuilds={invitableGuilds} />
+    </>
+  );
+}
+
+/**
  * デスクトップ用ギルド一覧サイドバーコンポーネント
  */
 function DesktopGuildSidebar({
@@ -393,56 +498,28 @@ function DesktopGuildSidebar({
           onToggleCollapse={onToggleCollapse}
         />
 
-        {isCollapsed ? null : (
-          <>
-            {hasError ? <ErrorDisplay error={guildError} /> : null}
-            {hasError || hasGuilds ? null : <EmptyState />}
-          </>
-        )}
-
-        {/* 折りたたみ時: アイコン表示 */}
         {isCollapsed ? (
-          <div className="flex flex-col items-center gap-3">
-            <UpcomingEventsIconButton
-              isSelected={isUpcomingSelected}
-              onSelect={onSelectUpcoming}
-            />
-            {!hasError && hasGuilds
-              ? guilds.map((guild) => (
-                  <GuildIconButton
-                    guild={guild}
-                    isSelected={selectedGuildId === guild.guildId}
-                    key={guild.guildId}
-                    onSelect={onGuildSelect}
-                  />
-                ))
-              : null}
-          </div>
-        ) : null}
-
-        {/* 展開時: カード表示 */}
-        {!isCollapsed ? (
-          <div className="space-y-2">
-            <UpcomingEventsCard
-              isSelected={isUpcomingSelected}
-              onSelect={onSelectUpcoming}
-            />
-            {!hasError && hasGuilds
-              ? guilds.map((guild) => (
-                  <SelectableGuildCard
-                    guild={guild}
-                    isSelected={selectedGuildId === guild.guildId}
-                    key={guild.guildId}
-                    onSelect={onGuildSelect}
-                  />
-                ))
-              : null}
-          </div>
-        ) : null}
-
-        {/* bot-invite-flow: デスクトップ用未参加ギルドセクション */}
-        {isCollapsed ? null : (
-          <InvitableGuildSection invitableGuilds={invitableGuilds} />
+          <CollapsedSidebarContent
+            guilds={guilds}
+            hasError={hasError}
+            hasGuilds={hasGuilds}
+            isUpcomingSelected={isUpcomingSelected}
+            onGuildSelect={onGuildSelect}
+            onSelectUpcoming={onSelectUpcoming}
+            selectedGuildId={selectedGuildId}
+          />
+        ) : (
+          <ExpandedSidebarContent
+            guildError={guildError}
+            guilds={guilds}
+            hasError={hasError}
+            hasGuilds={hasGuilds}
+            invitableGuilds={invitableGuilds}
+            isUpcomingSelected={isUpcomingSelected}
+            onGuildSelect={onGuildSelect}
+            onSelectUpcoming={onSelectUpcoming}
+            selectedGuildId={selectedGuildId}
+          />
         )}
 
         {/* bot-invite-flow: 再取得中ローディング */}
@@ -553,7 +630,7 @@ export function DashboardWithCalendar({
 
   // URL パラメータから初期選択状態を復元
   const [selection, setSelection] = useState<DashboardSelection>(() =>
-    selectionFromSearchParams(searchParams, initialGuilds),
+    selectionFromSearchParams(searchParams, initialGuilds)
   );
 
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
@@ -624,18 +701,9 @@ export function DashboardWithCalendar({
   // URL パラメータが変わったら状態を同期（ブラウザの戻る/進む対応）
   useEffect(() => {
     const newSelection = selectionFromSearchParams(searchParams, currentGuilds);
-    setSelection((current) => {
-      if (current === null && newSelection === null) return current;
-      if (
-        current?.type === newSelection?.type &&
-        (current?.type !== "guild" ||
-          newSelection?.type !== "guild" ||
-          current.guildId === newSelection.guildId)
-      ) {
-        return current;
-      }
-      return newSelection;
-    });
+    setSelection((current) =>
+      isSelectionEqual(current, newSelection) ? current : newSelection
+    );
   }, [searchParams, currentGuilds]);
 
   const handleGuildSelect = useCallback(

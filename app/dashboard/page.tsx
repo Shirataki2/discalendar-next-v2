@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
-import { UpcomingEventsCollapsible } from "@/components/calendar/upcoming-events-collapsible";
 import { UpcomingEventsSection } from "@/components/calendar/upcoming-events-section";
 import { UpcomingEventsSkeleton } from "@/components/calendar/upcoming-events-skeleton";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -71,9 +70,6 @@ export function DashboardPageLayout({
     <div className="flex min-h-screen flex-col">
       <DashboardHeader user={user} />
       <main className="container mx-auto flex flex-1 flex-col px-4 py-3">
-        {upcomingEventsSlot ? (
-          <div className="mb-4">{upcomingEventsSlot}</div>
-        ) : null}
         <div className="flex flex-1 flex-col">
           {/* ギルド一覧とカレンダー統合 (Task 10.1, guild-permissions 7.2) */}
           <DashboardWithCalendar
@@ -81,6 +77,7 @@ export function DashboardPageLayout({
             guildPermissions={guildPermissions}
             guilds={guilds}
             invitableGuilds={invitableGuilds}
+            upcomingEventsSlot={upcomingEventsSlot}
           />
         </div>
       </main>
@@ -190,11 +187,9 @@ export default async function DashboardPage() {
       guilds={guilds}
       invitableGuilds={invitableGuilds}
       upcomingEventsSlot={
-        <UpcomingEventsCollapsible>
-          <Suspense fallback={<UpcomingEventsSkeleton />}>
-            <UpcomingEventsSection guilds={guilds} />
-          </Suspense>
-        </UpcomingEventsCollapsible>
+        <Suspense fallback={<UpcomingEventsSkeleton />}>
+          <UpcomingEventsSection guilds={guilds} />
+        </Suspense>
       }
       user={dashboardUser}
     />
