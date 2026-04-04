@@ -72,3 +72,39 @@ fi
 if [ "$STREAM_WEB" = true ]; then
   check_command "vercel" "pnpm add -g vercel" || exit 1
 fi
+
+# ─── Environment Variables ───
+load_env_file() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    while IFS='=' read -r key value; do
+      # Skip comments and empty lines
+      [[ -z "$key" || "$key" =~ ^# ]] && continue
+      # Remove surrounding quotes from value
+      value="${value%\"}"
+      value="${value#\"}"
+      value="${value%\'}"
+      value="${value#\'}"
+      # Only export if not already set in environment
+      if [ -z "${!key+x}" ]; then
+        export "$key=$value"
+      fi
+    done < "$file"
+  fi
+}
+
+if [ "$STREAM_BOT" = true ]; then
+  # Load from .env.local first (higher priority), then .env
+  load_env_file "$PROJECT_DIR/.env.local"
+  load_env_file "$PROJECT_DIR/.env"
+
+  AWS_REGION="${AWS_REGION:-ap-northeast-1}"
+  CLOUDWATCH_LOG_GROUP="${AWS_CLOUDWATCH_LOG_GROUP:-${CLOUDWATCH_LOG_GROUP:-}}"
+
+  if [ -z "$CLOUDWATCH_LOG_GROUP" ]; then
+    echo -e "${RED}Error: CLOUDWATCH_LOG_GROUP (or AWS_CLOUDWATCH_LOG_GROUP) is not set.${RESET}"
+    echo -e "  Add to ${BOLD}.env.local${RESET}:"
+    echo -e "    CLOUDWATCH_LOG_GROUP=/your/log-group-name"
+    exit 1
+  fi
+fi
