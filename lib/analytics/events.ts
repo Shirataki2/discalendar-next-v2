@@ -7,6 +7,7 @@ type AnalyticsEventName =
   | "event_moved"
   | "event_resized"
   | "guild_switched"
+  | "upcoming_events_selected"
   | "view_changed"
   | "calendar_navigated";
 
@@ -30,6 +31,7 @@ interface AnalyticsEventMap {
   guild_switched: {
     guild_id: string;
   };
+  upcoming_events_selected: Record<never, never>;
   view_changed: {
     view_type: "day" | "week" | "month";
   };
