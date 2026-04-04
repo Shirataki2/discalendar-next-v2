@@ -19,7 +19,7 @@ export function UpcomingEventsPanel({ children }: UpcomingEventsPanelProps) {
       data-testid="upcoming-events-panel"
     >
       <div className="flex flex-1 flex-col rounded-lg border">
-        <h2 className="font-semibold text-lg p-4">直近の予定</h2>
+        <h2 className="p-4 font-semibold text-lg">直近の予定</h2>
         {children}
       </div>
     </section>

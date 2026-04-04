@@ -429,7 +429,7 @@ function ExpandedSidebarContent({
 }) {
   return (
     <>
-      {hasError && guildError ? <ErrorDisplay error={guildError} /> : null}
+      {guildError ? <ErrorDisplay error={guildError} /> : null}
       {hasError || hasGuilds ? null : <EmptyState />}
 
       <div className="space-y-2">
