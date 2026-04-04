@@ -91,7 +91,7 @@ function ErrorDisplay({ error }: { error: GuildListError }) {
       {showLoginLink ? (
         <a
           className="mt-2 inline-block text-primary text-sm underline hover:text-primary/80"
-          href="/auth/login"
+          href="/auth/login?reauth=true"
         >
           ログインページへ
         </a>

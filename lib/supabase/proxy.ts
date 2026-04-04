@@ -50,7 +50,9 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Requirement 5.2: Authenticated user accessing login page should redirect to dashboard
-  if (user && pathname === "/auth/login") {
+  // ただし reauth パラメータがある場合は Discord トークン再取得のためスキップ
+  const isReauth = request.nextUrl.searchParams.get("reauth") === "true";
+  if (user && pathname === "/auth/login" && !isReauth) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
