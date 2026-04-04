@@ -5,6 +5,11 @@ import {
   getFutureEventsForAllGuilds,
   getFutureSeriesForAllGuilds,
 } from "../services/event-service.js";
+import {
+  cleanupOldRecords,
+  hasSent,
+  markSent,
+} from "../services/sent-notification-service.js";
 import type {
   EventRecord,
   EventSeriesRecord,
@@ -20,6 +25,10 @@ const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const MS_PER_MINUTE = 60_000;
 const NOTIFY_CHECK_INTERVAL_MS = MS_PER_MINUTE;
 const MAX_NOTIFY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+const CLEANUP_RETENTION_DAYS = 7;
+
+let lastCleanupMs = 0;
 
 function toMinutes(notification: NotificationPayload): number {
   switch (notification.unit) {
@@ -148,6 +157,8 @@ async function processNotifications(client: Client): Promise<void> {
   }
 
   await processSeriesNotifications({ client, series, settingsMap, now, nowMs });
+
+  await runCleanupIfNeeded(nowMs);
 }
 
 type SeriesNotificationContext = {
@@ -215,22 +226,63 @@ async function processSeriesNotifications(
   }
 }
 
+function getStartMs(event: EventRecord): number {
+  const startDate = new Date(event.start_at);
+  if (event.is_all_day) {
+    const y = startDate.getUTCFullYear();
+    const m = startDate.getUTCMonth();
+    const d = startDate.getUTCDate();
+    return Date.UTC(y, m, d) - JST_OFFSET_MS;
+  }
+  return startDate.getTime();
+}
+
+async function sendNotification(
+  channel: SendableChannels,
+  event: EventRecord,
+  notification: NotificationPayload
+): Promise<void> {
+  const sentResult = await hasSent(event.id, event.guild_id, notification.key);
+  if (sentResult.success && sentResult.data) {
+    logger.debug(
+      {
+        eventId: event.id,
+        guildId: event.guild_id,
+        notificationKey: notification.key,
+      },
+      "Notification already sent, skipping"
+    );
+    return;
+  }
+
+  const isSentinel = notification.key === SENTINEL_NOTIFICATION.key;
+  const label = isSentinel
+    ? "以下の予定が開催されます"
+    : `${notification.num}${NOTIFICATION_UNIT_LABELS[notification.unit]}に以下の予定が開催されます`;
+
+  const embed = createNotificationEmbed(event, label);
+
+  try {
+    await channel.send({ embeds: [embed] });
+    logger.info(
+      { eventName: event.name, guildId: event.guild_id },
+      "Sent notification"
+    );
+    await markSent(event.id, event.guild_id, notification.key);
+  } catch (error) {
+    logger.warn(
+      { error, guildId: event.guild_id },
+      "Failed to send notification"
+    );
+  }
+}
+
 async function checkEventNotifications(
   channel: SendableChannels,
   event: EventRecord,
   nowMs: number
 ): Promise<void> {
-  const startDate = new Date(event.start_at);
-  let startMs: number;
-  if (event.is_all_day) {
-    const y = startDate.getUTCFullYear();
-    const m = startDate.getUTCMonth();
-    const d = startDate.getUTCDate();
-    startMs = Date.UTC(y, m, d) - JST_OFFSET_MS;
-  } else {
-    startMs = startDate.getTime();
-  }
-
+  const startMs = getStartMs(event);
   const notifications: NotificationPayload[] = [
     ...event.notifications,
     SENTINEL_NOTIFICATION,
@@ -242,37 +294,30 @@ async function checkEventNotifications(
     const diff = nowMs - notifyTimeMs;
 
     if (diff >= 0 && diff < MS_PER_MINUTE) {
-      const isSentinel = notification.key === SENTINEL_NOTIFICATION.key;
-      const label = isSentinel
-        ? "以下の予定が開催されます"
-        : `${notification.num}${NOTIFICATION_UNIT_LABELS[notification.unit]}に以下の予定が開催されます`;
-
-      const embed = createNotificationEmbed(event, label);
-
-      try {
-        await channel.send({ embeds: [embed] });
-        logger.info(
-          { eventName: event.name, guildId: event.guild_id },
-          "Sent notification"
-        );
-      } catch (error) {
-        logger.warn(
-          {
-            error,
-            guildId: event.guild_id,
-          },
-          "Failed to send notification"
-        );
-      }
+      await sendNotification(channel, event, notification);
     }
   }
 }
 
-// NOTE: 通知の重複送信について
-// 再起動やクラッシュ復旧時に同一分のウィンドウ内で重複送信される可能性がある。
-// 現時点ではDB送信済みフラグによる管理は複雑さに対して効果が見合わないため、
-// 再起動頻度が低いことを前提に重複を許容する設計とする。
-// 将来的に問題になった場合は、sent_notifications テーブルの追加を検討する。
+async function runCleanupIfNeeded(nowMs: number): Promise<void> {
+  if (nowMs - lastCleanupMs < CLEANUP_INTERVAL_MS) {
+    return;
+  }
+
+  try {
+    const result = await cleanupOldRecords(CLEANUP_RETENTION_DAYS);
+    lastCleanupMs = nowMs;
+    if (result.success && result.data > 0) {
+      logger.info(
+        { deletedCount: result.data },
+        "Cleaned up old sent notification records"
+      );
+    }
+  } catch (error) {
+    logger.error({ error }, "Failed to cleanup old sent notification records");
+  }
+}
+
 export function startNotifyTask(client: Client): NodeJS.Timeout {
   return setInterval(() => {
     processNotifications(client).catch((error) => {
