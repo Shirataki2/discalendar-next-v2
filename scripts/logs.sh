@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -uo pipefail
 
 # Stream production logs from Discord Bot (CloudWatch) and Next.js Web (Vercel)
 # Usage: ./scripts/logs.sh [--bot-only] [--web-only]
@@ -153,3 +153,61 @@ stream_bot_logs() {
     fi
   done
 }
+
+stream_web_logs() {
+  vercel logs --follow --cwd "$PROJECT_DIR" 2>&1 | while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    echo -e "${MAGENTA}[WEB]${RESET} $line"
+  done
+}
+
+# ─── Process Management ───
+BOT_PID=""
+WEB_PID=""
+
+cleanup() {
+  echo ""
+  echo -e "${BOLD}Stopping log streams...${RESET}"
+  [ -n "$BOT_PID" ] && kill "$BOT_PID" 2>/dev/null
+  [ -n "$WEB_PID" ] && kill "$WEB_PID" 2>/dev/null
+  wait 2>/dev/null
+  echo -e "${BOLD}Done.${RESET}"
+  exit 0
+}
+
+trap cleanup INT TERM
+
+# ─── Start Streaming ───
+echo -e "${BOLD}Starting production log stream...${RESET}"
+[ "$STREAM_BOT" = true ] && echo -e "  ${CYAN}[BOT]${RESET} CloudWatch: $CLOUDWATCH_LOG_GROUP ($AWS_REGION)"
+[ "$STREAM_WEB" = true ] && echo -e "  ${MAGENTA}[WEB]${RESET} Vercel: $(basename "$PROJECT_DIR")"
+echo -e "${BOLD}Press Ctrl+C to stop.${RESET}"
+echo ""
+
+if [ "$STREAM_BOT" = true ]; then
+  stream_bot_logs &
+  BOT_PID=$!
+fi
+
+if [ "$STREAM_WEB" = true ]; then
+  stream_web_logs &
+  WEB_PID=$!
+fi
+
+# Wait for any child to exit; if one dies, report and keep the other running
+while true; do
+  if [ -n "$BOT_PID" ] && ! kill -0 "$BOT_PID" 2>/dev/null; then
+    echo -e "${RED}[BOT] Stream ended unexpectedly.${RESET}"
+    BOT_PID=""
+  fi
+  if [ -n "$WEB_PID" ] && ! kill -0 "$WEB_PID" 2>/dev/null; then
+    echo -e "${RED}[WEB] Stream ended unexpectedly.${RESET}"
+    WEB_PID=""
+  fi
+  # If all streams are dead, exit
+  if [ -z "$BOT_PID" ] && [ -z "$WEB_PID" ]; then
+    echo -e "${RED}All streams ended.${RESET}"
+    exit 1
+  fi
+  sleep 2
+done
