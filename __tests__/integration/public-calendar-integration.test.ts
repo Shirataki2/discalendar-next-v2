@@ -431,6 +431,7 @@ function createMockRequest(pathname: string) {
   return {
     nextUrl: {
       pathname,
+      searchParams: url.searchParams,
       clone: () => new URL(url),
     },
     url: url.toString(),
