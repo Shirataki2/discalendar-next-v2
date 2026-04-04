@@ -43,6 +43,21 @@ describe("updateSession (proxy.ts)", () => {
       expect(result.headers.get("location")).toContain("/dashboard");
     });
 
+    it("should allow authenticated user to access /auth/login with reauth=true", async () => {
+      // Mock authenticated user
+      mockGetClaims.mockResolvedValue({
+        data: { claims: { sub: "user-123" } },
+      });
+
+      const { updateSession } = await import("@/lib/supabase/proxy");
+
+      const mockRequest = createMockRequest("/auth/login?reauth=true");
+      const result = await updateSession(mockRequest);
+
+      // reauth=true の場合はリダイレクトしない
+      expect(result.status).not.toBe(307);
+    });
+
     it("should allow authenticated user to access dashboard", async () => {
       // Mock authenticated user
       mockGetClaims.mockResolvedValue({
@@ -206,13 +221,14 @@ describe("updateSession (proxy.ts)", () => {
 /**
  * Helper function to create a mock NextRequest for testing
  */
-function createMockRequest(pathname: string) {
+function createMockRequest(pathnameWithQuery: string) {
   const baseUrl = "http://localhost:3000";
-  const url = new URL(pathname, baseUrl);
+  const url = new URL(pathnameWithQuery, baseUrl);
 
   return {
     nextUrl: {
-      pathname,
+      pathname: url.pathname,
+      searchParams: url.searchParams,
       clone: () => new URL(url),
     },
     url: url.toString(),
