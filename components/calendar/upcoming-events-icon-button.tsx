@@ -1,10 +1,11 @@
+"use client";
+
 /**
  * UpcomingEventsIconButton - サイドバー折りたたみ時の「直近の予定」アイコンボタン
  *
  * サイドバーが最小化されたときに表示される、
  * Calendarアイコンのみの円形ボタンコンポーネント。
  */
-"use client";
 
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";

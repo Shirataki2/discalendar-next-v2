@@ -25,10 +25,6 @@ export function UpcomingEventsCard({
   isSelected,
   onSelect,
 }: UpcomingEventsCardProps) {
-  const handleClick = useCallback(() => {
-    onSelect();
-  }, [onSelect]);
-
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === "Enter" || event.key === " ") {
@@ -39,8 +35,6 @@ export function UpcomingEventsCard({
     [onSelect]
   );
 
-  const selectedClass = isSelected ? "border-primary bg-accent" : "";
-
   return (
     <Card
       aria-pressed={isSelected}
@@ -48,11 +42,11 @@ export function UpcomingEventsCard({
         "cursor-pointer overflow-hidden transition-colors",
         "hover:bg-accent/50",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        selectedClass
+        isSelected ? "border-primary bg-accent" : ""
       )}
       data-selected={isSelected}
       data-testid="upcoming-events-card"
-      onClick={handleClick}
+      onClick={onSelect}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}

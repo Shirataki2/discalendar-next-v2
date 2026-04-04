@@ -69,8 +69,8 @@ function selectionFromSearchParams(
   params: URLSearchParams,
   guilds: Guild[]
 ): DashboardSelection {
-  const view = params.get("view");
-  if (view === "upcoming") {
+  const panel = params.get("panel");
+  if (panel === "upcoming") {
     return { type: "upcoming" };
   }
   const guildId = params.get("guild");
@@ -90,12 +90,12 @@ function selectionToSearchParams(
   const params = new URLSearchParams(current.toString());
   if (selection === null) {
     params.delete("guild");
-    params.delete("view");
+    params.delete("panel");
   } else if (selection.type === "guild") {
     params.set("guild", selection.guildId);
-    params.delete("view");
+    params.delete("panel");
   } else {
-    params.set("view", "upcoming");
+    params.set("panel", "upcoming");
     params.delete("guild");
   }
   return params;
@@ -153,7 +153,7 @@ export type DashboardWithCalendarProps = {
   /** ギルドごとの権限情報マップ（guildId → 権限情報） */
   guildPermissions?: Record<string, GuildPermissionInfo>;
   /** 直近の予定表示用の ReactNode slot */
-  upcomingEventsSlot: ReactNode;
+  upcomingEventsSlot?: ReactNode;
 };
 
 /**
