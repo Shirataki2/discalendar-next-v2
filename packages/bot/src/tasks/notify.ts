@@ -350,7 +350,9 @@ let isRunning = false;
 
 export function startNotifyTask(client: Client): NodeJS.Timeout {
   return setInterval(() => {
-    if (isRunning) return;
+    if (isRunning) {
+      return;
+    }
     isRunning = true;
     processNotifications(client)
       .catch((error) => {
