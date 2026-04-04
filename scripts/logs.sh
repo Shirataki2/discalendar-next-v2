@@ -108,3 +108,48 @@ if [ "$STREAM_BOT" = true ]; then
     exit 1
   fi
 fi
+
+# ─── Pino Log Level Mapping ───
+# Pino uses numeric levels: 10=trace, 20=debug, 30=info, 40=warn, 50=error, 60=fatal
+format_bot_line() {
+  local line="$1"
+  if [ "$HAS_JQ" = true ]; then
+    local formatted
+    formatted=$(echo "$line" | jq -r '
+      def level_name:
+        if . <= 10 then "TRACE"
+        elif . <= 20 then "DEBUG"
+        elif . <= 30 then "INFO "
+        elif . <= 40 then "WARN "
+        elif . <= 50 then "ERROR"
+        else "FATAL"
+        end;
+      "\(.time // "" | if . == "" then "---" else (. / 1000 | strftime("%Y-%m-%dT%H:%M:%SZ")) end) \(.level // 30 | level_name) \(.msg // .message // .)"
+    ' 2>/dev/null)
+    if [ -n "$formatted" ]; then
+      echo -e "${CYAN}[BOT]${RESET} $formatted"
+    else
+      # jq parse failed — print raw line with label
+      echo -e "${CYAN}[BOT]${RESET} $line"
+    fi
+  else
+    echo -e "${CYAN}[BOT]${RESET} $line"
+  fi
+}
+
+stream_bot_logs() {
+  aws logs tail "$CLOUDWATCH_LOG_GROUP" \
+    --region "$AWS_REGION" \
+    --follow \
+    --format short \
+    --since 5m 2>&1 | while IFS= read -r line; do
+    # Skip empty lines
+    [ -z "$line" ] && continue
+    # Check if line is JSON (starts with {)
+    if [[ "$line" == "{"* ]]; then
+      format_bot_line "$line"
+    else
+      echo -e "${CYAN}[BOT]${RESET} $line"
+    fi
+  done
+}
