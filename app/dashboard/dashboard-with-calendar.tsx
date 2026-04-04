@@ -16,8 +16,12 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarContainer } from "@/components/calendar/calendar-container";
+import { UpcomingEventsCard } from "@/components/calendar/upcoming-events-card";
+import { UpcomingEventsIconButton } from "@/components/calendar/upcoming-events-icon-button";
+import { UpcomingEventsPanel } from "@/components/calendar/upcoming-events-panel";
 import { GuildIconButton } from "@/components/guilds/guild-icon-button";
 
 import { InvitableGuildCard } from "@/components/guilds/invitable-guild-card";
@@ -47,6 +51,67 @@ import { cn } from "@/lib/utils";
 const BOT_INVITE_URL = process.env.NEXT_PUBLIC_BOT_INVITE_URL ?? null;
 
 /**
+ * ダッシュボードの選択状態
+ *
+ * - null: 未選択（初期状態）
+ * - { type: "guild"; guildId: string }: ギルド選択中
+ * - { type: "upcoming" }: 直近の予定表示中
+ */
+export type DashboardSelection =
+  | { type: "guild"; guildId: string }
+  | { type: "upcoming" }
+  | null;
+
+/**
+ * URL パラメータから DashboardSelection を復元する
+ */
+function selectionFromSearchParams(
+  params: URLSearchParams,
+  guilds: Guild[],
+): DashboardSelection {
+  const view = params.get("view");
+  if (view === "upcoming") {
+    return { type: "upcoming" };
+  }
+  const guildId = params.get("guild");
+  if (guildId && guilds.some((g) => g.guildId === guildId)) {
+    return { type: "guild", guildId };
+  }
+  return null;
+}
+
+/**
+ * DashboardSelection を URL パラメータに反映する
+ */
+function selectionToSearchParams(
+  selection: DashboardSelection,
+  current: URLSearchParams,
+): URLSearchParams {
+  const params = new URLSearchParams(current.toString());
+  if (selection === null) {
+    params.delete("guild");
+    params.delete("view");
+  } else if (selection.type === "guild") {
+    params.set("guild", selection.guildId);
+    params.delete("view");
+  } else {
+    params.set("view", "upcoming");
+    params.delete("guild");
+  }
+  return params;
+}
+
+/**
+ * DashboardSelection から selectedGuildId を導出する
+ */
+function getSelectedGuildId(selection: DashboardSelection): string | null {
+  if (selection?.type === "guild") {
+    return selection.guildId;
+  }
+  return null;
+}
+
+/**
  * ギルドごとの権限情報（Server Component からシリアライズ可能な形式）
  */
 export type GuildPermissionInfo = {
@@ -68,6 +133,8 @@ export type DashboardWithCalendarProps = {
   guildError?: GuildListError;
   /** ギルドごとの権限情報マップ（guildId → 権限情報） */
   guildPermissions?: Record<string, GuildPermissionInfo>;
+  /** 直近の予定表示用の ReactNode slot */
+  upcomingEventsSlot: ReactNode;
 };
 
 /**
@@ -165,21 +232,43 @@ function InvitableGuildSection({
 /**
  * モバイル用ギルド選択コンポーネント
  */
+/** モバイル Select の特殊値: 直近の予定 */
+const UPCOMING_SELECT_VALUE = "__upcoming__";
+
 function MobileGuildSelector({
   guilds,
   invitableGuilds,
   guildError,
   selectedGuildId,
+  isUpcomingSelected,
   onGuildSelect,
+  onSelectUpcoming,
 }: {
   guilds: Guild[];
   invitableGuilds: InvitableGuild[];
   guildError?: GuildListError;
   selectedGuildId: string | null;
+  isUpcomingSelected: boolean;
   onGuildSelect: (guildId: string) => void;
+  onSelectUpcoming: () => void;
 }) {
   const hasError = guildError !== undefined;
   const hasGuilds = guilds.length > 0;
+
+  const handleValueChange = useCallback(
+    (value: string) => {
+      if (value === UPCOMING_SELECT_VALUE) {
+        onSelectUpcoming();
+      } else {
+        onGuildSelect(value);
+      }
+    },
+    [onGuildSelect, onSelectUpcoming],
+  );
+
+  const selectValue = isUpcomingSelected
+    ? UPCOMING_SELECT_VALUE
+    : (selectedGuildId ?? undefined);
 
   return (
     <div className="w-full lg:hidden">
@@ -189,15 +278,18 @@ function MobileGuildSelector({
         {hasError ? <ErrorDisplay error={guildError} /> : null}
         {hasError || hasGuilds ? null : <EmptyState />}
 
-        {!hasError && hasGuilds ? (
+        {!hasError ? (
           <Select
-            onValueChange={onGuildSelect}
-            value={selectedGuildId ?? undefined}
+            onValueChange={handleValueChange}
+            value={selectValue}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="サーバーを選択..." />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={UPCOMING_SELECT_VALUE}>
+                直近の予定
+              </SelectItem>
               {guilds.map((guild) => (
                 <SelectItem key={guild.guildId} value={guild.guildId}>
                   {guild.name}
@@ -265,18 +357,22 @@ function DesktopGuildSidebar({
   invitableGuilds,
   guildError,
   selectedGuildId,
+  isUpcomingSelected,
   isCollapsed,
   isRefreshing,
   onGuildSelect,
+  onSelectUpcoming,
   onToggleCollapse,
 }: {
   guilds: Guild[];
   invitableGuilds: InvitableGuild[];
   guildError?: GuildListError;
   selectedGuildId: string | null;
+  isUpcomingSelected: boolean;
   isCollapsed: boolean;
   isRefreshing: boolean;
   onGuildSelect: (guildId: string) => void;
+  onSelectUpcoming: () => void;
   onToggleCollapse: () => void;
 }) {
   const hasError = guildError !== undefined;
@@ -304,29 +400,43 @@ function DesktopGuildSidebar({
           </>
         )}
 
-        {!hasError && hasGuilds && isCollapsed ? (
+        {/* 折りたたみ時: アイコン表示 */}
+        {isCollapsed ? (
           <div className="flex flex-col items-center gap-3">
-            {guilds.map((guild) => (
-              <GuildIconButton
-                guild={guild}
-                isSelected={selectedGuildId === guild.guildId}
-                key={guild.guildId}
-                onSelect={onGuildSelect}
-              />
-            ))}
+            <UpcomingEventsIconButton
+              isSelected={isUpcomingSelected}
+              onSelect={onSelectUpcoming}
+            />
+            {!hasError && hasGuilds
+              ? guilds.map((guild) => (
+                  <GuildIconButton
+                    guild={guild}
+                    isSelected={selectedGuildId === guild.guildId}
+                    key={guild.guildId}
+                    onSelect={onGuildSelect}
+                  />
+                ))
+              : null}
           </div>
         ) : null}
 
-        {!hasError && hasGuilds && !isCollapsed ? (
+        {/* 展開時: カード表示 */}
+        {!isCollapsed ? (
           <div className="space-y-2">
-            {guilds.map((guild) => (
-              <SelectableGuildCard
-                guild={guild}
-                isSelected={selectedGuildId === guild.guildId}
-                key={guild.guildId}
-                onSelect={onGuildSelect}
-              />
-            ))}
+            <UpcomingEventsCard
+              isSelected={isUpcomingSelected}
+              onSelect={onSelectUpcoming}
+            />
+            {!hasError && hasGuilds
+              ? guilds.map((guild) => (
+                  <SelectableGuildCard
+                    guild={guild}
+                    isSelected={selectedGuildId === guild.guildId}
+                    key={guild.guildId}
+                    onSelect={onGuildSelect}
+                  />
+                ))
+              : null}
           </div>
         ) : null}
 
@@ -389,6 +499,33 @@ function CalendarArea({
 }
 
 /**
+ * 右ペインコンテンツ切り替えコンポーネント
+ */
+function RightPaneContent({
+  selection,
+  upcomingEventsSlot,
+  canEditEvents,
+  onSettingsClick,
+}: {
+  selection: DashboardSelection;
+  upcomingEventsSlot: ReactNode;
+  canEditEvents: boolean;
+  onSettingsClick?: () => void;
+}) {
+  if (selection?.type === "upcoming") {
+    return <UpcomingEventsPanel>{upcomingEventsSlot}</UpcomingEventsPanel>;
+  }
+
+  return (
+    <CalendarArea
+      canEditEvents={canEditEvents}
+      onSettingsClick={onSettingsClick}
+      selectedGuildId={getSelectedGuildId(selection)}
+    />
+  );
+}
+
+/**
  * DashboardWithCalendar コンポーネント
  *
  * ギルド選択とカレンダー表示を統合したダッシュボードメインコンテンツ。
@@ -408,19 +545,16 @@ export function DashboardWithCalendar({
   invitableGuilds: initialInvitableGuilds,
   guildError,
   guildPermissions: initialGuildPermissions,
+  upcomingEventsSlot,
 }: DashboardWithCalendarProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  // URL の ?guild= パラメータから初期値を取得
-  const guildParam = searchParams.get("guild");
-  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(() => {
-    if (guildParam && initialGuilds.some((g) => g.guildId === guildParam)) {
-      return guildParam;
-    }
-    return null;
-  });
+  // URL パラメータから初期選択状態を復元
+  const [selection, setSelection] = useState<DashboardSelection>(() =>
+    selectionFromSearchParams(searchParams, initialGuilds),
+  );
 
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage<boolean>(
     "discalendar:sidebar-collapsed",
@@ -467,6 +601,10 @@ export function DashboardWithCalendar({
     enabled: true,
   });
 
+  // selection から selectedGuildId を導出
+  const selectedGuildId = getSelectedGuildId(selection);
+  const isUpcomingSelected = selection?.type === "upcoming";
+
   // 選択中ギルドの権限情報を取得
   const selectedPermInfo = selectedGuildId
     ? currentGuildPermissions?.[selectedGuildId]
@@ -483,30 +621,43 @@ export function DashboardWithCalendar({
     selectedPermInfo?.restricted ?? false
   );
 
-  // URL の ?guild= パラメータが変わったら状態を同期（ブラウザの戻る/進む対応）
+  // URL パラメータが変わったら状態を同期（ブラウザの戻る/進む対応）
   useEffect(() => {
-    const urlGuildId = searchParams.get("guild");
-    if (urlGuildId && currentGuilds.some((g) => g.guildId === urlGuildId)) {
-      setSelectedGuildId((current) =>
-        current !== urlGuildId ? urlGuildId : current
-      );
-    } else if (!urlGuildId) {
-      setSelectedGuildId(null);
-    }
+    const newSelection = selectionFromSearchParams(searchParams, currentGuilds);
+    setSelection((current) => {
+      if (current === null && newSelection === null) return current;
+      if (
+        current?.type === newSelection?.type &&
+        (current?.type !== "guild" ||
+          newSelection?.type !== "guild" ||
+          current.guildId === newSelection.guildId)
+      ) {
+        return current;
+      }
+      return newSelection;
+    });
   }, [searchParams, currentGuilds]);
 
   const handleGuildSelect = useCallback(
     (guildId: string) => {
-      setSelectedGuildId(guildId);
+      const newSelection: DashboardSelection = { type: "guild", guildId };
+      setSelection(newSelection);
       trackEvent("guild_switched", { guild_id: guildId });
 
-      // URL の guild パラメータを更新（既存パラメータを保持）
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("guild", guildId);
+      const params = selectionToSearchParams(newSelection, searchParams);
       router.replace(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams]
   );
+
+  const handleSelectUpcoming = useCallback(() => {
+    const newSelection: DashboardSelection = { type: "upcoming" };
+    setSelection(newSelection);
+    trackEvent("upcoming_events_selected", {});
+
+    const params = selectionToSearchParams(newSelection, searchParams);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [pathname, router, searchParams]);
 
   const handleToggleCollapse = useCallback(() => {
     setSidebarCollapsed((prev) => !prev);
@@ -531,7 +682,9 @@ export function DashboardWithCalendar({
         guildError={guildError}
         guilds={sortedGuilds}
         invitableGuilds={sortedInvitableGuilds}
+        isUpcomingSelected={isUpcomingSelected}
         onGuildSelect={handleGuildSelect}
+        onSelectUpcoming={handleSelectUpcoming}
         selectedGuildId={selectedGuildId}
       />
       <DesktopGuildSidebar
@@ -540,14 +693,17 @@ export function DashboardWithCalendar({
         invitableGuilds={sortedInvitableGuilds}
         isCollapsed={sidebarCollapsed}
         isRefreshing={isRefreshing}
+        isUpcomingSelected={isUpcomingSelected}
         onGuildSelect={handleGuildSelect}
+        onSelectUpcoming={handleSelectUpcoming}
         onToggleCollapse={handleToggleCollapse}
         selectedGuildId={selectedGuildId}
       />
-      <CalendarArea
+      <RightPaneContent
         canEditEvents={effectiveCanEdit}
         onSettingsClick={handleSettingsClick}
-        selectedGuildId={selectedGuildId}
+        selection={selection}
+        upcomingEventsSlot={upcomingEventsSlot}
       />
     </div>
   );
