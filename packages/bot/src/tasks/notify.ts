@@ -30,6 +30,12 @@ const CLEANUP_RETENTION_DAYS = 7;
 
 let lastCleanupMs = 0;
 
+/** @internal テスト用: モジュールレベル状態をリセットする */
+export function _resetState(): void {
+  lastCleanupMs = 0;
+  isRunning = false;
+}
+
 function toMinutes(notification: NotificationPayload): number {
   switch (notification.unit) {
     case "hours":
@@ -340,10 +346,18 @@ async function runCleanupIfNeeded(nowMs: number): Promise<void> {
   }
 }
 
+let isRunning = false;
+
 export function startNotifyTask(client: Client): NodeJS.Timeout {
   return setInterval(() => {
-    processNotifications(client).catch((error) => {
-      logger.error({ error }, "Unhandled error in notification processing");
-    });
+    if (isRunning) return;
+    isRunning = true;
+    processNotifications(client)
+      .catch((error) => {
+        logger.error({ error }, "Unhandled error in notification processing");
+      })
+      .finally(() => {
+        isRunning = false;
+      });
   }, NOTIFY_CHECK_INTERVAL_MS);
 }

@@ -50,7 +50,9 @@ vi.mock("../config.js", () => ({
 }));
 
 // Import after mocks
-const { startNotifyTask, toEventRecord } = await import("./notify.js");
+const { startNotifyTask, toEventRecord, _resetState } = await import(
+  "./notify.js"
+);
 const {
   getFutureEventsForAllGuilds,
   getFutureSeriesForAllGuilds,
@@ -134,6 +136,7 @@ describe("notify task", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    _resetState();
     mockSend.mockResolvedValue(undefined);
     mockGetFutureSeries.mockResolvedValue({ success: true, data: [] });
     mockExpandOccurrences.mockReturnValue({ dates: [], truncated: false });
@@ -723,6 +726,46 @@ describe("notify task", () => {
         "event-1",
         "guild-1",
         "__start__"
+      );
+    });
+
+    it("logs warning when markSent fails after successful send", async () => {
+      const now = new Date("2024-06-15T11:59:00Z");
+      vi.setSystemTime(now);
+
+      const event = createMockEvent({
+        start_at: "2024-06-15T12:00:00Z",
+        notifications: [],
+      });
+
+      mockGetFutureEvents.mockResolvedValue({
+        success: true,
+        data: [event],
+      });
+      mockGetSettings.mockResolvedValue({
+        success: true,
+        data: new Map([
+          ["guild-1", { id: 1, guild_id: "guild-1", channel_id: "ch-1" }],
+        ]),
+      });
+      mockMarkSent.mockResolvedValue({
+        success: false,
+        error: { code: "INSERT_FAILED", message: "db error" },
+      });
+
+      const client = createMockClient();
+      const timer = startNotifyTask(client as never);
+      await vi.advanceTimersByTimeAsync(60_000);
+      clearInterval(timer);
+
+      expect(mockSend).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: "event-1",
+          guildId: "guild-1",
+          notificationKey: "__start__",
+        }),
+        "Failed to record sent notification; may resend on restart"
       );
     });
 
