@@ -11,9 +11,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockInit = vi.fn();
+const mockReplayIntegration = vi.fn().mockReturnValue({ name: "Replay" });
 
 vi.mock("@sentry/nextjs", () => ({
   init: mockInit,
+  replayIntegration: mockReplayIntegration,
 }));
 
 describe("sentry.client.config", () => {
@@ -22,6 +24,7 @@ describe("sentry.client.config", () => {
   beforeEach(() => {
     vi.resetModules();
     mockInit.mockClear();
+    mockReplayIntegration.mockClear();
     process.env = { ...originalEnv };
   });
 
@@ -92,6 +95,38 @@ describe("sentry.client.config", () => {
     expect(mockInit).toHaveBeenCalledWith(
       expect.objectContaining({
         sendDefaultPii: false,
+      })
+    );
+  });
+
+  it("Session Replayのサンプリングレートが設定される", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/123";
+    process.env.NODE_ENV = "production";
+
+    await import("@/sentry.client.config");
+
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replaysSessionSampleRate: 0.1,
+        replaysOnErrorSampleRate: 1.0,
+      })
+    );
+  });
+
+  it("replayIntegrationがプライバシー設定付きで追加される", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://test@sentry.io/123";
+    process.env.NODE_ENV = "production";
+
+    await import("@/sentry.client.config");
+
+    expect(mockReplayIntegration).toHaveBeenCalledWith({
+      maskAllText: true,
+      maskAllInputs: true,
+      blockAllMedia: true,
+    });
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        integrations: [{ name: "Replay" }],
       })
     );
   });
