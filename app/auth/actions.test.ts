@@ -1,14 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hoist mock functions so they can be used in vi.mock
-const { mockRedirect, mockSignOut } = vi.hoisted(() => ({
+const { mockRedirect, mockSetUser, mockSignOut } = vi.hoisted(() => ({
   mockRedirect: vi.fn(),
+  mockSetUser: vi.fn(),
   mockSignOut: vi.fn(),
 }));
 
 // Mock redirect from next/navigation
 vi.mock("next/navigation", () => ({
   redirect: mockRedirect,
+}));
+
+// Mock @sentry/nextjs
+vi.mock("@sentry/nextjs", () => ({
+  setUser: mockSetUser,
 }));
 
 // Mock Supabase server client
@@ -67,6 +73,30 @@ describe("signOut Server Action", () => {
 
       // Should still redirect even on error
       expect(mockRedirect).toHaveBeenCalledWith("/auth/login");
+    });
+  });
+
+  // Sentry user context clear (DIS-153)
+  describe("Sentryユーザーコンテキストクリア", () => {
+    it("signOut時にSentry.setUser(null)が呼ばれる", async () => {
+      await signOut();
+
+      expect(mockSetUser).toHaveBeenCalledWith(null);
+    });
+
+    it("Supabaseのセッション破棄前にSentryユーザーコンテキストがクリアされる", async () => {
+      const callOrder: string[] = [];
+      mockSetUser.mockImplementation(() => {
+        callOrder.push("setUser");
+      });
+      mockSignOut.mockImplementation(() => {
+        callOrder.push("signOut");
+        return Promise.resolve({ error: null });
+      });
+
+      await signOut();
+
+      expect(callOrder).toEqual(["setUser", "signOut"]);
     });
   });
 

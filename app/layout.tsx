@@ -77,14 +77,16 @@ export default function RootLayout({
         className={`${geistSans.className} ${uniSansHeavy.variable} antialiased`}
       >
         <PostHogProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            disableTransitionOnChange
-            enableSystem
-          >
-            <TooltipProvider>{children}</TooltipProvider>
-          </ThemeProvider>
+          <SentryUserProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              disableTransitionOnChange
+              enableSystem
+            >
+              <TooltipProvider>{children}</TooltipProvider>
+            </ThemeProvider>
+          </SentryUserProvider>
         </PostHogProvider>
         <Analytics />
         <SpeedInsights />

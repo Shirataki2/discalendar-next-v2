@@ -1,5 +1,6 @@
 "use server";
 
+import { setUser } from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,6 +15,8 @@ import { createClient } from "@/lib/supabase/server";
  * - 7.4: エラーをコンソールに記録する
  */
 export async function signOut(): Promise<void> {
+  setUser(null);
+
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signOut();
