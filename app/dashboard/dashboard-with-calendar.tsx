@@ -491,7 +491,7 @@ function DesktopGuildSidebar({
         isCollapsed ? "w-16" : "w-72"
       )}
     >
-      <section className="space-y-4">
+      <section className={cn("space-y-4", isCollapsed ? "w-16" : "w-72")}>
         <SidebarHeader
           hasError={hasError}
           isCollapsed={isCollapsed}
