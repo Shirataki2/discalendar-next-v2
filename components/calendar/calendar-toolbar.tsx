@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ViewMode } from "@/hooks/calendar/use-calendar-state";
+import { SearchInput } from "./search-input";
 
 export type CalendarToolbarProps = {
   /** 現在のビューモード */
@@ -43,6 +44,12 @@ export type CalendarToolbarProps = {
   showHolidays?: boolean;
   /** 祝日表示切り替えハンドラー */
   onToggleHolidays?: () => void;
+  /** 検索クエリ */
+  searchQuery?: string;
+  /** 検索クエリ変更ハンドラー */
+  onSearchChange?: (query: string) => void;
+  /** 検索一致件数（nullで非表示） */
+  searchMatchCount?: number | null;
 };
 
 /**
@@ -106,6 +113,9 @@ export function CalendarToolbar({
   onSettingsClick,
   showHolidays,
   onToggleHolidays,
+  searchQuery,
+  onSearchChange,
+  searchMatchCount,
 }: CalendarToolbarProps) {
   const dateRangeLabel = getDateRangeLabel(viewMode, selectedDate);
 
@@ -200,6 +210,27 @@ export function CalendarToolbar({
         >
           {dateRangeLabel}
         </div>
+
+        {/* 検索フィールド (DIS-17) */}
+        {onSearchChange ? (
+          <div className={isMobile ? "w-full" : ""}>
+            <SearchInput
+              isMobile={isMobile}
+              matchCount={searchMatchCount ?? null}
+              onChange={onSearchChange}
+              value={searchQuery ?? ""}
+            />
+            <div
+              aria-live="polite"
+              className="sr-only"
+              data-testid="search-result-announce"
+            >
+              {searchMatchCount !== null && searchMatchCount !== undefined
+                ? `${searchMatchCount}件のイベントが見つかりました`
+                : ""}
+            </div>
+          </div>
+        ) : null}
 
         {/* 祝日トグル + ビューモード切り替え */}
         <div className="flex items-center gap-2">
