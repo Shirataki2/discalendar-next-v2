@@ -6,6 +6,7 @@ import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 import { SentryUserProvider } from "@/components/sentry/sentry-user-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PostHogIdentifyProvider } from "@/lib/analytics/posthog-identify-provider";
 import { PostHogProvider } from "@/lib/analytics/posthog-provider";
 import "./globals.css";
 
@@ -78,16 +79,18 @@ export default function RootLayout({
         className={`${geistSans.className} ${uniSansHeavy.variable} antialiased`}
       >
         <PostHogProvider>
-          <SentryUserProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              disableTransitionOnChange
-              enableSystem
-            >
-              <TooltipProvider>{children}</TooltipProvider>
-            </ThemeProvider>
-          </SentryUserProvider>
+          <PostHogIdentifyProvider>
+            <SentryUserProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                disableTransitionOnChange
+                enableSystem
+              >
+                <TooltipProvider>{children}</TooltipProvider>
+              </ThemeProvider>
+            </SentryUserProvider>
+          </PostHogIdentifyProvider>
         </PostHogProvider>
         <Analytics />
         <SpeedInsights />

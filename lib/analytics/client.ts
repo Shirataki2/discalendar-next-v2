@@ -21,3 +21,11 @@ export function getPostHogClient(): PostHog | undefined {
   }
   return undefined;
 }
+
+interface UserProperties {
+  guild_count: number;
+}
+
+export function setPostHogUserProperties(properties: UserProperties): void {
+  getPostHogClient()?.people.set(properties);
+}
