@@ -66,7 +66,9 @@ vi.mock("@/lib/guilds/user-guilds-service", () => ({
 
 vi.mock("@/lib/guilds/guild-config-service", () => ({
   createGuildConfigService: vi.fn(() => ({
-    getGuildConfig: vi.fn(),
+    getGuildConfig: vi.fn(() =>
+      Promise.resolve({ success: true, data: { restricted: false } })
+    ),
     upsertGuildConfig: (...args: unknown[]) =>
       mockUpsertGuildConfig(...args),
   })),
@@ -88,7 +90,7 @@ vi.mock("@/lib/calendar/event-service", async () => {
 });
 
 vi.mock("@/lib/calendar/permission-check", () => ({
-  checkEventPermission: vi.fn().mockResolvedValue({ allowed: true }),
+  checkEventPermission: vi.fn(() => ({ allowed: true })),
 }));
 
 vi.mock("@/lib/calendar/public-calendar-service", () => ({
@@ -127,15 +129,17 @@ vi.mock("@/lib/guilds/fetch-guilds", () => ({
 }));
 
 const mockGetSignedUrls = vi.fn();
+const mockDeleteFiles = vi.fn();
 vi.mock("@/lib/calendar/attachment-service", () => ({
   createAttachmentService: vi.fn(() => ({
     getSignedUrls: (...args: unknown[]) => mockGetSignedUrls(...args),
-    deleteFiles: vi.fn(),
+    deleteFiles: (...args: unknown[]) => mockDeleteFiles(...args),
   })),
 }));
 
 import { captureException } from "@sentry/nextjs";
 import {
+  deleteAttachmentFilesAction,
   fetchGuildChannels,
   getAttachmentUrlsAction,
   getOrCreateIcsFeedToken,
@@ -489,6 +493,41 @@ describe("Dashboard Actions Sentry captureException", () => {
       expect(captureException).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("[regenerateIcsFeedToken]"),
+        })
+      );
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // deleteAttachmentFilesAction
+  // ──────────────────────────────────────────────
+
+  describe("deleteAttachmentFilesAction", () => {
+    it("削除エラー時に captureException を呼ぶ", async () => {
+      // authorizeEventOperation は resolveServerAuth + getGuildConfig + checkEventPermission を使用
+      setupAuthWithManageGuild();
+      mockDeleteFiles.mockResolvedValueOnce({
+        success: false,
+        error: {
+          code: "STORAGE_ERROR",
+          message: "delete failed",
+          details: "detail info",
+        },
+      });
+
+      const result = await deleteAttachmentFilesAction({
+        guildId: TEST_GUILD_ID,
+        paths: [`${TEST_GUILD_ID}/event-1/file.jpg`],
+      });
+
+      // deleteAttachmentFilesAction は削除失敗でも success: true を返す
+      expect(result.success).toBe(true);
+      expect(captureException).toHaveBeenCalledOnce();
+      expect(captureException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            "[deleteAttachmentFilesAction]"
+          ),
         })
       );
     });

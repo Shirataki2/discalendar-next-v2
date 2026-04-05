@@ -1534,7 +1534,7 @@ export async function deleteAttachmentFilesAction(
 
   if (!result.success) {
     captureException(
-      new Error(`Attachment deletion failed: ${result.error.details}`)
+      new Error(`[deleteAttachmentFilesAction] failed: ${result.error.message}`)
     );
   }
 
