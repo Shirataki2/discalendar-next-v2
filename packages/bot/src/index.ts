@@ -1,3 +1,5 @@
+import "./instrument.js";
+import { close as sentryClose } from "@sentry/node";
 import { DiscalendarBot } from "./bot.js";
 import { getConfig } from "./config.js";
 import { logger } from "./utils/logger.js";
@@ -13,6 +15,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down...`);
     await bot.destroy();
+    await sentryClose(2000);
     process.exit(0);
   };
 

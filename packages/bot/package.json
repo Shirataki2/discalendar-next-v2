@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@discalendar/rrule-utils": "workspace:*",
+    "@sentry/node": "^10.47.0",
     "@supabase/supabase-js": "^2.86.0",
     "discord.js": "^14.18.0",
     "pino": "^9.6.0"
