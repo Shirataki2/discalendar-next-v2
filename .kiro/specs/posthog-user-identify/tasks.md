@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. PostHogIdentifyProvider の実装とテスト
+- [x] 1. PostHogIdentifyProvider の実装とテスト
 - [x] 1.1 PostHogIdentifyProvider コンポーネントを作成する
   - Supabase Auth の `onAuthStateChange` リスナーで認証状態の変化を監視する
   - セッション確立時（SIGNED_IN / INITIAL_SESSION）に PostHog の identify を user.id で呼び出す
@@ -20,7 +20,7 @@
   - SentryUserProvider テストと同じモックパターン（vi.mock posthog-js, vi.mock supabase/client）を使用する
   - _Requirements: 5.1, 5.2_
 
-- [ ] 2. ユーザープロパティ送信ユーティリティの実装とテスト
+- [x] 2. ユーザープロパティ送信ユーティリティの実装とテスト
 - [x] 2.1 setPostHogUserProperties ユーティリティ関数を作成する
   - PostHog の people.set API を使ってユーザープロパティ（guild_count）を送信する機能を追加する
   - PostHog SDK が未初期化の場合はエラーなくスキップする
@@ -32,7 +32,7 @@
   - SDK 未初期化時にエラーがスローされないことを検証する
   - _Requirements: 5.1, 5.2_
 
-- [ ] 3. Root Layout への統合
+- [x] 3. Root Layout への統合
 - [x] 3.1 PostHogIdentifyProvider を Root Layout に組み込む
   - PostHogProvider の内側、SentryUserProvider の前に PostHogIdentifyProvider を配置する
   - Provider の順序が正しいことを確認する（PostHogProvider > PostHogIdentifyProvider > SentryUserProvider > ThemeProvider）

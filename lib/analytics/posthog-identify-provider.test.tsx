@@ -88,6 +88,22 @@ describe("PostHogIdentifyProvider", () => {
     expect(mockReset).toHaveBeenCalled();
   });
 
+  it("TOKEN_REFRESHED イベントでは identify/reset が呼ばれない", () => {
+    render(
+      <PostHogIdentifyProvider>
+        <div>child</div>
+      </PostHogIdentifyProvider>,
+    );
+
+    const callback = mockOnAuthStateChange.mock.calls[0][0];
+    callback("TOKEN_REFRESHED", {
+      user: { id: "user-uuid-789" },
+    });
+
+    expect(mockIdentify).not.toHaveBeenCalled();
+    expect(mockReset).not.toHaveBeenCalled();
+  });
+
   it("アンマウント時に onAuthStateChange の購読が解除される", () => {
     const { unmount } = render(
       <PostHogIdentifyProvider>
