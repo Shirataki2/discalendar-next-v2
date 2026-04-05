@@ -33,7 +33,7 @@
   - _Requirements: 5.1, 5.2_
 
 - [ ] 3. Root Layout への統合
-- [ ] 3.1 PostHogIdentifyProvider を Root Layout に組み込む
+- [x] 3.1 PostHogIdentifyProvider を Root Layout に組み込む
   - PostHogProvider の内側、SentryUserProvider の前に PostHogIdentifyProvider を配置する
   - Provider の順序が正しいことを確認する（PostHogProvider > PostHogIdentifyProvider > SentryUserProvider > ThemeProvider）
   - _Requirements: 4.1, 4.3_
