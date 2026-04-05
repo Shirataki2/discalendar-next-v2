@@ -23,6 +23,7 @@ vi.mock("@/lib/supabase/server", () => ({
 const mockCaptureException = vi.fn();
 vi.mock("@sentry/nextjs", () => ({
   captureException: mockCaptureException,
+  setUser: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({

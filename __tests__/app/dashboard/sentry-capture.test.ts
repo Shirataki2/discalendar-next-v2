@@ -69,8 +69,7 @@ vi.mock("@/lib/guilds/guild-config-service", () => ({
     getGuildConfig: vi.fn(() =>
       Promise.resolve({ success: true, data: { restricted: false } })
     ),
-    upsertGuildConfig: (...args: unknown[]) =>
-      mockUpsertGuildConfig(...args),
+    upsertGuildConfig: (...args: unknown[]) => mockUpsertGuildConfig(...args),
   })),
 }));
 
@@ -101,8 +100,7 @@ vi.mock("@/lib/calendar/public-calendar-service", () => ({
       mockDisablePublicCalendar(...args),
     regeneratePublicSlug: (...args: unknown[]) =>
       mockRegeneratePublicSlug(...args),
-    getPublicSettings: (...args: unknown[]) =>
-      mockGetPublicSettings(...args),
+    getPublicSettings: (...args: unknown[]) => mockGetPublicSettings(...args),
   })),
 }));
 
@@ -112,16 +110,14 @@ vi.mock("@/lib/calendar/rsvp-service", () => ({
 
 vi.mock("@/lib/ics/ics-feed-token-service", () => ({
   createIcsFeedTokenService: vi.fn(() => ({
-    getOrCreateToken: (...args: unknown[]) =>
-      mockGetOrCreateToken(...args),
+    getOrCreateToken: (...args: unknown[]) => mockGetOrCreateToken(...args),
     regenerateToken: (...args: unknown[]) => mockRegenerateToken(...args),
     buildFeedUrl: vi.fn(() => "https://example.com/feed"),
   })),
 }));
 
 vi.mock("@/lib/discord/notification-channel-service", () => ({
-  getGuildChannels: (...args: unknown[]) =>
-    mockGetGuildChannels(...args),
+  getGuildChannels: (...args: unknown[]) => mockGetGuildChannels(...args),
 }));
 
 vi.mock("@/lib/guilds/fetch-guilds", () => ({
@@ -525,9 +521,7 @@ describe("Dashboard Actions Sentry captureException", () => {
       expect(captureException).toHaveBeenCalledOnce();
       expect(captureException).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.stringContaining(
-            "[deleteAttachmentFilesAction]"
-          ),
+          message: expect.stringContaining("[deleteAttachmentFilesAction]"),
         })
       );
     });

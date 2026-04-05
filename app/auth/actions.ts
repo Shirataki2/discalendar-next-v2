@@ -1,7 +1,6 @@
 "use server";
 
-import { setUser } from "@sentry/nextjs";
-import { captureException } from "@sentry/nextjs";
+import { captureException, setUser } from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 

@@ -15,6 +15,7 @@ vi.mock("next/navigation", () => ({
 // Mock @sentry/nextjs
 vi.mock("@sentry/nextjs", () => ({
   setUser: mockSetUser,
+  captureException: vi.fn(),
 }));
 
 // Mock Supabase server client

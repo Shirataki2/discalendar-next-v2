@@ -777,9 +777,7 @@ export async function fetchGuildChannels(
 
   if (!channelsResult.success) {
     captureException(
-      new Error(
-        `[fetchGuildChannels] failed: ${channelsResult.error.message}`
-      )
+      new Error(`[fetchGuildChannels] failed: ${channelsResult.error.message}`)
     );
     return {
       success: false,
@@ -865,9 +863,7 @@ export async function updateNotificationChannel(
   if (!result.success) {
     const { details, ...error } = result.error;
     captureException(
-      new Error(
-        `[updateNotificationChannel] upsert failed: ${error.message}`
-      )
+      new Error(`[updateNotificationChannel] upsert failed: ${error.message}`)
     );
     if (process.env.NODE_ENV !== "production") {
       console.error("[updateNotificationChannel] upsert failed:", {
@@ -1267,9 +1263,7 @@ export async function regeneratePublicSlugAction(
 
   if (!result.success) {
     captureException(
-      new Error(
-        `[regeneratePublicSlugAction] failed: ${result.error.message}`
-      )
+      new Error(`[regeneratePublicSlugAction] failed: ${result.error.message}`)
     );
     return {
       success: false,
@@ -1451,9 +1445,7 @@ export async function regenerateIcsFeedToken(
 
   if (!tokenResult.success) {
     captureException(
-      new Error(
-        `[regenerateIcsFeedToken] failed: ${tokenResult.error.message}`
-      )
+      new Error(`[regenerateIcsFeedToken] failed: ${tokenResult.error.message}`)
     );
     return {
       success: false,
@@ -1597,9 +1589,7 @@ export async function getAttachmentUrlsAction(
 
   if (!result.success) {
     captureException(
-      new Error(
-        `[getAttachmentUrlsAction] failed: ${result.error.message}`
-      )
+      new Error(`[getAttachmentUrlsAction] failed: ${result.error.message}`)
     );
   }
 
