@@ -101,7 +101,8 @@ export function useEventSearch(
     let count = 0;
 
     const filtered = events.filter((event) => {
-      // 祝日イベントは常に表示
+      // 祝日イベントは常に表示（現在のCalendarContainerではstate.eventsに祝日は含まれないが、
+      // フックの汎用性のために保持）
       if (isHolidayEvent(event)) {
         return true;
       }
