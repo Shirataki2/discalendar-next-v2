@@ -21,7 +21,7 @@ export function captureError(error: unknown, context: ErrorContext): void {
     if (context.name) {
       scope.setTag("name", context.name);
     }
-    if (context.guildId) {
+    if (context.guildId || context.userId) {
       scope.setContext("discord", {
         guildId: context.guildId,
         userId: context.userId,

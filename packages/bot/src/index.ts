@@ -14,8 +14,8 @@ async function main(): Promise<void> {
 
   const shutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down...`);
-    await sentryClose(2000);
     await bot.destroy();
+    await sentryClose(2000);
     process.exit(0);
   };
 
