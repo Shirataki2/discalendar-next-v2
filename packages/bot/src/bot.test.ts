@@ -47,9 +47,6 @@ vi.mock("./config.js", () => ({
 async function createBotForEventTests() {
   const { DiscalendarBot } = await import("./bot.js");
   const bot = new DiscalendarBot();
-  // loadCommands + registerEventHandlers のみ実行（registerSlashCommands をスキップ）
-  // EventEmitter の listeners でハンドラの登録を確認
-  // setup() の代わりに prototype のメソッドを直接呼ぶ
   type BotInternal = DiscalendarBot & {
     loadCommands(): void;
     registerEventHandlers(): void;
@@ -82,13 +79,14 @@ describe("DiscalendarBot error capture", () => {
 
     const listeners = (bot as EventEmitter).listeners("interactionCreate");
     await listeners[0](mockInteraction);
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
-      source: "command",
-      name: "fail-cmd",
-      guildId: "guild-123",
-      userId: "user-456",
+    await vi.waitFor(() => {
+      expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
+        source: "command",
+        name: "fail-cmd",
+        guildId: "guild-123",
+        userId: "user-456",
+      });
     });
   });
 
@@ -112,12 +110,13 @@ describe("DiscalendarBot error capture", () => {
 
     const listeners = (bot as EventEmitter).listeners("interactionCreate");
     await listeners[0](mockInteraction);
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
-      source: "modal",
-      guildId: "guild-789",
-      userId: "user-101",
+    await vi.waitFor(() => {
+      expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
+        source: "modal",
+        guildId: "guild-789",
+        userId: "user-101",
+      });
     });
   });
 
@@ -132,12 +131,56 @@ describe("DiscalendarBot error capture", () => {
     const mockGuild = { id: "guild-999", name: "Test Guild" };
     const listeners = (bot as EventEmitter).listeners("guildCreate");
     await listeners[0](mockGuild);
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
-      source: "event",
-      name: "guildCreate",
-      guildId: "guild-999",
+    await vi.waitFor(() => {
+      expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
+        source: "event",
+        name: "guildCreate",
+        guildId: "guild-999",
+      });
+    });
+  });
+
+  it("should call captureError when guildDelete handler fails", async () => {
+    mockCaptureError.mockClear();
+
+    const { onGuildDelete } = await import("./events/guild.js");
+    vi.mocked(onGuildDelete).mockRejectedValue(new Error("guild delete fail"));
+
+    const bot = await createBotForEventTests();
+
+    const mockGuild = { id: "guild-888", name: "Deleted Guild" };
+    const listeners = (bot as EventEmitter).listeners("guildDelete");
+    await listeners[0](mockGuild);
+
+    await vi.waitFor(() => {
+      expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
+        source: "event",
+        name: "guildDelete",
+        guildId: "guild-888",
+      });
+    });
+  });
+
+  it("should call captureError when guildUpdate handler fails", async () => {
+    mockCaptureError.mockClear();
+
+    const { onGuildUpdate } = await import("./events/guild.js");
+    vi.mocked(onGuildUpdate).mockRejectedValue(new Error("guild update fail"));
+
+    const bot = await createBotForEventTests();
+
+    const mockOldGuild = { id: "guild-777", name: "Old Name" };
+    const mockNewGuild = { id: "guild-777", name: "New Name" };
+    const listeners = (bot as EventEmitter).listeners("guildUpdate");
+    await listeners[0](mockOldGuild, mockNewGuild);
+
+    await vi.waitFor(() => {
+      expect(mockCaptureError).toHaveBeenCalledWith(expect.any(Error), {
+        source: "event",
+        name: "guildUpdate",
+        guildId: "guild-777",
+      });
     });
   });
 
@@ -164,11 +207,12 @@ describe("DiscalendarBot error capture", () => {
 
     const listeners = (bot as EventEmitter).listeners("interactionCreate");
     await listeners[0](mockInteraction);
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(mockReply).toHaveBeenCalledWith({
-      content: "コマンドの実行中にエラーが発生しました。",
-      ephemeral: true,
+    await vi.waitFor(() => {
+      expect(mockReply).toHaveBeenCalledWith({
+        content: "コマンドの実行中にエラーが発生しました。",
+        ephemeral: true,
+      });
     });
   });
 });

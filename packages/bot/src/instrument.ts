@@ -11,7 +11,11 @@ if (dsn) {
     dsn,
     enabled: isProduction,
     environment: process.env.NODE_ENV ?? "production",
-    release: "@discalendar/bot@0.0.0",
+    release:
+      process.env.SENTRY_RELEASE ??
+      (process.env.npm_package_version
+        ? `@discalendar/bot@${process.env.npm_package_version}`
+        : undefined),
     tracesSampleRate: 0.1,
     sendDefaultPii: false,
     initialScope: {

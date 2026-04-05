@@ -70,16 +70,32 @@ describe("instrument", () => {
     );
   });
 
-  it("should include release information", async () => {
+  it("should use SENTRY_RELEASE env var when set", async () => {
     process.env.SENTRY_DSN = "https://examplePublicKey@o0.ingest.sentry.io/0";
     process.env.NODE_ENV = "production";
+    process.env.SENTRY_RELEASE = "bot@1.2.3";
 
     const Sentry = await import("@sentry/node");
     await import("./instrument.js");
 
     expect(Sentry.init).toHaveBeenCalledWith(
       expect.objectContaining({
-        release: expect.stringContaining("@discalendar/bot@"),
+        release: "bot@1.2.3",
+      })
+    );
+  });
+
+  it("should fall back to npm_package_version for release", async () => {
+    process.env.SENTRY_DSN = "https://examplePublicKey@o0.ingest.sentry.io/0";
+    process.env.NODE_ENV = "production";
+    process.env.npm_package_version = "0.1.0";
+
+    const Sentry = await import("@sentry/node");
+    await import("./instrument.js");
+
+    expect(Sentry.init).toHaveBeenCalledWith(
+      expect.objectContaining({
+        release: "@discalendar/bot@0.1.0",
       })
     );
   });
