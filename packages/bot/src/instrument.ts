@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/node";
+import { init } from "@sentry/node";
 import { getConfig } from "./config.js";
 import { logger } from "./utils/logger.js";
 
@@ -7,7 +7,7 @@ const dsn = config.sentryDsn;
 const isProduction = process.env.NODE_ENV === "production";
 
 if (dsn) {
-  Sentry.init({
+  init({
     dsn,
     enabled: isProduction,
     environment: process.env.NODE_ENV ?? "production",

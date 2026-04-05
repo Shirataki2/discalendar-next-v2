@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/node";
+import { captureException, withScope } from "@sentry/node";
 
 export type ErrorContext = {
   /** エラーの発生源（"command", "event", "modal", "task" 等） */
@@ -15,7 +15,7 @@ export type ErrorContext = {
 
 /** エラーをコンテキスト情報付きで Sentry に報告する */
 export function captureError(error: unknown, context: ErrorContext): void {
-  Sentry.withScope((scope) => {
+  withScope((scope) => {
     scope.setTag("source", context.source);
 
     if (context.name) {
@@ -31,6 +31,6 @@ export function captureError(error: unknown, context: ErrorContext): void {
       scope.setExtras(context.extra);
     }
 
-    Sentry.captureException(error);
+    captureException(error);
   });
 }
