@@ -33,7 +33,7 @@ describe("UpcomingEventsPanel", () => {
     expect(screen.getByTestId("upcoming-events-panel")).toBeInTheDocument();
   });
 
-  it('タイトル「直近の予定」が表示される', () => {
+  it("タイトル「直近の予定」が表示される", () => {
     render(
       <UpcomingEventsPanel>
         <p>内容</p>
