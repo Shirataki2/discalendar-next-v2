@@ -21,13 +21,13 @@
   - _Requirements: 5.1, 5.2_
 
 - [ ] 2. ユーザープロパティ送信ユーティリティの実装とテスト
-- [ ] 2.1 setPostHogUserProperties ユーティリティ関数を作成する
+- [x] 2.1 setPostHogUserProperties ユーティリティ関数を作成する
   - PostHog の people.set API を使ってユーザープロパティ（guild_count）を送信する機能を追加する
   - PostHog SDK が未初期化の場合はエラーなくスキップする
   - 既存の analytics/client モジュールに配置する
   - _Requirements: 2.1, 2.2, 4.2_
 
-- [ ] 2.2 (P) setPostHogUserProperties のユニットテストを作成する
+- [x] 2.2 (P) setPostHogUserProperties のユニットテストを作成する
   - guild_count プロパティが people.set で送信されることを検証する
   - SDK 未初期化時にエラーがスローされないことを検証する
   - _Requirements: 5.1, 5.2_
