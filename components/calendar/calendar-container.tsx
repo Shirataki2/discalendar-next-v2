@@ -41,6 +41,7 @@ import { useEditScopeDialog } from "@/hooks/calendar/use-edit-scope-dialog";
 import { useEventDialog } from "@/hooks/calendar/use-event-dialog";
 import { useEventMutation } from "@/hooks/calendar/use-event-mutation";
 import { useEventPopover } from "@/hooks/calendar/use-event-popover";
+import { useEventSearch } from "@/hooks/calendar/use-event-search";
 import { useHolidays } from "@/hooks/calendar/use-holidays";
 import { useBreakpoint } from "@/hooks/calendar/use-media-query";
 import { useRealtimeSync } from "@/hooks/calendar/use-realtime-sync";
@@ -120,6 +121,15 @@ export function CalendarContainer({
     selectedDate,
     showHolidays
   );
+
+  // DIS-17: イベント検索フック
+  const {
+    searchQuery,
+    setSearchQuery,
+    filteredEvents: searchFilteredEvents,
+    matchCount: searchMatchCount,
+    isSearchActive,
+  } = useEventSearch({ events: state.events });
 
   // 祝日表示トグルハンドラー
   const handleToggleHolidays = useCallback(() => {
@@ -507,9 +517,9 @@ export function CalendarContainer({
       return [];
     }
     if (isMonthView) {
-      return state.events;
+      return searchFilteredEvents;
     }
-    return [...state.events, ...holidayEvents];
+    return [...searchFilteredEvents, ...holidayEvents];
   })();
   const visibleBackgroundEvents = (() => {
     if (shouldShowEmpty) {
@@ -545,9 +555,12 @@ export function CalendarContainer({
         isMobile={isMobile}
         onAddClick={toolbarAddClickHandler}
         onNavigate={handleNavigate}
+        onSearchChange={setSearchQuery}
         onSettingsClick={onSettingsClick}
         onToggleHolidays={handleToggleHolidays}
         onViewChange={handleViewChange}
+        searchMatchCount={searchMatchCount}
+        searchQuery={searchQuery}
         selectedDate={selectedDate}
         showHolidays={showHolidays}
         viewMode={viewMode}
@@ -574,6 +587,7 @@ export function CalendarContainer({
             backgroundEvents={visibleBackgroundEvents}
             events={visibleEvents}
             holidayMap={holidayMap}
+            isSearchActive={isSearchActive}
             onDateChange={handleDateChange}
             onEventClick={handleEventClick}
             onEventDrop={gridEventDropHandler}

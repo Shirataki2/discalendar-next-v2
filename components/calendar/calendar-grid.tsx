@@ -191,6 +191,8 @@ export type CalendarGridProps = {
   holidayMap?: Map<string, string>;
   /** 背景イベント（月ビューでスロットを消費しない） */
   backgroundEvents?: CalendarEvent[];
+  /** 検索が適用されているか（空状態メッセージ表示判定用） */
+  isSearchActive?: boolean;
 };
 
 /**
@@ -273,6 +275,7 @@ export function CalendarGrid({
   resizable = true,
   holidayMap,
   backgroundEvents,
+  isSearchActive,
 }: CalendarGridProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -450,6 +453,10 @@ export function CalendarGrid({
     []
   );
 
+  // DIS-17: 検索で一致イベントが0件の場合の空状態メッセージ
+  const hasNoSearchResults =
+    isSearchActive && events.filter((e) => !isHolidayEvent(e)).length === 0;
+
   return (
     <section
       aria-label="カレンダー"
@@ -457,6 +464,15 @@ export function CalendarGrid({
       data-testid="calendar-grid"
       ref={sectionRef}
     >
+      {/* DIS-17: 検索0件時もカレンダーは表示し続ける（祝日や日付コンテキストを維持するため） */}
+      {hasNoSearchResults ? (
+        <div
+          className="border-b bg-muted/50 px-4 py-3 text-center text-muted-foreground text-sm"
+          data-testid="search-empty-state"
+        >
+          一致するイベントが見つかりません
+        </div>
+      ) : null}
       <div className="flex h-full flex-1 flex-col">
         <DnDCalendar
           backgroundEvents={backgroundEvents}
