@@ -75,8 +75,13 @@ export function useEventSearch(
   // デバウンス後のクエリ（フィルタリングに使用）
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  // デバウンス処理
+  // デバウンス処理（空文字列への変更は即時反映してクリア操作の遅延を防ぐ）
   useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setDebouncedQuery("");
+      return;
+    }
+
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
     }, debounceMs);

@@ -464,19 +464,16 @@ export function CalendarGrid({
       data-testid="calendar-grid"
       ref={sectionRef}
     >
+      {/* DIS-17: 検索0件時もカレンダーは表示し続ける（祝日や日付コンテキストを維持するため） */}
       {hasNoSearchResults ? (
         <div
-          className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-muted-foreground"
+          className="border-b bg-muted/50 px-4 py-3 text-center text-muted-foreground text-sm"
           data-testid="search-empty-state"
         >
-          <p>一致するイベントが見つかりません</p>
+          一致するイベントが見つかりません
         </div>
       ) : null}
-      <div
-        className={
-          hasNoSearchResults ? "hidden" : "flex h-full flex-1 flex-col"
-        }
-      >
+      <div className="flex h-full flex-1 flex-col">
         <DnDCalendar
           backgroundEvents={backgroundEvents}
           components={calendarComponents}
