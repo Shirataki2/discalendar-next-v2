@@ -102,6 +102,7 @@ function getDateRangeLabel(viewMode: ViewMode, selectedDate: Date): string {
  * />
  * ```
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: CalendarToolbar orchestrates multiple optional features (search, holidays, settings, navigation) with responsive layout
 export function CalendarToolbar({
   viewMode,
   selectedDate,

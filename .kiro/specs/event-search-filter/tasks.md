@@ -58,14 +58,14 @@
   - isSearchActive propを追加する（オプショナルで後方互換性を維持）
   - _Requirements: 1.4_
 
-- [ ] 4. 統合テストと品質検証
-- [ ] 4.1 CalendarToolbarの検索統合テストを更新する
+- [x] 4. 統合テストと品質検証
+- [x] 4.1 CalendarToolbarの検索統合テストを更新する
   - 検索フィールドの表示を検証する
   - 検索件数のaria-live通知を検証する
   - 既存テストとの整合性を確認する
   - _Requirements: 3.1, 4.2_
 
-- [ ] 4.2 CalendarContainerの検索統合テストを追加する
+- [x] 4.2 CalendarContainerの検索統合テストを追加する
   - 検索入力からCalendarGridのイベントフィルタリングまでの連動を検証する
   - 検索クリアで全イベントが再表示されることを検証する
   - 空状態メッセージの表示を検証する

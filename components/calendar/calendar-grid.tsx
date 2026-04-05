@@ -473,8 +473,9 @@ export function CalendarGrid({
         </div>
       ) : null}
       <div
-        className="flex h-full flex-1 flex-col"
-        style={hasNoSearchResults ? { display: "none" } : undefined}
+        className={
+          hasNoSearchResults ? "hidden" : "flex h-full flex-1 flex-col"
+        }
       >
         <DnDCalendar
           backgroundEvents={backgroundEvents}
