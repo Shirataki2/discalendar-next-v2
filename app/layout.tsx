@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
+import { SentryUserProvider } from "@/components/sentry/sentry-user-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PostHogProvider } from "@/lib/analytics/posthog-provider";
 import "./globals.css";
