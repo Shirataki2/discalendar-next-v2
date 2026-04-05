@@ -23,6 +23,7 @@ import { startNotifyTask } from "./tasks/notify.js";
 import { startPresenceTask } from "./tasks/presence.js";
 import type { Command } from "./types/command.js";
 import { logger } from "./utils/logger.js";
+import { captureError } from "./utils/sentry.js";
 
 async function safeReplyError(
   interaction: ModalSubmitInteraction | ChatInputCommandInteraction,
@@ -90,6 +91,11 @@ export class DiscalendarBot extends Client {
         await handleModalSubmit(interaction);
       } catch (error) {
         logger.error({ error }, "Modal submit handler failed");
+        captureError(error, {
+          source: "modal",
+          guildId: interaction.guildId ?? undefined,
+          userId: interaction.user.id,
+        });
         await safeReplyError(
           interaction,
           "モーダルの処理中にエラーが発生しました。"
@@ -115,6 +121,12 @@ export class DiscalendarBot extends Client {
         { error, command: interaction.commandName },
         "Command execution failed"
       );
+      captureError(error, {
+        source: "command",
+        name: interaction.commandName,
+        guildId: interaction.guildId ?? undefined,
+        userId: interaction.user.id,
+      });
       await safeReplyError(
         interaction,
         "コマンドの実行中にエラーが発生しました。"
@@ -135,6 +147,11 @@ export class DiscalendarBot extends Client {
           { error, guildId: guild.id },
           "guildCreate handler failed"
         );
+        captureError(error, {
+          source: "event",
+          name: "guildCreate",
+          guildId: guild.id,
+        });
       }
     });
 
@@ -146,6 +163,11 @@ export class DiscalendarBot extends Client {
           { error, guildId: guild.id },
           "guildDelete handler failed"
         );
+        captureError(error, {
+          source: "event",
+          name: "guildDelete",
+          guildId: guild.id,
+        });
       }
     });
 
@@ -157,6 +179,11 @@ export class DiscalendarBot extends Client {
           { error, guildId: newGuild.id },
           "guildUpdate handler failed"
         );
+        captureError(error, {
+          source: "event",
+          name: "guildUpdate",
+          guildId: newGuild.id,
+        });
       }
     });
 

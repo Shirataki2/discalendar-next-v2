@@ -6,7 +6,7 @@ export type Config = {
   invitationUrl: string;
   supportServerUrl: string;
   logLevel: string;
-  /** TODO: Sentry SDK初期化は未実装。将来的に追加予定 */
+  /** Sentry DSN。未設定時はSentry無効 */
   sentryDsn: string | undefined;
   /** 開発用: 指定するとグローバルではなくギルドコマンドとして登録（レート制限回避） */
   devGuildId: string | undefined;
