@@ -9,7 +9,7 @@
  * - 祝日イベントはフィルタリングから除外（常に表示）
  * - 空文字・空白のみの入力は検索非アクティブとして元のイベントを返す
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isHolidayEvent } from "@/lib/calendar/holiday-service";
 import type { CalendarEvent } from "@/lib/calendar/types";
 
@@ -75,10 +75,6 @@ export function useEventSearch(
   // デバウンス後のクエリ（フィルタリングに使用）
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const setSearchQuery = useCallback((query: string) => {
-    setSearchQueryState(query);
-  }, []);
-
   // デバウンス処理
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -90,13 +86,15 @@ export function useEventSearch(
     };
   }, [searchQuery, debounceMs]);
 
-  // 検索がアクティブかどうか（デバウンス後のクエリで判定）
-  const isSearchActive = debouncedQuery.trim().length > 0;
-
   // フィルタリング結果の計算
-  const { filteredEvents, matchCount } = useMemo(() => {
-    if (!isSearchActive) {
-      return { filteredEvents: events, matchCount: null };
+  const { filteredEvents, matchCount, isSearchActive } = useMemo(() => {
+    const active = debouncedQuery.trim().length > 0;
+    if (!active) {
+      return {
+        filteredEvents: events,
+        matchCount: null,
+        isSearchActive: false,
+      };
     }
 
     const normalizedQuery = debouncedQuery.trim().toLowerCase();
@@ -115,12 +113,12 @@ export function useEventSearch(
       return matches;
     });
 
-    return { filteredEvents: filtered, matchCount: count };
-  }, [events, debouncedQuery, isSearchActive]);
+    return { filteredEvents: filtered, matchCount: count, isSearchActive: true };
+  }, [events, debouncedQuery]);
 
   return {
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: setSearchQueryState,
     filteredEvents,
     matchCount,
     isSearchActive,

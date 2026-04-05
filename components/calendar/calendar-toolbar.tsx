@@ -226,7 +226,7 @@ export function CalendarToolbar({
               className="sr-only"
               data-testid="search-result-announce"
             >
-              {searchMatchCount !== null && searchMatchCount !== undefined
+              {searchMatchCount !== null
                 ? `${searchMatchCount}件のイベントが見つかりました`
                 : ""}
             </div>

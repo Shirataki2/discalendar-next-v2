@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * SearchInput - 検索入力フィールド
  *
@@ -5,7 +7,6 @@
  *
  * Requirements: 1.1, 1.5, 2.1, 2.2, 2.3, 4.1, 4.3
  */
-"use client";
 
 import { Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
