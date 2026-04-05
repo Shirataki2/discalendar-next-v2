@@ -126,9 +126,10 @@ vi.mock("@/lib/guilds/fetch-guilds", () => ({
   fetchGuilds: vi.fn(),
 }));
 
+const mockGetSignedUrls = vi.fn();
 vi.mock("@/lib/calendar/attachment-service", () => ({
   createAttachmentService: vi.fn(() => ({
-    getSignedUrls: vi.fn(),
+    getSignedUrls: (...args: unknown[]) => mockGetSignedUrls(...args),
     deleteFiles: vi.fn(),
   })),
 }));
@@ -136,6 +137,7 @@ vi.mock("@/lib/calendar/attachment-service", () => ({
 import { captureException } from "@sentry/nextjs";
 import {
   fetchGuildChannels,
+  getAttachmentUrlsAction,
   getOrCreateIcsFeedToken,
   regenerateIcsFeedToken,
   regeneratePublicSlugAction,
@@ -429,6 +431,43 @@ describe("Dashboard Actions Sentry captureException", () => {
   });
 
   // ──────────────────────────────────────────────
+  // getAttachmentUrlsAction
+  // ──────────────────────────────────────────────
+
+  describe("getAttachmentUrlsAction", () => {
+    it("サービスエラー時に captureException を呼ぶ", async () => {
+      setupAuthWithManageGuild();
+      mockGetSignedUrls.mockResolvedValueOnce({
+        success: false,
+        error: {
+          code: "STORAGE_ERROR",
+          message: "signed url generation failed",
+          details: "detail info",
+        },
+      });
+
+      await getAttachmentUrlsAction({
+        guildId: TEST_GUILD_ID,
+        attachments: [
+          {
+            name: "file.jpg",
+            path: `${TEST_GUILD_ID}/event-1/file.jpg`,
+            type: "image/jpeg",
+            size: 1024,
+          },
+        ],
+      });
+
+      expect(captureException).toHaveBeenCalledOnce();
+      expect(captureException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("[getAttachmentUrlsAction]"),
+        })
+      );
+    });
+  });
+
+  // ──────────────────────────────────────────────
   // regenerateIcsFeedToken
   // ──────────────────────────────────────────────
 
@@ -437,7 +476,7 @@ describe("Dashboard Actions Sentry captureException", () => {
       setupAuthWithManageGuild();
       mockGetPublicSettings.mockResolvedValueOnce({
         success: false,
-        data: null,
+        error: { code: "NOT_FOUND", message: "not found" },
       });
       mockRegenerateToken.mockResolvedValueOnce({
         success: false,
