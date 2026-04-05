@@ -1,3 +1,4 @@
+import { setUser } from "@sentry/nextjs";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +23,8 @@ export default async function DashboardLayout({
   if (!user) {
     redirect("/auth/login");
   }
+
+  setUser({ id: user.id });
 
   return children;
 }
