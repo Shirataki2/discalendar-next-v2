@@ -1,5 +1,6 @@
 "use server";
 
+import { captureException } from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,6 +21,7 @@ export async function signOut(): Promise<void> {
 
   if (error) {
     console.error("[Auth Error] signOut failed:", error.message);
+    captureException(new Error(`[signOut] failed: ${error.message}`));
   }
 
   redirect("/auth/login");

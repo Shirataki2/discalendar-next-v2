@@ -284,6 +284,12 @@ export async function updateGuildConfig(
 
   if (upsertResult.success) {
     revalidatePath("/dashboard");
+  } else {
+    captureException(
+      new Error(
+        `[updateGuildConfig] upsert failed: ${upsertResult.error.message}`
+      )
+    );
   }
 
   return sanitizeResult(upsertResult);
@@ -770,6 +776,11 @@ export async function fetchGuildChannels(
   const channelsResult = await getGuildChannels(guildId);
 
   if (!channelsResult.success) {
+    captureException(
+      new Error(
+        `[fetchGuildChannels] failed: ${channelsResult.error.message}`
+      )
+    );
     return {
       success: false,
       error: {
@@ -853,6 +864,11 @@ export async function updateNotificationChannel(
 
   if (!result.success) {
     const { details, ...error } = result.error;
+    captureException(
+      new Error(
+        `[updateNotificationChannel] upsert failed: ${error.message}`
+      )
+    );
     if (process.env.NODE_ENV !== "production") {
       console.error("[updateNotificationChannel] upsert failed:", {
         code: error.code,
@@ -1148,6 +1164,11 @@ export async function togglePublicCalendar(
     const result = await service.enablePublicCalendar(input.guildId);
 
     if (!result.success) {
+      captureException(
+        new Error(
+          `[togglePublicCalendar] enable failed: ${result.error.message}`
+        )
+      );
       return {
         success: false,
         error: {
@@ -1167,6 +1188,11 @@ export async function togglePublicCalendar(
   const result = await service.disablePublicCalendar(input.guildId);
 
   if (!result.success) {
+    captureException(
+      new Error(
+        `[togglePublicCalendar] disable failed: ${result.error.message}`
+      )
+    );
     return {
       success: false,
       error: {
@@ -1240,6 +1266,11 @@ export async function regeneratePublicSlugAction(
   const result = await service.regeneratePublicSlug(input.guildId);
 
   if (!result.success) {
+    captureException(
+      new Error(
+        `[regeneratePublicSlugAction] failed: ${result.error.message}`
+      )
+    );
     return {
       success: false,
       error: {
@@ -1328,6 +1359,11 @@ export async function getOrCreateIcsFeedToken(
   const tokenResult = await tokenService.getOrCreateToken(guildId);
 
   if (!tokenResult.success) {
+    captureException(
+      new Error(
+        `[getOrCreateIcsFeedToken] failed: ${tokenResult.error.message}`
+      )
+    );
     return {
       success: false,
       error: {
@@ -1414,6 +1450,11 @@ export async function regenerateIcsFeedToken(
   const tokenResult = await tokenService.regenerateToken(guildId);
 
   if (!tokenResult.success) {
+    captureException(
+      new Error(
+        `[regenerateIcsFeedToken] failed: ${tokenResult.error.message}`
+      )
+    );
     return {
       success: false,
       error: {
@@ -1493,7 +1534,7 @@ export async function deleteAttachmentFilesAction(
 
   if (!result.success) {
     captureException(
-      new Error(`Attachment deletion failed: ${result.error.details}`)
+      new Error(`[deleteAttachmentFilesAction] failed: ${result.error.message}`)
     );
   }
 
@@ -1553,6 +1594,14 @@ export async function getAttachmentUrlsAction(
 
   const attachmentService = createAttachmentService(authResult.auth.supabase);
   const result = await attachmentService.getSignedUrls(input.attachments);
+
+  if (!result.success) {
+    captureException(
+      new Error(
+        `[getAttachmentUrlsAction] failed: ${result.error.message}`
+      )
+    );
+  }
 
   return sanitizeResult(result);
 }
