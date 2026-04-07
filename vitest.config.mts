@@ -11,6 +11,10 @@ export default defineConfig({
       "node_modules/**/*",
       "e2e_tests/**/*",
       "packages/**/*",
+      // ワークツリー配下の重複テストを除外（git worktree で別ブランチが残っている場合）
+      ".claude/worktrees/**/*",
+      // pnpm content-addressable store のハードリンク先テストを除外
+      ".pnpm-store/**/*",
     ],
     setupFiles: ["./vitest-setup.ts"],
     maxWorkers: "75%",
