@@ -1,7 +1,7 @@
 # Implementation Plan
 
-- [ ] 1. サービス層に events 物理削除関数を追加する
-- [ ] 1.1 deleteEvent 関数のテストを先に書く
+- [x] 1. サービス層に events 物理削除関数を追加する
+- [x] 1.1 deleteEvent 関数のテストを先に書く
   - 既存の event-service の単体テストファイルに deleteEvent 用のテストケースを追加する
   - 成功時に Result 型の success が true、data が undefined を返すことを検証する
   - Supabase 側から error が返ったケースで Result 型の failure と DELETE_FAILED 系のドメインコードへの変換を検証する
@@ -9,7 +9,7 @@
   - 失敗時に既存の構造化ロガーが eventId と guildId を含むコンテキストでエラーを記録することを検証する
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 7.3_
 
-- [ ] 1.2 deleteEvent 関数を実装する
+- [x] 1.2 deleteEvent 関数を実装する
   - Bot 側 event-service モジュールに deleteEvent をエクスポート関数として追加する
   - Supabase クライアントから events テーブルに対し id と guild_id の複合条件で物理削除を実行する
   - Supabase エラーは既存の classifySupabaseError を operation 名 delete で呼び ServiceError に変換する
@@ -18,8 +18,8 @@
   - 実装後に該当ファイルの単体テストを実行し全 PASS を確認する
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 7.3_
 
-- [ ] 2. delete スラッシュコマンドハンドラを実装する
-- [ ] 2.1 delete コマンドのテストを先に書く
+- [x] 2. delete スラッシュコマンドハンドラを実装する
+- [x] 2.1 delete コマンドのテストを先に書く
   - 新規 delete コマンド用の単体テストファイルを Bot コマンドのテスト規約に沿って作成する
   - ギルド外実行時に「サーバーでのみ実行可能」エフェメラル応答を返し、サービス層が呼ばれないことを検証する
   - guild config 取得失敗時にエフェメラルでエラーメッセージを返し処理が中断することを検証する
@@ -35,7 +35,7 @@
   - 削除成功時に info ログへ guildId と userId と eventId とイベント名が含まれることを検証する
   - _Requirements: 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5, 6.1, 6.2, 6.3, 6.4, 7.1, 7.2_
 
-- [ ] 2.2 delete コマンドの SlashCommandBuilder 定義と実行ロジックを実装する
+- [x] 2.2 delete コマンドの SlashCommandBuilder 定義と実行ロジックを実装する
   - SlashCommandBuilder で /delete コマンドを定義し、必須の event 文字列オプション (最大 100 文字) と日本語の説明を設定する
   - execute 関数の冒頭でギルド外実行を弾き、エフェメラル reply で早期終了する
   - インタラクションの応答制限を超えないよう deferReply をエフェメラル属性付きで即座に呼ぶ
@@ -46,7 +46,7 @@
   - 検索ヒット時は createEventEmbed で対象イベントの埋め込みを生成し、確認メッセージとして editReply する
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 2.3 削除確認 UI のボタンと collector を実装する
+- [x] 2.3 削除確認 UI のボタンと collector を実装する
   - ButtonBuilder で「削除する」(Danger) と「キャンセル」(Secondary) の 2 ボタンを ActionRow にまとめ、確認メッセージに添付する
   - 確認メッセージは引き続きエフェメラル属性を維持する (deferReply で確定済み)
   - editReply の戻り値に対し createMessageComponentCollector を ComponentType.Button と 60 秒タイムアウトで開始する
@@ -61,7 +61,7 @@
   - 実装後に該当ファイルの単体テストを実行し全 PASS を確認する
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 6.1, 6.2, 6.3, 6.4, 7.1, 7.2, 7.3_
 
-- [ ] 3. delete コマンドを Bot に登録する
+- [x] 3. delete コマンドを Bot に登録する
   - Bot エントリ (bot.ts) のコマンドインポートに新規 delete コマンドを追加する
   - loadCommands の配列に delete コマンドを追加し、起動時のスラッシュコマンド登録に含まれるようにする
   - bot.ts のコマンド読み込みパスとアルファベット順 (既存規約に合わせる) を確認する
