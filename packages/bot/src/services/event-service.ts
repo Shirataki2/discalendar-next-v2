@@ -259,6 +259,30 @@ export async function updateEvent(
   return { success: true, data: data as EventRecord };
 }
 
+export async function deleteEvent(
+  eventId: string,
+  guildId: string
+): Promise<ServiceResult<void>> {
+  const supabase = getSupabaseClient();
+
+  // guild_id でスコープして IDOR を防ぐ物理削除
+  const { error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", eventId)
+    .eq("guild_id", guildId);
+
+  if (error) {
+    logger.error({ error, eventId, guildId }, "Failed to delete event");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "delete"),
+    };
+  }
+
+  return { success: true, data: undefined };
+}
+
 export async function getEventSettingsByGuildIds(
   guildIds: string[]
 ): Promise<ServiceResult<Map<string, EventSettings>>> {
