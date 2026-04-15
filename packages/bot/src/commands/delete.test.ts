@@ -110,6 +110,8 @@ function createButtonInteraction(opts: { customId: string; userId: string }) {
     user: { id: opts.userId },
     update: vi.fn(),
     reply: vi.fn(),
+    deferUpdate: vi.fn(),
+    editReply: vi.fn(),
   };
 }
 
@@ -357,8 +359,9 @@ describe("delete command", () => {
 
     await handler(buttonInteraction);
 
+    expect(buttonInteraction.deferUpdate).toHaveBeenCalled();
     expect(mockDeleteEvent).toHaveBeenCalledWith("evt-1", "guild-1");
-    expect(buttonInteraction.update).toHaveBeenCalledWith(
+    expect(buttonInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining("削除しました"),
       })
@@ -453,13 +456,50 @@ describe("delete command", () => {
 
     await handler(buttonInteraction);
 
+    expect(buttonInteraction.deferUpdate).toHaveBeenCalled();
     expect(mockLoggerError).toHaveBeenCalled();
-    expect(buttonInteraction.update).toHaveBeenCalledWith(
+    expect(buttonInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         embeds: expect.arrayContaining([
           expect.objectContaining({
             data: expect.objectContaining({
               description: expect.stringContaining("削除に失敗"),
+            }),
+          }),
+        ]),
+      })
+    );
+  });
+
+  it("shows already-deleted message when deleteEvent returns NOT_FOUND", async () => {
+    mockDeleteEvent.mockResolvedValue({
+      success: false,
+      error: { code: "NOT_FOUND", message: "not found" },
+    });
+
+    const interaction = createMockInteraction({
+      guildId: "guild-1",
+      userId: "user-1",
+      eventQuery: "テスト",
+    });
+
+    const deleteCommand = (await import("./delete.js")).default;
+    await deleteCommand.execute(interaction as never);
+
+    const handler = getCollectHandler(interaction);
+    const buttonInteraction = createButtonInteraction({
+      customId: "delete-confirm",
+      userId: "user-1",
+    });
+
+    await handler(buttonInteraction);
+
+    expect(buttonInteraction.editReply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: expect.arrayContaining([
+          expect.objectContaining({
+            data: expect.objectContaining({
+              description: expect.stringContaining("既に削除"),
             }),
           }),
         ]),

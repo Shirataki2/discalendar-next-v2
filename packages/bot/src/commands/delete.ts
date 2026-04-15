@@ -155,6 +155,11 @@ function createCollectHandler(
       return;
     }
 
+    // Supabase 呼び出し前に即座にインタラクションを ack する。
+    // deleteEvent のレイテンシで Discord の 3 秒インタラクション期限を超過すると
+    // 後続の update / editReply が「interaction expired」で失敗するため。
+    await buttonInteraction.deferUpdate();
+
     const result = await deleteEvent(event.id, guildId);
     if (!result.success) {
       logger.error(
@@ -165,9 +170,13 @@ function createCollectHandler(
         },
         "Failed to delete event from /delete command"
       );
-      await buttonInteraction.update({
+      const errorMessage =
+        result.error.code === "NOT_FOUND"
+          ? "この予定は既に削除されています"
+          : "予定の削除に失敗しました";
+      await buttonInteraction.editReply({
         content: "",
-        embeds: [createErrorEmbed("エラー", "予定の削除に失敗しました")],
+        embeds: [createErrorEmbed("エラー", errorMessage)],
         components: [buildConfirmRow(true)],
       });
       collector.stop("error");
@@ -183,7 +192,7 @@ function createCollectHandler(
       },
       "Event deleted via /delete command"
     );
-    await buttonInteraction.update({
+    await buttonInteraction.editReply({
       content: `予定を削除しました: ${event.name}`,
       embeds: [],
       components: [buildConfirmRow(true)],

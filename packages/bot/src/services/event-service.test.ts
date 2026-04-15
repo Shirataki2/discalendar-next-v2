@@ -317,11 +317,24 @@ describe("event-service", () => {
   });
 
   describe("deleteEvent", () => {
-    it("returns success with undefined data on successful delete", async () => {
-      // first eq("id", ...) returns chainable, second eq("guild_id", ...) resolves
+    /**
+     * deleteEvent のチェーンをモック化するヘルパ:
+     *   supabase.from("events").delete().eq("id", ...).eq("guild_id", ...).select("id")
+     * 2 回目の eq が `.select()` 可能なオブジェクトを返し、select は最終的に Promise を返す。
+     */
+    function mockDeleteChain(result: {
+      data: { id: string }[] | null;
+      error: { code?: string; message: string } | null;
+    }) {
+      const mockSelectForDelete = vi.fn().mockResolvedValue(result);
       mockEq
         .mockReturnValueOnce({ eq: mockEq })
-        .mockResolvedValueOnce({ data: null, error: null });
+        .mockReturnValueOnce({ select: mockSelectForDelete });
+      return { mockSelectForDelete };
+    }
+
+    it("returns success with undefined data on successful delete", async () => {
+      mockDeleteChain({ data: [{ id: "evt-1" }], error: null });
 
       const { deleteEvent } = await import("./event-service.js");
       const result = await deleteEvent("evt-1", "guild-1");
@@ -332,13 +345,14 @@ describe("event-service", () => {
       }
     });
 
-    it("calls supabase with id and guild_id eq filters", async () => {
+    it("calls supabase with id and guild_id eq filters and .select()", async () => {
       // 共有モックの呼び出し履歴をクリアしてから検証
       mockEq.mockClear();
       mockDelete.mockClear();
-      mockEq
-        .mockReturnValueOnce({ eq: mockEq })
-        .mockResolvedValueOnce({ data: null, error: null });
+      const { mockSelectForDelete } = mockDeleteChain({
+        data: [{ id: "evt-42" }],
+        error: null,
+      });
 
       const { deleteEvent } = await import("./event-service.js");
       await deleteEvent("evt-42", "guild-99");
@@ -346,10 +360,11 @@ describe("event-service", () => {
       expect(mockDelete).toHaveBeenCalled();
       expect(mockEq).toHaveBeenNthCalledWith(1, "id", "evt-42");
       expect(mockEq).toHaveBeenNthCalledWith(2, "guild_id", "guild-99");
+      expect(mockSelectForDelete).toHaveBeenCalledWith("id");
     });
 
     it("returns failure when supabase returns an error", async () => {
-      mockEq.mockReturnValueOnce({ eq: mockEq }).mockResolvedValueOnce({
+      mockDeleteChain({
         data: null,
         error: { message: "DB delete failed" },
       });
@@ -365,7 +380,7 @@ describe("event-service", () => {
     });
 
     it("logs an error including eventId and guildId on failure", async () => {
-      mockEq.mockReturnValueOnce({ eq: mockEq }).mockResolvedValueOnce({
+      mockDeleteChain({
         data: null,
         error: { message: "DB delete failed" },
       });
@@ -377,6 +392,31 @@ describe("event-service", () => {
       expect(logger.error).toHaveBeenCalledWith(
         expect.objectContaining({ eventId: "evt-1", guildId: "guild-1" }),
         expect.stringContaining("Failed to delete event")
+      );
+    });
+
+    it("returns NOT_FOUND when 0 rows are deleted (race condition)", async () => {
+      mockDeleteChain({ data: [], error: null });
+
+      const { deleteEvent } = await import("./event-service.js");
+      const result = await deleteEvent("evt-1", "guild-1");
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("NOT_FOUND");
+      }
+    });
+
+    it("logs a warning when no rows are deleted", async () => {
+      mockDeleteChain({ data: [], error: null });
+
+      const { logger } = await import("../utils/logger.js");
+      const { deleteEvent } = await import("./event-service.js");
+      await deleteEvent("evt-1", "guild-1");
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: "evt-1", guildId: "guild-1" }),
+        expect.stringContaining("Event not found")
       );
     });
   });
