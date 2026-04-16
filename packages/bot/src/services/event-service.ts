@@ -259,6 +259,47 @@ export async function updateEvent(
   return { success: true, data: data as EventRecord };
 }
 
+export async function deleteEvent(
+  eventId: string,
+  guildId: string
+): Promise<ServiceResult<void>> {
+  const supabase = getSupabaseClient();
+
+  // guild_id でスコープして IDOR を防ぐ物理削除。
+  // .select() で実際に削除された行を返してもらい、0 件削除（レース競合で既に
+  // 削除済みなど）を検知して NOT_FOUND として扱う。
+  const { data, error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", eventId)
+    .eq("guild_id", guildId)
+    .select("id");
+
+  if (error) {
+    logger.error({ error, eventId, guildId }, "Failed to delete event");
+    return {
+      success: false,
+      error: classifySupabaseError(error, "delete"),
+    };
+  }
+
+  if (!data || data.length === 0) {
+    logger.warn(
+      { eventId, guildId },
+      "Event not found or already deleted when attempting delete"
+    );
+    return {
+      success: false,
+      error: {
+        code: "NOT_FOUND",
+        message: "削除対象のイベントが見つかりませんでした",
+      },
+    };
+  }
+
+  return { success: true, data: undefined };
+}
+
 export async function getEventSettingsByGuildIds(
   guildIds: string[]
 ): Promise<ServiceResult<Map<string, EventSettings>>> {
