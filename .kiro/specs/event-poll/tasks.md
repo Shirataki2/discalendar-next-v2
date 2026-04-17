@@ -18,7 +18,7 @@
   - `finalized_event_id` を `events(id)` への FK（ON DELETE SET NULL）、`finalized_option_id` を `event_poll_options(id)` への FK（ON DELETE SET NULL）として定義する
   - `updated_at` 自動更新トリガと、1 poll あたり options が 10 件を超える INSERT を拒否する trigger / plpgsql 関数を実装する
   - _Requirements: 6.1, 6.2, 6.3, 6.6, 6.7, 7.5_
-- [ ] 1.2 新規 3 テーブルに対して RLS ポリシーと Realtime publication を設定するマイグレーションを追加する
+- [x] 1.2 新規 3 テーブルに対して RLS ポリシーと Realtime publication を設定するマイグレーションを追加する
   - SELECT は当該ギルドのメンバー（既存ユーザー・ギルドリレーションビュー）に許可し、`event_poll_votes` の SELECT でも同一条件を適用する
   - `event_polls` の INSERT / UPDATE / DELETE は service_role、または `has_guild_management(guild_id, auth.uid())` を満たすユーザーに許可する（必要なら関数を新設する）
   - `event_poll_options` / `event_poll_votes` の書き込みは service_role のみとする（Web からの直接書き込みは禁止）
