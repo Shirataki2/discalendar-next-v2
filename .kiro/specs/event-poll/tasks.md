@@ -1,0 +1,156 @@
+# Implementation Plan
+
+## 作業方針
+
+- Bot とは独立した Web 層、および Bot 層どうしでも境界の異なるコンポーネント（コマンド／ハンドラ／サービス）は並行実装可能な箇所を `(P)` で示す。
+- データモデル（マイグレーション）は他すべての前提となるため最優先で完了させ、以後はサービス → コマンド／UI → 統合の順で進める。
+- すべての実装タスクに対応する単体テストまたは統合テストを必須として含める（任意 `*` マークは原則使わない）。
+
+---
+
+## Tasks
+
+- [ ] 1. データモデル基盤を構築する
+- [x] 1.1 `event_polls` / `event_poll_options` / `event_poll_votes` テーブルとインデックス・CHECK 制約を作成する Supabase マイグレーションを追加する
+  - `event_polls` に `guild_id` への CASCADE FK、`status` の CHECK 制約（`open` / `closed` / `finalized`）、`title` 文字数 CHECK、`message_id` の部分インデックスを含める
+  - `event_poll_options` に `(poll_id, position)` の UNIQUE 制約と `position BETWEEN 0 AND 9` の CHECK を設定する
+  - `event_poll_votes` に `(option_id, user_id)` の UNIQUE 制約と `choice` の CHECK 制約を設定する
+  - `finalized_event_id` を `events(id)` への FK（ON DELETE SET NULL）、`finalized_option_id` を `event_poll_options(id)` への FK（ON DELETE SET NULL）として定義する
+  - `updated_at` 自動更新トリガと、1 poll あたり options が 10 件を超える INSERT を拒否する trigger / plpgsql 関数を実装する
+  - _Requirements: 6.1, 6.2, 6.3, 6.6, 6.7, 7.5_
+- [ ] 1.2 新規 3 テーブルに対して RLS ポリシーと Realtime publication を設定するマイグレーションを追加する
+  - SELECT は当該ギルドのメンバー（既存ユーザー・ギルドリレーションビュー）に許可し、`event_poll_votes` の SELECT でも同一条件を適用する
+  - `event_polls` の INSERT / UPDATE / DELETE は service_role、または `has_guild_management(guild_id, auth.uid())` を満たすユーザーに許可する（必要なら関数を新設する）
+  - `event_poll_options` / `event_poll_votes` の書き込みは service_role のみとする（Web からの直接書き込みは禁止）
+  - `supabase_realtime` publication に 3 テーブルを追加し、`REPLICA IDENTITY FULL` を設定する
+  - _Requirements: 5.4, 6.4, 6.5_
+
+- [ ] 2. Bot 共通 PollService とエラー分類を実装する
+- [ ] 2.1 Bot 側 `poll-service` の型と Result インターフェースを定義する
+  - `PollStatus`, `ChoiceLabel`, `PollRecord`, `PollOptionRecord`, `PollVoteAggregate`, `PollSnapshot` の型を定義する
+  - `PollServiceError` の discriminated union（`POLL_NOT_FOUND` / `POLL_ALREADY_FINALIZED` / `POLL_ALREADY_CLOSED` / `TIE_BREAK_REQUIRED` / `FORBIDDEN` / `INVALID_INPUT` / `EVENT_CREATE_FAILED` / `INTERNAL`）を既存 Result 型に沿って実装する
+  - 既存 `classify-error.ts` を拡張し、Postgres エラーを `PollServiceError` にマップするヘルパーを追加する
+  - 型と分類ロジックの単体テストを追加する（`TIE_BREAK_REQUIRED` の `candidateOptionIds` 伝搬含む）
+  - _Requirements: 8.1_
+- [ ] 2.2 `createPoll` / `getPoll` / `deletePoll` を実装する
+  - `createPoll` は options 件数（2〜10）と時刻のバリデーションを行い、`event_polls` と `event_poll_options` を 1 トランザクションで INSERT し `PollSnapshot` を返す
+  - `getPoll` は guild スコープで poll・options・votes 集計（yes/maybe/no 人数と yes 投票者 user_id 配列）を取得する
+  - `deletePoll` は作成失敗時のロールバック用に呼ばれる想定。`event_polls` の DELETE と CASCADE 動作確認を含む
+  - `createPoll` の候補件数バリデーション（1 件・11 件）と `getPoll` の集計正確性を検証する単体テストを追加する
+  - _Requirements: 1.5, 1.6, 1.7, 2.5, 2.6_
+- [ ] 2.3 `castVote` による投票 upsert / 取消 / closed ガードを実装する
+  - `event_poll_votes` を `(option_id, user_id)` 単位で upsert し、同 choice 再送信時は DELETE して `CastVoteOutcome.revoked` を返す
+  - `event_polls.status` が `open` 以外の場合は Supabase を叩かず `rejected_closed` を返す
+  - 単体テストで新規挿入 / 別 choice への上書き / 同 choice での取消 / closed 時の拒否を検証する
+  - _Requirements: 2.1, 2.2, 2.3, 2.4_
+- [ ] 2.4 `closePoll` と `finalizePoll`（events 昇格ロジックを含む）を実装する
+  - `closePoll` は条件付き UPDATE（`WHERE status IN ('open')`）で冪等に遷移させ、既に closed/finalized の場合は対応する Result エラーを返す
+  - `finalizePoll` は (a) `status=open` なら先に `closed` へ遷移、(b) `optionId` 未指定時は yes 票最多の候補を選択し、同数なら `TIE_BREAK_REQUIRED` を返す、(c) `events` への INSERT（`series_id = NULL`、title/description/start_at/end_at/created_by を引き継ぐ）、(d) 成功なら `status=finalized` に遷移し `finalized_event_id` と `finalized_by` を記録する
+  - events INSERT 失敗時は `status` を元に戻すコンペンセーション SQL を発行する
+  - 既存 events と重複する時間帯の候補なら Result の `warnings` に警告文を含める
+  - 通常終了・タイ検出・既 finalized への再実行・INSERT 失敗ロールバック・既存イベント重複警告の単体テストを追加する
+  - `event-service.ts` に `createEventFromPoll(pollSnapshot, optionId, actorUserId)` を追加する
+  - _Requirements: 3.1, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.9, 7.1, 7.2, 7.3_
+
+- [ ] 3. Bot コマンド／ハンドラ／Embed を実装する
+- [ ] 3.1 (P) 投票 Embed ビルダー（`PollEmbedBuilder`）を実装する
+  - poll タイトル・説明・候補ごとの ○/△/× 人数・yes 投票者一覧（最大 20 名、超過は `他 N 名`）を Embed に描画する
+  - `status` に応じて `締切済` / `確定: <候補日時>` を末尾に付与し、確定時は `events` への Web リンク（`/dashboard?event=<event_id>` 相当）を表示する
+  - 最大件数テスト・yes 20 名超テスト・closed/finalized バッジ表示テストを追加する
+  - _Requirements: 1.7, 2.5, 2.6, 3.2, 4.8_
+- [ ] 3.2 (P) `/poll create` サブコマンドを実装する
+  - `SlashCommandBuilder.addSubcommand("create")` で title / description / options（例: カンマ区切り、または 10 個までの個別オプション）を受け取り、`deferReply({ ephemeral: true })` でタイムアウト対策する
+  - `hasManagementPermission` と `guild_config.restricted` による権限チェックを行う
+  - 件数バリデーション（2〜10）と時刻パース（既存 `utils/datetime.ts` 再利用）を実施する
+  - `PollService.createPoll` を呼び出し、成功時に指定チャンネル（未指定時は通知チャンネル）へ `PollEmbedBuilder` の Embed と ○/△/× ボタン（customId = `poll:<pollId>:<optionId>:<choice>`）を投稿する
+  - 失敗時は投稿済みメッセージを削除し、ephemeral でエラー理由を返す
+  - 件数外入力・権限不足・Supabase 失敗時の挙動を単体テストでカバーする
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7_
+- [ ] 3.3 (P) `/poll close` サブコマンドを実装する
+  - `poll_id` オプションを受け取り、権限・所属ギルドをチェックする
+  - `PollService.closePoll` を呼び、成功時は対象メッセージの Embed を `締切済` マーク付きに更新し、○/△/× ボタンを `disabled` にする
+  - 不在 / 既 closed / 既 finalized / 権限不足 の各経路を ephemeral メッセージで分岐させる単体テストを追加する
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+- [ ] 3.4 `/poll finalize` サブコマンドを実装する
+  - `poll_id`（必須）と `option`（任意）を受け取り、権限チェックを行う
+  - `PollService.finalizePoll` を呼び、`TIE_BREAK_REQUIRED` の場合は候補一覧と `option` 指定を促す ephemeral を返す
+  - 成功時は元メッセージの Embed を `確定: <候補日時>` に更新し、`/dashboard?event=<event_id>` へのリンクを含める
+  - 既 finalized / INSERT 失敗 / 既存イベント重複警告の経路を単体テストでカバーする
+  - _Requirements: 4.1, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 7.3_
+- [ ] 3.5 永続ボタンハンドラ `poll-vote` を実装し `bot.ts` に組み込む
+  - `customId` を `poll:<pollId>:<optionId>:<choice>` 形式でパースし、不正形式は warn ログと ephemeral 応答で返す
+  - `PollService.castVote` を呼び、`recorded` / `revoked` / `rejected_closed` に応じた ephemeral 応答と Embed 再構築を行う
+  - 1.5 秒のメッセージ更新デバウンス（同一 message_id 単位）を実装し、Discord レートリミット回避する
+  - Discord 側でメッセージが削除済みの場合は `message_id` を NULL に更新し 500 を返さない
+  - `bot.ts::handleInteraction` に `isButton()` 分岐を追加して `customId` が `poll:` で始まるときのみ本ハンドラへルーティングする
+  - customId パース・closed ガード・メッセージ欠損・デバウンスの単体テストを追加する
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 7.4_
+- [ ] 3.6 `loadCommands` と `registerSlashCommands` に `/poll` を登録する
+  - `bot.ts` のコマンドリストに `pollCommand` を追加し、サブコマンド付きの JSON ペイロードが Discord API に配布されることを確認する
+  - 起動時ログに `Loaded command: poll` が出ることを単体テストで確認する
+  - _Requirements: 1.1, 3.1, 4.1_
+
+- [ ] 4. Web 層の PollService・Server Action・Realtime を実装する
+- [ ] 4.1 (P) Web 側 `lib/polls/poll-service.ts` を実装する
+  - 認証済み Supabase クライアント（Cookie auth）で `listPolls(guildId)` / `getPollSnapshot(guildId, pollId)` / `closePoll` / `finalizePoll` を実装する
+  - Bot 側と同一の `PollServiceError` コードを返すよう `classifySupabaseError` を経由してマッピングする
+  - Bot 版と等価性を担保するため、`finalizePoll` のタイ検出・既 finalized・events INSERT 失敗時ロールバックを同じシナリオで検証する単体テストを追加する
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.9, 5.6, 5.7_
+- [ ] 4.2 (P) Server Action（`finalizePollAction`, `closePollAction`）を実装する
+  - `"use server"` ディレクティブで Cookie 認証を通し、未認証時は `/auth/login` にリダイレクトする
+  - 入力の UUID / text 形状バリデーションを行い、`PollService` を呼び出して結果を `sanitizeResult` で整形する
+  - `revalidatePath("/dashboard/polls")` と finalize 成功時の `eventId` を含む Result を返す
+  - 権限不足・タイ検出・既 finalized・内部エラー の分岐を単体テストでカバーする
+  - _Requirements: 5.6, 5.7, 8.3_
+- [ ] 4.3 (P) `hooks/polls/use-poll-realtime.ts` を実装する
+  - `supabase.channel("polls:<guildId>")` で `postgres_changes`（`event_polls` / `event_poll_options` / `event_poll_votes`）を購読し、300ms デバウンスで `fetchPollSnapshot` を再実行する
+  - `pendingMutationIdsRef` 相当で自身のミューテーションを抑制する
+  - 接続断 / タブ非表示時は購読を一時停止し、30 秒ポーリングにフォールバックする
+  - 再接続時に最新 snapshot を再取得する
+  - 購読成功・接続断フォールバック・多重タブでの重複抑制の単体テスト（MSW + Supabase クライアントモック）を追加する
+  - _Requirements: 5.3_
+
+- [ ] 5. Web ページ（一覧・詳細）と UI コンポーネントを実装する
+- [ ] 5.1 (P) 投票一覧ページ `app/dashboard/polls/page.tsx` を実装する
+  - Server Component で認証・ギルドメンバーシップを検証し、当該ユーザーが所属する全ギルドの `open` / `closed` ステータスの poll を新しい順に並べる
+  - 非メンバーのギルドに属する poll は一切返さない（RLS に委ねるが、アプリ側でもフィルタする）
+  - 一覧カードから詳細ページへの遷移リンクを提供する
+  - Server Component のレンダリングと非メンバー時のリダイレクト挙動の統合テストを追加する
+  - _Requirements: 5.1, 5.4_
+- [ ] 5.2 投票詳細ページ `app/dashboard/polls/[pollId]/page.tsx` を実装する
+  - Server Component で初期 `PollSnapshot` を取得し、Client Wrapper に渡す
+  - Client Wrapper は `usePollRealtime` で最新 snapshot を反映し、候補ごとの ○/△/× 集計と yes 投票者一覧（Discord 表示名）を可視化する
+  - 管理者権限（`has_guild_management`）を持つ場合のみ「この候補で確定」「投票を締切」ボタンを表示する
+  - 「締切」ボタンは `closePollAction` を呼び、完了後にローカル snapshot を再取得する
+  - 「確定」ボタンは `finalizePollAction` を呼び、成功時は `/dashboard?event=<eventId>` にリダイレクトする。`TIE_BREAK_REQUIRED` の場合は候補選択モーダルを表示する
+  - メンバー権限ユーザーで操作 UI が非表示になること、管理者で操作成功時にリダイレクトされること、タイ検出時にモーダルが出ることを統合テストで確認する
+  - _Requirements: 5.2, 5.3, 5.5, 5.6, 5.7_
+- [ ] 5.3 (P) 投票一覧カード・候補リスト・確定モーダルなどの UI コンポーネントを `components/polls/` に実装する
+  - `poll-card.tsx`（一覧表示）、`poll-option-row.tsx`（候補1行）、`poll-finalize-modal.tsx`（タイ選択／最終確認）を作成する
+  - それぞれに Storybook ストーリー（`*.stories.tsx`）と Vitest + Testing Library テスト（`*.test.tsx`）を co-locate する
+  - CLAUDE.md の Component Development Rules に従い、shadcn/ui プリミティブを再利用する
+  - _Requirements: 5.2, 5.5_
+
+- [ ] 6. ログ・監査・エラーハンドリングを整備する
+- [ ] 6.1 Bot 側の操作ログ（pino）を `/poll` 全サブコマンドと `poll-vote` ハンドラに追加する
+  - `guildId`, `pollId`, `actorUserId`, `subcommand`, `resultCode`, `warnings` を構造化出力する
+  - 成功・失敗両パスでログが出ることを単体テストで検証する
+  - _Requirements: 8.1, 8.2_
+- [ ] 6.2 Web Server Action のエラー情報漏洩対策と Sentry 連携を追加する
+  - `sanitizeResult` で `details` を削除済みであることをテストで保証する
+  - Server Action で失敗時に Sentry へ `capture` する（既存 Sentry integration を利用）
+  - _Requirements: 8.3_
+
+- [ ] 7. エンドツーエンド統合と最終検証
+- [ ] 7.1 Supabase 実 DB を使った Bot 統合テストを追加する
+  - `/poll create` → `castVote` × 複数ユーザー → `/poll finalize` の一連フローで `events` レコードが作成されることを検証する
+  - `event_series` に既存レコードがある状態で finalize しても既存 series が壊れないことを確認する
+  - _Requirements: 4.2, 4.9, 7.1, 7.2_
+- [ ] 7.2 Playwright E2E テストを追加する
+  - ユーザー視点でダッシュボードの投票詳細ページを開き、Bot 側で投票が入った状態が 5 秒以内に画面に反映されること
+  - 管理者が Web から `finalize` を実行し、ダッシュボードカレンダーに昇格後のイベントが表示されること
+  - _Requirements: 5.3, 5.6_
+- [ ] 7.3 lint / type-check / 全テストスイートの通過を確認する
+  - `pnpm ultracite check`, `pnpm run type-check`, `pnpm vitest run`, `packages/bot` の `npm run type-check` / `npm run test` を実行する
+  - 失敗があれば修正する
+  - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 5.2, 5.3, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3_
