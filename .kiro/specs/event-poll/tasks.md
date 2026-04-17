@@ -26,7 +26,7 @@
   - _Requirements: 5.4, 6.4, 6.5_
 
 - [ ] 2. Bot 共通 PollService とエラー分類を実装する
-- [ ] 2.1 Bot 側 `poll-service` の型と Result インターフェースを定義する
+- [x] 2.1 Bot 側 `poll-service` の型と Result インターフェースを定義する
   - `PollStatus`, `ChoiceLabel`, `PollRecord`, `PollOptionRecord`, `PollVoteAggregate`, `PollSnapshot` の型を定義する
   - `PollServiceError` の discriminated union（`POLL_NOT_FOUND` / `POLL_ALREADY_FINALIZED` / `POLL_ALREADY_CLOSED` / `TIE_BREAK_REQUIRED` / `FORBIDDEN` / `INVALID_INPUT` / `EVENT_CREATE_FAILED` / `INTERNAL`）を既存 Result 型に沿って実装する
   - 既存 `classify-error.ts` を拡張し、Postgres エラーを `PollServiceError` にマップするヘルパーを追加する
