@@ -111,7 +111,7 @@
   - _Requirements: 5.3_
 
 - [ ] 5. Web ページ（一覧・詳細）と UI コンポーネントを実装する
-- [ ] 5.1 (P) 投票一覧ページ `app/dashboard/polls/page.tsx` を実装する
+- [x] 5.1 (P) 投票一覧ページ `app/dashboard/polls/page.tsx` を実装する
   - Server Component で認証・ギルドメンバーシップを検証し、当該ユーザーが所属する全ギルドの `open` / `closed` ステータスの poll を新しい順に並べる
   - 非メンバーのギルドに属する poll は一切返さない（RLS に委ねるが、アプリ側でもフィルタする）
   - 一覧カードから詳細ページへの遷移リンクを提供する
