@@ -53,7 +53,7 @@
   - _Requirements: 3.1, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.9, 7.1, 7.2, 7.3_
 
 - [ ] 3. Bot コマンド／ハンドラ／Embed を実装する
-- [ ] 3.1 (P) 投票 Embed ビルダー（`PollEmbedBuilder`）を実装する
+- [x] 3.1 (P) 投票 Embed ビルダー（`PollEmbedBuilder`）を実装する
   - poll タイトル・説明・候補ごとの ○/△/× 人数・yes 投票者一覧（最大 20 名、超過は `他 N 名`）を Embed に描画する
   - `status` に応じて `締切済` / `確定: <候補日時>` を末尾に付与し、確定時は `events` への Web リンク（`/dashboard?event=<event_id>` 相当）を表示する
   - 最大件数テスト・yes 20 名超テスト・closed/finalized バッジ表示テストを追加する
