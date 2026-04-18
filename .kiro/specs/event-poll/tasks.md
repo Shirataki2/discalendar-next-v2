@@ -91,7 +91,7 @@
   - _Requirements: 1.1, 3.1, 4.1_
 
 - [ ] 4. Web 層の PollService・Server Action・Realtime を実装する
-- [ ] 4.1 (P) Web 側 `lib/polls/poll-service.ts` を実装する
+- [x] 4.1 (P) Web 側 `lib/polls/poll-service.ts` を実装する
   - 認証済み Supabase クライアント（Cookie auth）で `listPolls(guildId)` / `getPollSnapshot(guildId, pollId)` / `closePoll` / `finalizePoll` を実装する
   - Bot 側と同一の `PollServiceError` コードを返すよう `classifySupabaseError` を経由してマッピングする
   - Bot 版と等価性を担保するため、`finalizePoll` のタイ検出・既 finalized・events INSERT 失敗時ロールバックを同じシナリオで検証する単体テストを追加する
