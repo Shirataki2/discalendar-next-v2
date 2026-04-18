@@ -22,24 +22,19 @@ function invalid(message: string): PollServiceError {
   return { code: "INVALID_INPUT", message };
 }
 
-type SanitizedError = Omit<PollServiceError, "details"> & {
-  details?: never;
-};
-
-export type SanitizedPollResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: SanitizedError };
+export type SanitizedPollResult<T> = PollResult<T>;
 
 function sanitizeResult<T>(result: PollResult<T>): SanitizedPollResult<T> {
   if (result.success) {
     return result;
   }
+  // PollServiceError の内 details を持つ variant のみから details を除去する
   const error = result.error;
   if ("details" in error) {
     const { details: _details, ...rest } = error;
-    return { success: false, error: rest as SanitizedError };
+    return { success: false, error: rest as PollServiceError };
   }
-  return { success: false, error: error as SanitizedError };
+  return { success: false, error };
 }
 
 type ServerContext = {

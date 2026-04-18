@@ -117,7 +117,7 @@
   - 一覧カードから詳細ページへの遷移リンクを提供する
   - Server Component のレンダリングと非メンバー時のリダイレクト挙動の統合テストを追加する
   - _Requirements: 5.1, 5.4_
-- [ ] 5.2 投票詳細ページ `app/dashboard/polls/[pollId]/page.tsx` を実装する
+- [x] 5.2 投票詳細ページ `app/dashboard/polls/[pollId]/page.tsx` を実装する
   - Server Component で初期 `PollSnapshot` を取得し、Client Wrapper に渡す
   - Client Wrapper は `usePollRealtime` で最新 snapshot を反映し、候補ごとの ○/△/× 集計と yes 投票者一覧（Discord 表示名）を可視化する
   - 管理者権限（`has_guild_management`）を持つ場合のみ「この候補で確定」「投票を締切」ボタンを表示する
