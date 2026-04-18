@@ -453,4 +453,212 @@ describe("poll-service", () => {
       }
     });
   });
+
+  describe("castVote", () => {
+    /**
+     * castVote では次の順序で DB を呼ぶ:
+     *   1) event_polls.select("status").eq("id").single()   — closed ガード
+     *   2) event_poll_votes.select("id, choice").eq("poll_id").eq("option_id").eq("user_id").maybeSingle()
+     *   3) upsert / delete いずれか
+     */
+    function buildPollStatusChain(status: "open" | "closed" | "finalized") {
+      const single = vi
+        .fn()
+        .mockResolvedValue({ data: { status }, error: null });
+      const eqId = vi.fn().mockReturnValue({ single });
+      const select = vi.fn().mockReturnValue({ eq: eqId });
+      return { select, eqId };
+    }
+
+    function buildExistingVoteChain(
+      existing: { id: string; choice: "yes" | "maybe" | "no" } | null
+    ) {
+      const maybeSingle = vi
+        .fn()
+        .mockResolvedValue({ data: existing, error: null });
+      const eqUser = vi.fn().mockReturnValue({ maybeSingle });
+      const eqOption = vi.fn().mockReturnValue({ eq: eqUser });
+      const eqPoll = vi.fn().mockReturnValue({ eq: eqOption });
+      const select = vi.fn().mockReturnValue({ eq: eqPoll });
+      return { select, eqPoll, eqOption, eqUser };
+    }
+
+    it("closed ポールでは rejected_closed を返し votes テーブルを触らない", async () => {
+      const pollChain = buildPollStatusChain("closed");
+      const voteSelect = vi.fn();
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: pollChain.select };
+        }
+        if (table === "event_poll_votes") {
+          return { select: voteSelect };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { castVote } = await import("./poll-service.js");
+      const result = await castVote({
+        pollId: "poll-1",
+        optionId: "opt-1",
+        userId: "u1",
+        choice: "yes",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.kind).toBe("rejected_closed");
+      }
+      expect(voteSelect).not.toHaveBeenCalled();
+    });
+
+    it("既存 vote がない場合は upsert して recorded(previous=null) を返す", async () => {
+      const pollChain = buildPollStatusChain("open");
+      const existingChain = buildExistingVoteChain(null);
+
+      const upsertResolved = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: null });
+      const upsert = vi.fn().mockReturnValue(upsertResolved);
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: pollChain.select };
+        }
+        if (table === "event_poll_votes") {
+          return { select: existingChain.select, upsert };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { castVote } = await import("./poll-service.js");
+      const result = await castVote({
+        pollId: "poll-1",
+        optionId: "opt-1",
+        userId: "u1",
+        choice: "yes",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success && result.data.kind === "recorded") {
+        expect(result.data.previous).toBeNull();
+      }
+      expect(upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          poll_id: "poll-1",
+          option_id: "opt-1",
+          user_id: "u1",
+          choice: "yes",
+        }),
+        expect.objectContaining({ onConflict: "option_id,user_id" })
+      );
+    });
+
+    it("既存 vote と異なる choice で upsert し previous を返す", async () => {
+      const pollChain = buildPollStatusChain("open");
+      const existingChain = buildExistingVoteChain({
+        id: "vote-1",
+        choice: "maybe",
+      });
+
+      const upsertResolved = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: null });
+      const upsert = vi.fn().mockReturnValue(upsertResolved);
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: pollChain.select };
+        }
+        if (table === "event_poll_votes") {
+          return { select: existingChain.select, upsert };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { castVote } = await import("./poll-service.js");
+      const result = await castVote({
+        pollId: "poll-1",
+        optionId: "opt-1",
+        userId: "u1",
+        choice: "no",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success && result.data.kind === "recorded") {
+        expect(result.data.previous).toBe("maybe");
+      }
+      expect(upsert).toHaveBeenCalled();
+    });
+
+    it("同一 choice の再送信は vote を削除し revoked を返す", async () => {
+      const pollChain = buildPollStatusChain("open");
+      const existingChain = buildExistingVoteChain({
+        id: "vote-1",
+        choice: "yes",
+      });
+
+      const deleteEq = vi.fn().mockResolvedValue({ error: null });
+      const pollVotesDelete = vi.fn().mockReturnValue({ eq: deleteEq });
+      const upsert = vi.fn();
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: pollChain.select };
+        }
+        if (table === "event_poll_votes") {
+          return {
+            select: existingChain.select,
+            delete: pollVotesDelete,
+            upsert,
+          };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { castVote } = await import("./poll-service.js");
+      const result = await castVote({
+        pollId: "poll-1",
+        optionId: "opt-1",
+        userId: "u1",
+        choice: "yes",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.kind).toBe("revoked");
+      }
+      expect(upsert).not.toHaveBeenCalled();
+      expect(deleteEq).toHaveBeenCalledWith("id", "vote-1");
+    });
+
+    it("poll が存在しない場合は POLL_NOT_FOUND を返す", async () => {
+      const pollSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "PGRST116", message: "no rows" },
+      });
+      const pollEqId = vi.fn().mockReturnValue({ single: pollSingle });
+      const pollSelect = vi.fn().mockReturnValue({ eq: pollEqId });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: pollSelect };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { castVote } = await import("./poll-service.js");
+      const result = await castVote({
+        pollId: "poll-missing",
+        optionId: "opt-1",
+        userId: "u1",
+        choice: "yes",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("POLL_NOT_FOUND");
+      }
+    });
+  });
 });

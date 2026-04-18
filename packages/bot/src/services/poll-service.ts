@@ -306,3 +306,103 @@ export async function deletePoll(
 
   return { success: true, data: undefined };
 }
+
+export async function castVote(
+  input: CastVoteInput
+): Promise<PollResult<CastVoteOutcome>> {
+  const supabase = getSupabaseClient();
+
+  const { data: pollRow, error: pollError } = await supabase
+    .from("event_polls")
+    .select("status")
+    .eq("id", input.pollId)
+    .single();
+
+  if (pollError || !pollRow) {
+    return {
+      success: false,
+      error: classifyPollError(
+        pollError ?? { code: "PGRST116", message: "poll not found" },
+        "castVote"
+      ),
+    };
+  }
+
+  const status = (pollRow as { status: string }).status;
+  if (status !== "open") {
+    return {
+      success: true,
+      data: { kind: "rejected_closed" },
+    };
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("event_poll_votes")
+    .select("id, choice")
+    .eq("poll_id", input.pollId)
+    .eq("option_id", input.optionId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+
+  if (existingError) {
+    logger.error(
+      { error: existingError, pollId: input.pollId },
+      "Failed to fetch existing vote"
+    );
+    return {
+      success: false,
+      error: classifyPollError(existingError, "castVote"),
+    };
+  }
+
+  const existingRow = existing as { id: string; choice: ChoiceLabel } | null;
+
+  if (existingRow && existingRow.choice === input.choice) {
+    const { error: deleteError } = await supabase
+      .from("event_poll_votes")
+      .delete()
+      .eq("id", existingRow.id);
+
+    if (deleteError) {
+      logger.error(
+        { error: deleteError, pollId: input.pollId },
+        "Failed to delete event_poll_votes row"
+      );
+      return {
+        success: false,
+        error: classifyPollError(deleteError, "castVote"),
+      };
+    }
+
+    return { success: true, data: { kind: "revoked" } };
+  }
+
+  const { error: upsertError } = await supabase.from("event_poll_votes").upsert(
+    {
+      poll_id: input.pollId,
+      option_id: input.optionId,
+      user_id: input.userId,
+      choice: input.choice,
+    },
+    { onConflict: "option_id,user_id" }
+  );
+
+  if (upsertError) {
+    logger.error(
+      { error: upsertError, pollId: input.pollId },
+      "Failed to upsert event_poll_votes"
+    );
+    return {
+      success: false,
+      error: classifyPollError(upsertError, "castVote"),
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      kind: "recorded",
+      previous: existingRow?.choice ?? null,
+    },
+  };
+}

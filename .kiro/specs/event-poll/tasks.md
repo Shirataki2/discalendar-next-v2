@@ -38,7 +38,7 @@
   - `deletePoll` は作成失敗時のロールバック用に呼ばれる想定。`event_polls` の DELETE と CASCADE 動作確認を含む
   - `createPoll` の候補件数バリデーション（1 件・11 件）と `getPoll` の集計正確性を検証する単体テストを追加する
   - _Requirements: 1.5, 1.6, 1.7, 2.5, 2.6_
-- [ ] 2.3 `castVote` による投票 upsert / 取消 / closed ガードを実装する
+- [x] 2.3 `castVote` による投票 upsert / 取消 / closed ガードを実装する
   - `event_poll_votes` を `(option_id, user_id)` 単位で upsert し、同 choice 再送信時は DELETE して `CastVoteOutcome.revoked` を返す
   - `event_polls.status` が `open` 以外の場合は Supabase を叩かず `rejected_closed` を返す
   - 単体テストで新規挿入 / 別 choice への上書き / 同 choice での取消 / closed 時の拒否を検証する
