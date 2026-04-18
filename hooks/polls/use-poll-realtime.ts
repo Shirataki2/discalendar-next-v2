@@ -1,6 +1,9 @@
 "use client";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  REALTIME_LISTEN_TYPES,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import type { PollSnapshot } from "@/lib/polls/types";
 
@@ -36,49 +39,56 @@ export function usePollRealtime(
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeRef = useRef(true);
+  // effect クロージャで常に最新の isLive を参照するための ref
+  const isLiveRef = useRef(false);
+  const fetchSnapshotRef = useRef(fetchSnapshot);
 
-  const refresh = async () => {
-    if (!activeRef.current) {
-      return;
-    }
-    try {
-      const next = await fetchSnapshot();
-      if (next && activeRef.current) {
-        setSnapshot(next);
-      }
-    } catch {
-      // fetchSnapshot が失敗した場合は次のイベントまで待つ
-    }
-  };
-
-  const scheduleRefresh = () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      debounceTimerRef.current = null;
-      void refresh();
-    }, REALTIME_DEBOUNCE_MS);
-  };
-
-  const startPolling = () => {
-    if (pollingTimerRef.current) {
-      return;
-    }
-    pollingTimerRef.current = setInterval(() => {
-      void refresh();
-    }, POLLING_FALLBACK_MS);
-  };
-
-  const stopPolling = () => {
-    if (pollingTimerRef.current) {
-      clearInterval(pollingTimerRef.current);
-      pollingTimerRef.current = null;
-    }
-  };
+  // effect 再実行を避けつつ最新参照を保つ
+  isLiveRef.current = isLive;
+  fetchSnapshotRef.current = fetchSnapshot;
 
   useEffect(() => {
     activeRef.current = true;
+
+    const refresh = async () => {
+      if (!activeRef.current) {
+        return;
+      }
+      try {
+        const next = await fetchSnapshotRef.current();
+        if (next && activeRef.current) {
+          setSnapshot(next);
+        }
+      } catch {
+        // fetchSnapshot が失敗した場合は次のイベントまで待つ
+      }
+    };
+
+    const scheduleRefresh = () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        debounceTimerRef.current = null;
+        void refresh();
+      }, REALTIME_DEBOUNCE_MS);
+    };
+
+    const startPolling = () => {
+      if (pollingTimerRef.current) {
+        return;
+      }
+      pollingTimerRef.current = setInterval(() => {
+        void refresh();
+      }, POLLING_FALLBACK_MS);
+    };
+
+    const stopPolling = () => {
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
 
     const channel = client.channel(`polls:${guildId}:${pollId}`);
 
@@ -88,25 +98,44 @@ export function usePollRealtime(
 
     channel
       .on(
-        "postgres_changes" as never,
-        { event: "*", schema: "public", table: "event_polls", filter: `id=eq.${pollId}` },
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: "*",
+          schema: "public",
+          table: "event_polls",
+          filter: `id=eq.${pollId}`,
+        },
         handleChange
       )
       .on(
-        "postgres_changes" as never,
-        { event: "*", schema: "public", table: "event_poll_options", filter: `poll_id=eq.${pollId}` },
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: "*",
+          schema: "public",
+          table: "event_poll_options",
+          filter: `poll_id=eq.${pollId}`,
+        },
         handleChange
       )
       .on(
-        "postgres_changes" as never,
-        { event: "*", schema: "public", table: "event_poll_votes", filter: `poll_id=eq.${pollId}` },
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: "*",
+          schema: "public",
+          table: "event_poll_votes",
+          filter: `poll_id=eq.${pollId}`,
+        },
         handleChange
       )
       .subscribe((status: string) => {
         if (status === "SUBSCRIBED") {
           setIsLive(true);
           stopPolling();
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
           setIsLive(false);
           startPolling();
         }
@@ -119,9 +148,9 @@ export function usePollRealtime(
       if (document.visibilityState === "hidden") {
         stopPolling();
       } else {
-        // タブ復帰時は即座に再取得
         void refresh();
-        if (!isLive) {
+        // ref 経由で最新値を参照（stale closure を避ける）
+        if (!isLiveRef.current) {
           startPolling();
         }
       }
@@ -143,7 +172,6 @@ export function usePollRealtime(
       }
       void client.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, guildId, pollId]);
 
   return { snapshot, isLive };
