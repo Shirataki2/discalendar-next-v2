@@ -34,6 +34,8 @@ vi.mock("../utils/logger.js", () => ({
   },
 }));
 
+const OVERLAP_WARNING_REGEX = /重複/;
+
 function buildPollRecord(overrides: Partial<PollRecord> = {}): PollRecord {
   return {
     id: "poll-1",
@@ -658,6 +660,536 @@ describe("poll-service", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.code).toBe("POLL_NOT_FOUND");
+      }
+    });
+  });
+
+  describe("closePoll", () => {
+    /**
+     * closePoll の DB 呼び出し順:
+     *   supabase.from("event_polls")
+     *     .update({ status: "closed" })
+     *     .eq("id", ...)
+     *     .eq("guild_id", ...)
+     *     .eq("status", "open")
+     *     .select()
+     */
+    function mockConditionalUpdate(data: unknown[] | null, error: unknown) {
+      const select = vi.fn().mockResolvedValue({ data, error });
+      const eqStatus = vi.fn().mockReturnValue({ select });
+      const eqGuild = vi.fn().mockReturnValue({ eq: eqStatus });
+      const eqId = vi.fn().mockReturnValue({ eq: eqGuild });
+      const update = vi.fn().mockReturnValue({ eq: eqId });
+      return { update, eqId, eqGuild, eqStatus, select };
+    }
+
+    function mockStatusFetch(status: "open" | "closed" | "finalized" | null) {
+      const single = vi.fn().mockResolvedValue({
+        data: status ? { status } : null,
+        error: status
+          ? null
+          : { code: "PGRST116", message: "no rows returned" },
+      });
+      const eqGuild = vi.fn().mockReturnValue({ single });
+      const eqId = vi.fn().mockReturnValue({ eq: eqGuild });
+      const select = vi.fn().mockReturnValue({ eq: eqId });
+      return { select, eqId, eqGuild, single };
+    }
+
+    function mockGetPollSnapshotChain(
+      status: "open" | "closed" | "finalized" = "closed"
+    ) {
+      const pollRecord = buildPollRecord({ status });
+      const options = [
+        buildOption({ id: "opt-1", position: 0 }),
+        buildOption({ id: "opt-2", position: 1 }),
+      ];
+
+      const pollSingle = vi
+        .fn()
+        .mockResolvedValue({ data: pollRecord, error: null });
+      const pollEqGuild = vi.fn().mockReturnValue({ single: pollSingle });
+      const pollEqId = vi.fn().mockReturnValue({ eq: pollEqGuild });
+      const pollSelect = vi.fn().mockReturnValue({ eq: pollEqId });
+
+      const optionOrder = vi
+        .fn()
+        .mockResolvedValue({ data: options, error: null });
+      const optionEq = vi.fn().mockReturnValue({ order: optionOrder });
+      const optionSelect = vi.fn().mockReturnValue({ eq: optionEq });
+
+      const voteEq = vi.fn().mockResolvedValue({ data: [], error: null });
+      const voteSelect = vi.fn().mockReturnValue({ eq: voteEq });
+
+      return { pollSelect, optionSelect, voteSelect, pollRecord, options };
+    }
+
+    it("open なポールを closed に条件付き UPDATE し snapshot を返す", async () => {
+      const update = mockConditionalUpdate(
+        [{ id: "poll-1", status: "closed" }],
+        null
+      );
+      const snapshotChain = mockGetPollSnapshotChain("closed");
+
+      let pollCall = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          pollCall += 1;
+          return pollCall === 1
+            ? { update: update.update }
+            : { select: snapshotChain.pollSelect };
+        }
+        if (table === "event_poll_options") {
+          return { select: snapshotChain.optionSelect };
+        }
+        if (table === "event_poll_votes") {
+          return { select: snapshotChain.voteSelect };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { closePoll } = await import("./poll-service.js");
+      const result = await closePoll("poll-1", "guild-1", "user-1");
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.poll.status).toBe("closed");
+      }
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "closed" })
+      );
+      expect(update.eqStatus).toHaveBeenCalledWith("status", "open");
+    });
+
+    it("既に closed の場合は POLL_ALREADY_CLOSED を返す", async () => {
+      const update = mockConditionalUpdate([], null);
+      const statusChain = mockStatusFetch("closed");
+
+      let pollCall = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          pollCall += 1;
+          return pollCall === 1
+            ? { update: update.update }
+            : { select: statusChain.select };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { closePoll } = await import("./poll-service.js");
+      const result = await closePoll("poll-1", "guild-1", "user-1");
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("POLL_ALREADY_CLOSED");
+      }
+    });
+
+    it("既に finalized の場合は POLL_ALREADY_FINALIZED を返す", async () => {
+      const update = mockConditionalUpdate([], null);
+      const statusChain = mockStatusFetch("finalized");
+
+      let pollCall = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          pollCall += 1;
+          return pollCall === 1
+            ? { update: update.update }
+            : { select: statusChain.select };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { closePoll } = await import("./poll-service.js");
+      const result = await closePoll("poll-1", "guild-1", "user-1");
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("POLL_ALREADY_FINALIZED");
+      }
+    });
+
+    it("poll が存在しない場合は POLL_NOT_FOUND を返す", async () => {
+      const update = mockConditionalUpdate([], null);
+      const statusChain = mockStatusFetch(null);
+
+      let pollCall = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          pollCall += 1;
+          return pollCall === 1
+            ? { update: update.update }
+            : { select: statusChain.select };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { closePoll } = await import("./poll-service.js");
+      const result = await closePoll("poll-1", "guild-1", "user-1");
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("POLL_NOT_FOUND");
+      }
+    });
+  });
+
+  describe("finalizePoll", () => {
+    /**
+     * finalizePoll は createEventFromPoll を呼ぶため、そちらをモックする。
+     */
+    function buildSnapshotFetchers(opts: {
+      pollStatus: "open" | "closed" | "finalized";
+      votes: Array<{
+        option_id: string;
+        user_id: string;
+        choice: "yes" | "maybe" | "no";
+        ts?: string;
+      }>;
+      options?: Array<{ id: string; position: number }>;
+    }) {
+      const pollRecord = buildPollRecord({ status: opts.pollStatus });
+      const optionsArr = (
+        opts.options ?? [
+          { id: "opt-1", position: 0 },
+          { id: "opt-2", position: 1 },
+        ]
+      ).map((o) => buildOption(o));
+
+      const votes = opts.votes.map((v, idx) =>
+        buildVote({
+          id: `vote-${idx}`,
+          option_id: v.option_id,
+          user_id: v.user_id,
+          choice: v.choice,
+          created_at: v.ts ?? `2026-04-18T00:00:0${idx}Z`,
+        })
+      );
+
+      const pollSingle = vi
+        .fn()
+        .mockResolvedValue({ data: pollRecord, error: null });
+      const pollEqGuild = vi.fn().mockReturnValue({ single: pollSingle });
+      const pollEqId = vi.fn().mockReturnValue({ eq: pollEqGuild });
+      const pollSelect = vi.fn().mockReturnValue({ eq: pollEqId });
+
+      const optionOrder = vi
+        .fn()
+        .mockResolvedValue({ data: optionsArr, error: null });
+      const optionEq = vi.fn().mockReturnValue({ order: optionOrder });
+      const optionSelect = vi.fn().mockReturnValue({ eq: optionEq });
+
+      const voteEq = vi.fn().mockResolvedValue({ data: votes, error: null });
+      const voteSelect = vi.fn().mockReturnValue({ eq: voteEq });
+
+      return {
+        pollSelect,
+        optionSelect,
+        voteSelect,
+        pollRecord,
+        options: optionsArr,
+        votes,
+      };
+    }
+
+    function mockFinalizeUpdate(data: unknown[] | null = [{ id: "poll-1" }]) {
+      const select = vi.fn().mockResolvedValue({ data, error: null });
+      const eqStatusCurrent = vi.fn().mockReturnValue({ select });
+      const eqGuild = vi.fn().mockReturnValue({ eq: eqStatusCurrent });
+      const eqId = vi.fn().mockReturnValue({ eq: eqGuild });
+      const update = vi.fn().mockReturnValue({ eq: eqId });
+      return { update, eqId, eqGuild, eqStatusCurrent, select };
+    }
+
+    function mockExistingEventsForDupCheck(rows: Array<{ id: string }>) {
+      const lte = vi.fn().mockResolvedValue({ data: rows, error: null });
+      const gte = vi.fn().mockReturnValue({ lte });
+      const eq = vi.fn().mockReturnValue({ gte });
+      const select = vi.fn().mockReturnValue({ eq });
+      return { select };
+    }
+
+    it("optionId 未指定で yes 最多候補を自動選択して finalize する", async () => {
+      const snapshot = buildSnapshotFetchers({
+        pollStatus: "closed",
+        votes: [
+          { option_id: "opt-1", user_id: "u1", choice: "yes" },
+          { option_id: "opt-1", user_id: "u2", choice: "yes" },
+          { option_id: "opt-2", user_id: "u3", choice: "yes" },
+        ],
+      });
+
+      // closed→finalized の conditional update
+      const finalizeUpdate = mockFinalizeUpdate();
+      // events INSERT のモック
+      const eventSingle = vi.fn().mockResolvedValue({
+        data: {
+          id: "evt-new",
+          guild_id: "guild-1",
+          name: "next meetup",
+          description: null,
+          color: "#3B82F6",
+          is_all_day: false,
+          start_at: "2026-04-20T12:00:00Z",
+          end_at: "2026-04-20T13:00:00Z",
+          location: null,
+          channel_id: null,
+          channel_name: null,
+          notifications: [],
+          created_at: "2026-04-18T00:00:00Z",
+          updated_at: "2026-04-18T00:00:00Z",
+        },
+        error: null,
+      });
+      const eventSelect = vi.fn().mockReturnValue({ single: eventSingle });
+      const eventInsert = vi.fn().mockReturnValue({ select: eventSelect });
+
+      const dupCheck = mockExistingEventsForDupCheck([]);
+
+      let pollCall = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          pollCall += 1;
+          if (pollCall === 1) {
+            return { select: snapshot.pollSelect };
+          }
+          return { update: finalizeUpdate.update };
+        }
+        if (table === "event_poll_options") {
+          return { select: snapshot.optionSelect };
+        }
+        if (table === "event_poll_votes") {
+          return { select: snapshot.voteSelect };
+        }
+        if (table === "events") {
+          return { select: dupCheck.select, insert: eventInsert };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { finalizePoll } = await import("./poll-service.js");
+      const result = await finalizePoll({
+        pollId: "poll-1",
+        guildId: "guild-1",
+        actorUserId: "user-1",
+        optionId: null,
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.eventId).toBe("evt-new");
+        expect(result.data.warnings).toEqual([]);
+      }
+      // finalized への update は closed 状態から遷移する
+      expect(finalizeUpdate.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "finalized",
+          finalized_event_id: "evt-new",
+          finalized_option_id: "opt-1",
+          finalized_by: "user-1",
+        })
+      );
+    });
+
+    it("yes 同数の候補が複数あるときは TIE_BREAK_REQUIRED を返す", async () => {
+      const snapshot = buildSnapshotFetchers({
+        pollStatus: "closed",
+        votes: [
+          { option_id: "opt-1", user_id: "u1", choice: "yes" },
+          { option_id: "opt-2", user_id: "u2", choice: "yes" },
+        ],
+      });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: snapshot.pollSelect };
+        }
+        if (table === "event_poll_options") {
+          return { select: snapshot.optionSelect };
+        }
+        if (table === "event_poll_votes") {
+          return { select: snapshot.voteSelect };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { finalizePoll } = await import("./poll-service.js");
+      const result = await finalizePoll({
+        pollId: "poll-1",
+        guildId: "guild-1",
+        actorUserId: "user-1",
+        optionId: null,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success && result.error.code === "TIE_BREAK_REQUIRED") {
+        expect(result.error.candidateOptionIds).toEqual(
+          expect.arrayContaining(["opt-1", "opt-2"])
+        );
+      } else {
+        throw new Error("expected TIE_BREAK_REQUIRED");
+      }
+    });
+
+    it("既に finalized なら POLL_ALREADY_FINALIZED を返す", async () => {
+      const snapshot = buildSnapshotFetchers({
+        pollStatus: "finalized",
+        votes: [],
+      });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: snapshot.pollSelect };
+        }
+        if (table === "event_poll_options") {
+          return { select: snapshot.optionSelect };
+        }
+        if (table === "event_poll_votes") {
+          return { select: snapshot.voteSelect };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { finalizePoll } = await import("./poll-service.js");
+      const result = await finalizePoll({
+        pollId: "poll-1",
+        guildId: "guild-1",
+        actorUserId: "user-1",
+        optionId: "opt-1",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("POLL_ALREADY_FINALIZED");
+      }
+    });
+
+    it("events INSERT 失敗時は status を closed に戻し EVENT_CREATE_FAILED を返す", async () => {
+      const snapshot = buildSnapshotFetchers({
+        pollStatus: "open",
+        votes: [{ option_id: "opt-1", user_id: "u1", choice: "yes" }],
+      });
+
+      // open→closed の先行遷移
+      const preCloseUpdate = mockFinalizeUpdate();
+      // ロールバック用 closed→open の UPDATE
+      const rollbackUpdate = mockFinalizeUpdate();
+
+      const eventSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "23503", message: "fk violation" },
+      });
+      const eventSelect = vi.fn().mockReturnValue({ single: eventSingle });
+      const eventInsert = vi.fn().mockReturnValue({ select: eventSelect });
+
+      const dupCheck = mockExistingEventsForDupCheck([]);
+
+      let pollCall = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          pollCall += 1;
+          if (pollCall === 1) {
+            return { select: snapshot.pollSelect };
+          }
+          if (pollCall === 2) {
+            // open→closed
+            return { update: preCloseUpdate.update };
+          }
+          // rollback: closed→open
+          return { update: rollbackUpdate.update };
+        }
+        if (table === "event_poll_options") {
+          return { select: snapshot.optionSelect };
+        }
+        if (table === "event_poll_votes") {
+          return { select: snapshot.voteSelect };
+        }
+        if (table === "events") {
+          return { select: dupCheck.select, insert: eventInsert };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { finalizePoll } = await import("./poll-service.js");
+      const result = await finalizePoll({
+        pollId: "poll-1",
+        guildId: "guild-1",
+        actorUserId: "user-1",
+        optionId: "opt-1",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("EVENT_CREATE_FAILED");
+      }
+      expect(rollbackUpdate.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "open" })
+      );
+    });
+
+    it("既存 events と時間帯が重複する場合は warnings を付与する", async () => {
+      const snapshot = buildSnapshotFetchers({
+        pollStatus: "closed",
+        votes: [{ option_id: "opt-1", user_id: "u1", choice: "yes" }],
+      });
+
+      const finalizeUpdate = mockFinalizeUpdate();
+      const eventSingle = vi.fn().mockResolvedValue({
+        data: {
+          id: "evt-new",
+          guild_id: "guild-1",
+          name: "next meetup",
+          description: null,
+          color: "#3B82F6",
+          is_all_day: false,
+          start_at: "2026-04-20T12:00:00Z",
+          end_at: "2026-04-20T13:00:00Z",
+          location: null,
+          channel_id: null,
+          channel_name: null,
+          notifications: [],
+          created_at: "2026-04-18T00:00:00Z",
+          updated_at: "2026-04-18T00:00:00Z",
+        },
+        error: null,
+      });
+      const eventSelect = vi.fn().mockReturnValue({ single: eventSingle });
+      const eventInsert = vi.fn().mockReturnValue({ select: eventSelect });
+
+      const dupCheck = mockExistingEventsForDupCheck([{ id: "evt-existing" }]);
+
+      let pollCall = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          pollCall += 1;
+          return pollCall === 1
+            ? { select: snapshot.pollSelect }
+            : { update: finalizeUpdate.update };
+        }
+        if (table === "event_poll_options") {
+          return { select: snapshot.optionSelect };
+        }
+        if (table === "event_poll_votes") {
+          return { select: snapshot.voteSelect };
+        }
+        if (table === "events") {
+          return { select: dupCheck.select, insert: eventInsert };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { finalizePoll } = await import("./poll-service.js");
+      const result = await finalizePoll({
+        pollId: "poll-1",
+        guildId: "guild-1",
+        actorUserId: "user-1",
+        optionId: "opt-1",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.warnings.length).toBeGreaterThan(0);
+        expect(result.data.warnings[0]).toMatch(OVERLAP_WARNING_REGEX);
       }
     });
   });

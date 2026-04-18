@@ -300,6 +300,67 @@ export async function deleteEvent(
   return { success: true, data: undefined };
 }
 
+/** イベント昇格用入力 (PollSnapshot からの抜粋) */
+export type CreateEventFromPollInput = {
+  poll: {
+    id: string;
+    guild_id: string;
+    title: string;
+    description: string | null;
+  };
+  option: {
+    id: string;
+    starts_at: string;
+    ends_at: string | null;
+  };
+  actorUserId: string;
+};
+
+const DEFAULT_POLL_EVENT_DURATION_MS = 60 * 60 * 1000; // 1 hour
+
+export async function createEventFromPoll(
+  input: CreateEventFromPollInput
+): Promise<ServiceResult<EventRecord>> {
+  const supabase = getSupabaseClient();
+
+  const endAt =
+    input.option.ends_at ??
+    new Date(
+      Date.parse(input.option.starts_at) + DEFAULT_POLL_EVENT_DURATION_MS
+    ).toISOString();
+
+  const payload: EventCreate = {
+    guild_id: input.poll.guild_id,
+    name: input.poll.title,
+    description: input.poll.description,
+    start_at: input.option.starts_at,
+    end_at: endAt,
+    notifications: [],
+  };
+
+  const { data, error } = await supabase
+    .from("events")
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error || !data) {
+    logger.error(
+      { error, pollId: input.poll.id },
+      "Failed to create event from poll"
+    );
+    return {
+      success: false,
+      error: classifySupabaseError(
+        error ?? { message: "events insert returned no row" },
+        "create"
+      ),
+    };
+  }
+
+  return { success: true, data: data as EventRecord };
+}
+
 export async function getEventSettingsByGuildIds(
   guildIds: string[]
 ): Promise<ServiceResult<Map<string, EventSettings>>> {

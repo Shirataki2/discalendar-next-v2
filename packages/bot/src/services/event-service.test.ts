@@ -420,4 +420,133 @@ describe("event-service", () => {
       );
     });
   });
+
+  describe("createEventFromPoll", () => {
+    beforeEach(() => {
+      mockInsert.mockClear();
+    });
+
+    it("poll snapshot と optionId から events を INSERT し、series_id は送らない", async () => {
+      const created: EventRecord = {
+        id: "evt-from-poll",
+        guild_id: "guild-1",
+        name: "投票確定: 次回ミートアップ",
+        description: "decided by poll",
+        color: "#3B82F6",
+        is_all_day: false,
+        start_at: "2026-04-20T12:00:00Z",
+        end_at: "2026-04-20T13:00:00Z",
+        location: null,
+        channel_id: null,
+        channel_name: null,
+        notifications: [],
+        created_at: "2026-04-18T00:00:00Z",
+        updated_at: "2026-04-18T00:00:00Z",
+      };
+
+      mockSingle.mockResolvedValue({ data: created, error: null });
+
+      const { createEventFromPoll } = await import("./event-service.js");
+      const result = await createEventFromPoll({
+        poll: {
+          id: "poll-1",
+          guild_id: "guild-1",
+          title: "投票確定: 次回ミートアップ",
+          description: "decided by poll",
+        },
+        option: {
+          id: "opt-1",
+          starts_at: "2026-04-20T12:00:00Z",
+          ends_at: "2026-04-20T13:00:00Z",
+        },
+        actorUserId: "user-1",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.id).toBe("evt-from-poll");
+      }
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          guild_id: "guild-1",
+          name: "投票確定: 次回ミートアップ",
+          start_at: "2026-04-20T12:00:00Z",
+          end_at: "2026-04-20T13:00:00Z",
+          description: "decided by poll",
+        })
+      );
+      const payload = mockInsert.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(payload.series_id).toBeUndefined();
+    });
+
+    it("option.ends_at が null の場合は start から 1 時間後を end に設定する", async () => {
+      mockSingle.mockResolvedValue({
+        data: {
+          id: "evt-1",
+          guild_id: "guild-1",
+          name: "t",
+          description: null,
+          color: "#3B82F6",
+          is_all_day: false,
+          start_at: "2026-04-20T12:00:00Z",
+          end_at: "2026-04-20T13:00:00Z",
+          location: null,
+          channel_id: null,
+          channel_name: null,
+          notifications: [],
+          created_at: "2026-04-18T00:00:00Z",
+          updated_at: "2026-04-18T00:00:00Z",
+        },
+        error: null,
+      });
+
+      const { createEventFromPoll } = await import("./event-service.js");
+      await createEventFromPoll({
+        poll: {
+          id: "poll-1",
+          guild_id: "guild-1",
+          title: "t",
+          description: null,
+        },
+        option: {
+          id: "opt-1",
+          starts_at: "2026-04-20T12:00:00Z",
+          ends_at: null,
+        },
+        actorUserId: "user-1",
+      });
+
+      const payload = mockInsert.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(payload.start_at).toBe("2026-04-20T12:00:00Z");
+      expect(payload.end_at).toBe("2026-04-20T13:00:00.000Z");
+    });
+
+    it("INSERT 失敗時は classifySupabaseError 経由のエラーを返す", async () => {
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: { code: "23503", message: "fk violation" },
+      });
+
+      const { createEventFromPoll } = await import("./event-service.js");
+      const result = await createEventFromPoll({
+        poll: {
+          id: "poll-1",
+          guild_id: "guild-1",
+          title: "t",
+          description: null,
+        },
+        option: {
+          id: "opt-1",
+          starts_at: "2026-04-20T12:00:00Z",
+          ends_at: null,
+        },
+        actorUserId: "user-1",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("FOREIGN_KEY_VIOLATION");
+      }
+    });
+  });
 });

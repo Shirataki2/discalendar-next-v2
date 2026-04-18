@@ -43,7 +43,7 @@
   - `event_polls.status` が `open` 以外の場合は Supabase を叩かず `rejected_closed` を返す
   - 単体テストで新規挿入 / 別 choice への上書き / 同 choice での取消 / closed 時の拒否を検証する
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
-- [ ] 2.4 `closePoll` と `finalizePoll`（events 昇格ロジックを含む）を実装する
+- [x] 2.4 `closePoll` と `finalizePoll`（events 昇格ロジックを含む）を実装する
   - `closePoll` は条件付き UPDATE（`WHERE status IN ('open')`）で冪等に遷移させ、既に closed/finalized の場合は対応する Result エラーを返す
   - `finalizePoll` は (a) `status=open` なら先に `closed` へ遷移、(b) `optionId` 未指定時は yes 票最多の候補を選択し、同数なら `TIE_BREAK_REQUIRED` を返す、(c) `events` への INSERT（`series_id = NULL`、title/description/start_at/end_at/created_by を引き継ぐ）、(d) 成功なら `status=finalized` に遷移し `finalized_event_id` と `finalized_by` を記録する
   - events INSERT 失敗時は `status` を元に戻すコンペンセーション SQL を発行する
