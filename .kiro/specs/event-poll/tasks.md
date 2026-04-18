@@ -85,7 +85,7 @@
   - `bot.ts::handleInteraction` に `isButton()` 分岐を追加して `customId` が `poll:` で始まるときのみ本ハンドラへルーティングする
   - customId パース・closed ガード・メッセージ欠損・デバウンスの単体テストを追加する
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 7.4_
-- [ ] 3.6 `loadCommands` と `registerSlashCommands` に `/poll` を登録する
+- [x] 3.6 `loadCommands` と `registerSlashCommands` に `/poll` を登録する
   - `bot.ts` のコマンドリストに `pollCommand` を追加し、サブコマンド付きの JSON ペイロードが Discord API に配布されることを確認する
   - 起動時ログに `Loaded command: poll` が出ることを単体テストで確認する
   - _Requirements: 1.1, 3.1, 4.1_
