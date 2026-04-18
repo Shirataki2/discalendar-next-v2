@@ -71,7 +71,7 @@
   - `PollService.closePoll` を呼び、成功時は対象メッセージの Embed を `締切済` マーク付きに更新し、○/△/× ボタンを `disabled` にする
   - 不在 / 既 closed / 既 finalized / 権限不足 の各経路を ephemeral メッセージで分岐させる単体テストを追加する
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
-- [ ] 3.4 `/poll finalize` サブコマンドを実装する
+- [x] 3.4 `/poll finalize` サブコマンドを実装する
   - `poll_id`（必須）と `option`（任意）を受け取り、権限チェックを行う
   - `PollService.finalizePoll` を呼び、`TIE_BREAK_REQUIRED` の場合は候補一覧と `option` 指定を促す ephemeral を返す
   - 成功時は元メッセージの Embed を `確定: <候補日時>` に更新し、`/dashboard?event=<event_id>` へのリンクを含める

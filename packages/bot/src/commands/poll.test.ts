@@ -37,6 +37,21 @@ vi.mock("../utils/logger.js", () => ({
   },
 }));
 
+vi.mock("../config.js", () => ({
+  getConfig: () => ({
+    botToken: "test",
+    applicationId: "test",
+    supabaseUrl: "http://localhost",
+    supabaseServiceKey: "test-key",
+    invitationUrl: "",
+    supportServerUrl: "",
+    logLevel: "silent",
+    sentryDsn: undefined,
+    devGuildId: undefined,
+    webBaseUrl: "https://discalendar.app",
+  }),
+}));
+
 type InteractionOptions = {
   subcommand: "create" | "close" | "finalize";
   strings?: Record<string, string | null>;
@@ -362,6 +377,153 @@ describe("poll command", () => {
       await pollCommand.execute(interaction as never);
 
       expect(interaction.editReply).toHaveBeenCalled();
+    });
+  });
+
+  describe("/poll finalize", () => {
+    function finalizedSnapshot() {
+      return {
+        poll: {
+          id: "poll-1",
+          guild_id: "guild-1",
+          title: "meetup",
+          description: null,
+          status: "finalized" as const,
+          channel_id: "chan-default",
+          message_id: "msg-123",
+          created_by: "user-1",
+          finalized_by: "user-1",
+          finalized_option_id: "opt-1",
+          finalized_event_id: "evt-1",
+          created_at: "2026-04-18T00:00:00Z",
+          updated_at: "2026-04-18T00:00:00Z",
+        },
+        options: [
+          {
+            id: "opt-1",
+            poll_id: "poll-1",
+            starts_at: "2026-04-20T03:00:00.000Z",
+            ends_at: "2026-04-20T04:00:00.000Z",
+            position: 0,
+            created_at: "2026-04-18T00:00:00Z",
+          },
+        ],
+        aggregates: [
+          {
+            optionId: "opt-1",
+            counts: { yes: 3, maybe: 0, no: 0 },
+            yesVoters: ["u1", "u2", "u3"],
+          },
+        ],
+      };
+    }
+
+    it("TIE_BREAK_REQUIRED の場合は候補指定を促すメッセージを返す", async () => {
+      mockFinalizePoll.mockResolvedValue({
+        success: false,
+        error: {
+          code: "TIE_BREAK_REQUIRED",
+          message: "tie",
+          candidateOptionIds: ["opt-1", "opt-2"],
+        },
+      });
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "finalize",
+        strings: { poll_id: "poll-1", option_id: null },
+      });
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      expect(interaction.editReply).toHaveBeenCalled();
+      const [call] = interaction.editReply.mock.calls[0];
+      expect(JSON.stringify(call)).toContain("opt-1");
+      expect(JSON.stringify(call)).toContain("opt-2");
+    });
+
+    it("成功時はメッセージを更新し /dashboard リンク付きの応答を返す", async () => {
+      mockFinalizePoll.mockResolvedValue({
+        success: true,
+        data: {
+          snapshot: finalizedSnapshot(),
+          eventId: "evt-1",
+          warnings: [],
+        },
+      });
+
+      const messageEdit = vi.fn().mockResolvedValue(undefined);
+      const messageFetch = vi
+        .fn()
+        .mockResolvedValue({ id: "msg-123", edit: messageEdit });
+
+      const channelWithMessages = {
+        id: "chan-default",
+        send: vi.fn(),
+        isTextBased: () => true,
+        messages: { fetch: messageFetch },
+      };
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "finalize",
+        strings: { poll_id: "poll-1", option_id: "opt-1" },
+      });
+      interaction.guild.channels.fetch = vi
+        .fn()
+        .mockResolvedValue(channelWithMessages);
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      expect(mockFinalizePoll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pollId: "poll-1",
+          guildId: "guild-1",
+          optionId: "opt-1",
+        })
+      );
+      expect(messageEdit).toHaveBeenCalled();
+      const [replyCall] = interaction.editReply.mock.calls[0];
+      expect(JSON.stringify(replyCall)).toContain("evt-1");
+    });
+
+    it("EVENT_CREATE_FAILED はエラー応答を返す", async () => {
+      mockFinalizePoll.mockResolvedValue({
+        success: false,
+        error: { code: "EVENT_CREATE_FAILED", message: "boom" },
+      });
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "finalize",
+        strings: { poll_id: "poll-1", option_id: "opt-1" },
+      });
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      expect(interaction.editReply).toHaveBeenCalled();
+    });
+
+    it("warnings がある場合はメッセージに含める", async () => {
+      mockFinalizePoll.mockResolvedValue({
+        success: true,
+        data: {
+          snapshot: finalizedSnapshot(),
+          eventId: "evt-1",
+          warnings: ["同時刻の既存イベントあり"],
+        },
+      });
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "finalize",
+        strings: { poll_id: "poll-1", option_id: "opt-1" },
+      });
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      const [replyCall] = interaction.editReply.mock.calls[0];
+      expect(JSON.stringify(replyCall)).toContain("同時刻の既存イベント");
     });
   });
 });

@@ -10,7 +10,11 @@ import {
 } from "discord.js";
 import { getEventSettings } from "../services/event-service.js";
 import { getGuildConfig } from "../services/guild-service.js";
-import { closePoll, createPoll } from "../services/poll-service.js";
+import {
+  closePoll,
+  createPoll,
+  finalizePoll,
+} from "../services/poll-service.js";
 import type { Command } from "../types/command.js";
 import type { PollOptionInput, PollSnapshot } from "../types/poll.js";
 import { jstPartsToUtcIso, parseDateTimeText } from "../utils/datetime.js";
@@ -404,6 +408,103 @@ async function executeClose(
   });
 }
 
+const FINALIZE_ERROR_MESSAGES: Record<string, string> = {
+  POLL_NOT_FOUND: "指定された投票が見つかりません",
+  POLL_ALREADY_FINALIZED: "この投票は既に確定済みです",
+  FORBIDDEN: "この操作を実行する権限がありません",
+  EVENT_CREATE_FAILED:
+    "events レコードの作成に失敗しました。投票の状態は巻き戻されています",
+  INVALID_INPUT: "入力が不正です",
+};
+
+async function executeFinalize(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
+  const guildId = interaction.guild?.id;
+  if (!guildId) {
+    return;
+  }
+
+  const permitted = await ensurePermission(interaction);
+  if (!permitted) {
+    await interaction.editReply({
+      content:
+        "このコマンドを実行するには管理権限（管理者 / サーバー管理 / ロール管理 / メッセージ管理）が必要です",
+    });
+    return;
+  }
+
+  const pollId = interaction.options.getString("poll_id", true);
+  const optionId = interaction.options.getString("option_id");
+
+  const result = await finalizePoll({
+    pollId,
+    guildId,
+    actorUserId: interaction.user.id,
+    optionId: optionId ?? null,
+  });
+
+  if (!result.success) {
+    if (result.error.code === "TIE_BREAK_REQUIRED") {
+      const candidateList = result.error.candidateOptionIds
+        .map((id, idx) => `  ${idx + 1}. ${id}`)
+        .join("\n");
+      await interaction.editReply({
+        content: `複数の候補が同数 yes 票で並んでいます。\`option_id\` に確定したい候補 ID を指定して再実行してください。\n${candidateList}`,
+      });
+      return;
+    }
+    const friendly =
+      FINALIZE_ERROR_MESSAGES[result.error.code] ?? result.error.message;
+    logger.info(
+      { guildId, pollId, resultCode: result.error.code },
+      "poll_finalize rejected"
+    );
+    await interaction.editReply({ content: friendly });
+    return;
+  }
+
+  const { snapshot, eventId, warnings } = result.data;
+
+  const { getConfig } = await import("../config.js");
+  const baseUrl = getConfig().webBaseUrl;
+  // updatePollMessage 内では既定の baseUrl を渡せないため、ここで差し替え
+  const channelId = snapshot.poll.channel_id;
+  const messageId = snapshot.poll.message_id;
+  if (messageId) {
+    try {
+      const channel = await interaction.guild?.channels.fetch(channelId);
+      if (channel?.isTextBased() && "messages" in channel) {
+        const message = await channel.messages.fetch(messageId);
+        const embed = buildPollEmbed(snapshot, { baseUrl });
+        const components = buildVoteRows(snapshot, { disabled: true });
+        await message.edit({ embeds: [embed], components });
+      }
+    } catch (editError) {
+      logger.warn(
+        { error: editError, pollId, channelId, messageId },
+        "Failed to refresh finalized poll message"
+      );
+    }
+  }
+
+  const warningLine =
+    warnings.length > 0 ? `\n注意: ${warnings.join(" / ")}` : "";
+  logger.info(
+    {
+      guildId,
+      pollId,
+      eventId,
+      actorUserId: interaction.user.id,
+      warnings,
+    },
+    "poll_finalize success"
+  );
+  await interaction.editReply({
+    content: `投票を確定しました。[イベント詳細](${baseUrl}/dashboard?event=${eventId}) (event_id: ${eventId})${warningLine}`,
+  });
+}
+
 async function execute(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
@@ -425,6 +526,10 @@ async function execute(
   }
   if (subcommand === "close") {
     await executeClose(interaction);
+    return;
+  }
+  if (subcommand === "finalize") {
+    await executeFinalize(interaction);
     return;
   }
 
