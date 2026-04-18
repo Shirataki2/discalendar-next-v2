@@ -102,7 +102,7 @@
   - `revalidatePath("/dashboard/polls")` と finalize 成功時の `eventId` を含む Result を返す
   - 権限不足・タイ検出・既 finalized・内部エラー の分岐を単体テストでカバーする
   - _Requirements: 5.6, 5.7, 8.3_
-- [ ] 4.3 (P) `hooks/polls/use-poll-realtime.ts` を実装する
+- [x] 4.3 (P) `hooks/polls/use-poll-realtime.ts` を実装する
   - `supabase.channel("polls:<guildId>")` で `postgres_changes`（`event_polls` / `event_poll_options` / `event_poll_votes`）を購読し、300ms デバウンスで `fetchPollSnapshot` を再実行する
   - `pendingMutationIdsRef` 相当で自身のミューテーションを抑制する
   - 接続断 / タブ非表示時は購読を一時停止し、30 秒ポーリングにフォールバックする
