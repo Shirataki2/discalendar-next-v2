@@ -100,6 +100,7 @@ function buildInteraction(
 }
 
 const OPTIONS_COUNT_ERROR_REGEX = /候補.*2/;
+const CLOSED_MESSAGE_REGEX = /締め切|既に/;
 
 describe("poll command", () => {
   beforeEach(() => {
@@ -255,6 +256,112 @@ describe("poll command", () => {
 
       expect(interaction.editReply).toHaveBeenCalled();
       expect(interaction._sendFn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("/poll close", () => {
+    function snapshotFixture(
+      status: "open" | "closed" | "finalized",
+      messageId: string | null = "msg-123"
+    ) {
+      return {
+        poll: {
+          id: "poll-1",
+          guild_id: "guild-1",
+          title: "meetup",
+          description: null,
+          status,
+          channel_id: "chan-default",
+          message_id: messageId,
+          created_by: "user-1",
+          finalized_by: null,
+          finalized_option_id: null,
+          finalized_event_id: null,
+          created_at: "2026-04-18T00:00:00Z",
+          updated_at: "2026-04-18T00:00:00Z",
+        },
+        options: [
+          {
+            id: "opt-1",
+            poll_id: "poll-1",
+            starts_at: "2026-04-20T03:00:00.000Z",
+            ends_at: "2026-04-20T04:00:00.000Z",
+            position: 0,
+            created_at: "2026-04-18T00:00:00Z",
+          },
+        ],
+        aggregates: [],
+      };
+    }
+
+    it("成功時にメッセージを編集して締切済に更新する", async () => {
+      mockClosePoll.mockResolvedValue({
+        success: true,
+        data: snapshotFixture("closed"),
+      });
+
+      const messageEdit = vi.fn().mockResolvedValue(undefined);
+      const messageFetch = vi
+        .fn()
+        .mockResolvedValue({ id: "msg-123", edit: messageEdit });
+
+      const channelWithMessages = {
+        id: "chan-default",
+        send: vi.fn(),
+        isTextBased: () => true,
+        messages: { fetch: messageFetch },
+      };
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "close",
+        strings: { poll_id: "poll-1" },
+      });
+      interaction.guild.channels.fetch = vi
+        .fn()
+        .mockResolvedValue(channelWithMessages);
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      expect(mockClosePoll).toHaveBeenCalledWith("poll-1", "guild-1", "user-1");
+      expect(messageEdit).toHaveBeenCalled();
+      expect(interaction.editReply).toHaveBeenCalled();
+    });
+
+    it("既に closed の場合は POLL_ALREADY_CLOSED メッセージを表示する", async () => {
+      mockClosePoll.mockResolvedValue({
+        success: false,
+        error: { code: "POLL_ALREADY_CLOSED", message: "closed" },
+      });
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "close",
+        strings: { poll_id: "poll-1" },
+      });
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      expect(interaction.editReply).toHaveBeenCalled();
+      const [call] = interaction.editReply.mock.calls[0];
+      expect(JSON.stringify(call)).toMatch(CLOSED_MESSAGE_REGEX);
+    });
+
+    it("POLL_NOT_FOUND は not-found メッセージを返す", async () => {
+      mockClosePoll.mockResolvedValue({
+        success: false,
+        error: { code: "POLL_NOT_FOUND", message: "not found" },
+      });
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "close",
+        strings: { poll_id: "poll-1" },
+      });
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      expect(interaction.editReply).toHaveBeenCalled();
     });
   });
 });

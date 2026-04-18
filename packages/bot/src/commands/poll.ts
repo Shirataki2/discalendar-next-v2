@@ -10,7 +10,7 @@ import {
 } from "discord.js";
 import { getEventSettings } from "../services/event-service.js";
 import { getGuildConfig } from "../services/guild-service.js";
-import { createPoll } from "../services/poll-service.js";
+import { closePoll, createPoll } from "../services/poll-service.js";
 import type { Command } from "../types/command.js";
 import type { PollOptionInput, PollSnapshot } from "../types/poll.js";
 import { jstPartsToUtcIso, parseDateTimeText } from "../utils/datetime.js";
@@ -173,23 +173,28 @@ async function resolveTargetChannel(
 }
 
 function buildVoteRows(
-  snapshot: PollSnapshot
+  snapshot: PollSnapshot,
+  options: { disabled?: boolean } = {}
 ): ActionRowBuilder<ButtonBuilder>[] {
+  const disabled = options.disabled ?? false;
   const rows: ActionRowBuilder<ButtonBuilder>[] = [];
   for (const option of snapshot.options) {
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`poll:${snapshot.poll.id}:${option.id}:yes`)
         .setLabel(`○ 候補 ${option.position + 1}`)
-        .setStyle(ButtonStyle.Success),
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(disabled),
       new ButtonBuilder()
         .setCustomId(`poll:${snapshot.poll.id}:${option.id}:maybe`)
         .setLabel("△")
-        .setStyle(ButtonStyle.Secondary),
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(disabled),
       new ButtonBuilder()
         .setCustomId(`poll:${snapshot.poll.id}:${option.id}:no`)
         .setLabel("×")
         .setStyle(ButtonStyle.Danger)
+        .setDisabled(disabled)
     );
     rows.push(row);
     // Discord の ActionRow は最大 5 行まで
@@ -198,6 +203,35 @@ function buildVoteRows(
     }
   }
   return rows;
+}
+
+async function updatePollMessage(
+  interaction: ChatInputCommandInteraction,
+  snapshot: PollSnapshot,
+  voteButtonsDisabled: boolean
+): Promise<void> {
+  const { channel_id: channelId, message_id: messageId } = snapshot.poll;
+  if (!messageId) {
+    return;
+  }
+
+  try {
+    const channel = await interaction.guild?.channels.fetch(channelId);
+    if (!(channel?.isTextBased() && "messages" in channel)) {
+      return;
+    }
+    const message = await channel.messages.fetch(messageId);
+    const embed = buildPollEmbed(snapshot);
+    const components = buildVoteRows(snapshot, {
+      disabled: voteButtonsDisabled,
+    });
+    await message.edit({ embeds: [embed], components });
+  } catch (error) {
+    logger.warn(
+      { error, pollId: snapshot.poll.id, channelId, messageId },
+      "Failed to refresh poll message; continuing"
+    );
+  }
 }
 
 async function ensurePermission(
@@ -312,6 +346,64 @@ async function executeCreate(
   }
 }
 
+const CLOSE_ERROR_MESSAGES: Record<string, string> = {
+  POLL_NOT_FOUND: "指定された投票が見つかりません",
+  POLL_ALREADY_CLOSED: "この投票は既に締め切られています",
+  POLL_ALREADY_FINALIZED: "この投票は既に確定済みです",
+  FORBIDDEN: "この操作を実行する権限がありません",
+};
+
+async function executeClose(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
+  const guildId = interaction.guild?.id;
+  if (!guildId) {
+    return;
+  }
+
+  const permitted = await ensurePermission(interaction);
+  if (!permitted) {
+    await interaction.editReply({
+      content:
+        "このコマンドを実行するには管理権限（管理者 / サーバー管理 / ロール管理 / メッセージ管理）が必要です",
+    });
+    return;
+  }
+
+  const pollId = interaction.options.getString("poll_id", true);
+
+  const result = await closePoll(pollId, guildId, interaction.user.id);
+
+  if (!result.success) {
+    const friendly =
+      CLOSE_ERROR_MESSAGES[result.error.code] ?? result.error.message;
+    logger.info(
+      {
+        guildId,
+        pollId,
+        resultCode: result.error.code,
+      },
+      "poll_close rejected"
+    );
+    await interaction.editReply({ content: friendly });
+    return;
+  }
+
+  await updatePollMessage(interaction, result.data, true);
+
+  logger.info(
+    {
+      guildId,
+      pollId,
+      actorUserId: interaction.user.id,
+    },
+    "poll_close success"
+  );
+  await interaction.editReply({
+    content: "投票を締め切りました",
+  });
+}
+
 async function execute(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
@@ -329,6 +421,10 @@ async function execute(
 
   if (subcommand === "create") {
     await executeCreate(interaction);
+    return;
+  }
+  if (subcommand === "close") {
+    await executeClose(interaction);
     return;
   }
 
