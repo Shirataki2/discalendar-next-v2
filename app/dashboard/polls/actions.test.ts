@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PollSnapshot } from "@/lib/polls/types";
 
-const mockCreateClient = vi.fn();
+const mockResolveServerAuth = vi.fn();
+const mockCanManageGuild = vi.fn();
 const mockClosePollService = vi.fn();
 const mockFinalizePollService = vi.fn();
 const mockRevalidatePath = vi.fn();
@@ -10,8 +11,12 @@ const mockRedirect = vi.fn(() => {
 });
 const mockCaptureException = vi.fn();
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: (...args: unknown[]) => mockCreateClient(...args),
+vi.mock("@/lib/auth/server-auth", () => ({
+  resolveServerAuth: (...args: unknown[]) => mockResolveServerAuth(...args),
+}));
+
+vi.mock("@/lib/discord/permissions", () => ({
+  canManageGuild: (...args: unknown[]) => mockCanManageGuild(...args),
 }));
 
 vi.mock("@/lib/polls/poll-service", () => ({
@@ -57,14 +62,35 @@ function snapshotFixture(): PollSnapshot {
   };
 }
 
-function mockAuthenticated(userId: string | null = "user-1") {
-  mockCreateClient.mockResolvedValue({
+function mockAuthorized(userId = "user-1") {
+  mockResolveServerAuth.mockResolvedValue({
+    success: true,
     auth: {
-      getUser: vi
-        .fn()
-        .mockResolvedValue({ data: { user: userId ? { id: userId } : null } }),
+      supabase: {},
+      userId,
+      permissions: { administrator: true },
     },
   });
+  mockCanManageGuild.mockReturnValue(true);
+}
+
+function mockUnauthorized() {
+  mockResolveServerAuth.mockResolvedValue({
+    success: false,
+    error: { code: "UNAUTHORIZED", message: "Not authenticated" },
+  });
+}
+
+function mockAuthorizedWithoutManagePermission() {
+  mockResolveServerAuth.mockResolvedValue({
+    success: true,
+    auth: {
+      supabase: {},
+      userId: "user-1",
+      permissions: { administrator: false },
+    },
+  });
+  mockCanManageGuild.mockReturnValue(false);
 }
 
 describe("poll server actions", () => {
@@ -79,7 +105,7 @@ describe("poll server actions", () => {
 
   describe("closePollAction", () => {
     it("未認証では /auth/login にリダイレクトする", async () => {
-      mockAuthenticated(null);
+      mockUnauthorized();
 
       const { closePollAction } = await import("./actions");
       await expect(
@@ -90,8 +116,24 @@ describe("poll server actions", () => {
       expect(mockClosePollService).not.toHaveBeenCalled();
     });
 
+    it("管理権限がない場合は FORBIDDEN を返し Service を呼ばない", async () => {
+      mockAuthorizedWithoutManagePermission();
+
+      const { closePollAction } = await import("./actions");
+      const result = await closePollAction({
+        pollId: VALID_POLL_ID,
+        guildId: VALID_GUILD_ID,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("FORBIDDEN");
+      }
+      expect(mockClosePollService).not.toHaveBeenCalled();
+    });
+
     it("不正な UUID では INVALID_INPUT を返し Service を呼ばない", async () => {
-      mockAuthenticated();
+      mockAuthorized();
 
       const { closePollAction } = await import("./actions");
       const result = await closePollAction({
@@ -107,7 +149,7 @@ describe("poll server actions", () => {
     });
 
     it("成功時は revalidatePath を呼び snapshot を返す", async () => {
-      mockAuthenticated();
+      mockAuthorized();
       mockClosePollService.mockResolvedValue({
         success: true,
         data: snapshotFixture(),
@@ -127,7 +169,7 @@ describe("poll server actions", () => {
     });
 
     it("失敗時は details が削除された error を返し Sentry に送る", async () => {
-      mockAuthenticated();
+      mockAuthorized();
       mockClosePollService.mockResolvedValue({
         success: false,
         error: {
@@ -154,8 +196,25 @@ describe("poll server actions", () => {
   });
 
   describe("finalizePollAction", () => {
+    it("管理権限がない場合は FORBIDDEN を返し Service を呼ばない", async () => {
+      mockAuthorizedWithoutManagePermission();
+
+      const { finalizePollAction } = await import("./actions");
+      const result = await finalizePollAction({
+        pollId: VALID_POLL_ID,
+        guildId: VALID_GUILD_ID,
+        optionId: null,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("FORBIDDEN");
+      }
+      expect(mockFinalizePollService).not.toHaveBeenCalled();
+    });
+
     it("TIE_BREAK_REQUIRED は candidateOptionIds を含めて伝搬する", async () => {
-      mockAuthenticated();
+      mockAuthorized();
       mockFinalizePollService.mockResolvedValue({
         success: false,
         error: {
@@ -181,7 +240,7 @@ describe("poll server actions", () => {
     });
 
     it("成功時は eventId を含む結果を返し revalidatePath を呼ぶ", async () => {
-      mockAuthenticated();
+      mockAuthorized();
       mockFinalizePollService.mockResolvedValue({
         success: true,
         data: {
@@ -206,7 +265,7 @@ describe("poll server actions", () => {
     });
 
     it("FORBIDDEN は権限不足としてそのまま返す", async () => {
-      mockAuthenticated();
+      mockAuthorized();
       mockFinalizePollService.mockResolvedValue({
         success: false,
         error: { code: "FORBIDDEN", message: "permission denied" },

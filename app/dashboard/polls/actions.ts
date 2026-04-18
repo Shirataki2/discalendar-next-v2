@@ -3,6 +3,8 @@
 import { captureException } from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { resolveServerAuth } from "@/lib/auth/server-auth";
+import { canManageGuild } from "@/lib/discord/permissions";
 import {
   closePoll as closePollService,
   finalizePoll as finalizePollService,
@@ -12,7 +14,6 @@ import type {
   PollServiceError,
   PollSnapshot,
 } from "@/lib/polls/types";
-import { createClient } from "@/lib/supabase/server";
 import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
 
 const UUID_PATTERN =
@@ -22,13 +23,16 @@ function invalid(message: string): PollServiceError {
   return { code: "INVALID_INPUT", message };
 }
 
+function permissionDenied(message: string): PollServiceError {
+  return { code: "FORBIDDEN", message };
+}
+
 export type SanitizedPollResult<T> = PollResult<T>;
 
 function sanitizeResult<T>(result: PollResult<T>): SanitizedPollResult<T> {
   if (result.success) {
     return result;
   }
-  // PollServiceError の内 details を持つ variant のみから details を除去する
   const error = result.error;
   if ("details" in error) {
     const { details: _details, ...rest } = error;
@@ -37,20 +41,40 @@ function sanitizeResult<T>(result: PollResult<T>): SanitizedPollResult<T> {
   return { success: false, error };
 }
 
-type ServerContext = {
-  supabase: Awaited<ReturnType<typeof createClient>>;
-  userId: string;
-};
-
-async function resolveUser(): Promise<ServerContext | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return null;
+/**
+ * 認証 + ギルド管理権限の検証を行う共通ヘルパー。
+ * UI の canManage フラグを信頼せず、必ずサーバー側で解決する。
+ */
+async function authorizeManage(guildId: string): Promise<
+  | {
+      success: true;
+      supabase: Awaited<
+        ReturnType<typeof import("@/lib/supabase/server").createClient>
+      >;
+      userId: string;
+    }
+  | { success: false; error: PollServiceError }
+> {
+  const authResult = await resolveServerAuth(guildId);
+  if (!authResult.success) {
+    if (authResult.error.code === "UNAUTHORIZED") {
+      redirect("/auth/login");
+    }
+    return {
+      success: false,
+      error: permissionDenied(authResult.error.message),
+    };
   }
-  return { supabase, userId: user.id };
+
+  const { auth } = authResult;
+  if (!canManageGuild(auth.permissions)) {
+    return {
+      success: false,
+      error: permissionDenied("この投票を操作するには管理権限が必要です。"),
+    };
+  }
+
+  return { success: true, supabase: auth.supabase, userId: auth.userId };
 }
 
 export type ClosePollActionInput = {
@@ -61,11 +85,6 @@ export type ClosePollActionInput = {
 export async function closePollAction(
   input: ClosePollActionInput
 ): Promise<SanitizedPollResult<PollSnapshot>> {
-  const ctx = await resolveUser();
-  if (!ctx) {
-    redirect("/auth/login");
-  }
-
   if (!UUID_PATTERN.test(input.pollId)) {
     return sanitizeResult({
       success: false,
@@ -79,11 +98,16 @@ export async function closePollAction(
     });
   }
 
+  const authz = await authorizeManage(input.guildId);
+  if (!authz.success) {
+    return sanitizeResult({ success: false, error: authz.error });
+  }
+
   try {
-    const result = await closePollService(ctx.supabase, {
+    const result = await closePollService(authz.supabase, {
       pollId: input.pollId,
       guildId: input.guildId,
-      actorUserId: ctx.userId,
+      actorUserId: authz.userId,
     });
 
     if (result.success) {
@@ -129,11 +153,6 @@ export type FinalizePollActionData = {
 export async function finalizePollAction(
   input: FinalizePollActionInput
 ): Promise<SanitizedPollResult<FinalizePollActionData>> {
-  const ctx = await resolveUser();
-  if (!ctx) {
-    redirect("/auth/login");
-  }
-
   if (!UUID_PATTERN.test(input.pollId)) {
     return sanitizeResult({
       success: false,
@@ -153,11 +172,16 @@ export async function finalizePollAction(
     });
   }
 
+  const authz = await authorizeManage(input.guildId);
+  if (!authz.success) {
+    return sanitizeResult({ success: false, error: authz.error });
+  }
+
   try {
-    const result = await finalizePollService(ctx.supabase, {
+    const result = await finalizePollService(authz.supabase, {
       pollId: input.pollId,
       guildId: input.guildId,
-      actorUserId: ctx.userId,
+      actorUserId: authz.userId,
       optionId: input.optionId,
     });
 

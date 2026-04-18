@@ -16,6 +16,7 @@
 
 import { captureException } from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
+import { type ResolvedAuth, resolveServerAuth } from "@/lib/auth/server-auth";
 import {
   createAttachmentService,
   type SignedUrlResult,
@@ -48,17 +49,12 @@ import type {
   EditScope,
   EventSeriesRecord,
 } from "@/lib/calendar/types";
-import { getUserGuilds } from "@/lib/discord/client";
 import {
   type DiscordTextChannel,
   getGuildChannels,
 } from "@/lib/discord/notification-channel-service";
-import {
-  canManageGuild,
-  type DiscordPermissions,
-  parsePermissions,
-} from "@/lib/discord/permissions";
-import { clearCache, getCachedGuilds } from "@/lib/guilds/cache";
+import { canManageGuild } from "@/lib/discord/permissions";
+import { clearCache } from "@/lib/guilds/cache";
 import {
   createEventSettingsService,
   type EventSettings,
@@ -71,7 +67,6 @@ import {
   type GuildConfigMutationResult,
 } from "@/lib/guilds/guild-config-service";
 import type { Guild, GuildListError, InvitableGuild } from "@/lib/guilds/types";
-import { createUserGuildsService } from "@/lib/guilds/user-guilds-service";
 import { createIcsFeedTokenService } from "@/lib/ics/ics-feed-token-service";
 import { createClient } from "@/lib/supabase/server";
 import { SNOWFLAKE_PATTERN } from "@/lib/validation/snowflake";
@@ -104,135 +99,6 @@ function sanitizeResult<T>(
   }
   const { details: _details, ...error } = result.error;
   return { success: false, error };
-}
-
-// ──────────────────────────────────────────────
-// サーバー側権限解決ヘルパー
-// ──────────────────────────────────────────────
-
-type ResolvedAuth = {
-  supabase: Awaited<ReturnType<typeof createClient>>;
-  userId: string;
-  permissions: DiscordPermissions;
-};
-
-type AuthResult =
-  | { success: true; auth: ResolvedAuth }
-  | { success: false; error: CalendarError };
-
-/**
- * サーバー側で Discord 権限を解決する
- *
- * クライアント入力を一切信頼せず、以下の順序で権限を取得する:
- * 1. メモリキャッシュ（getCachedGuilds）からギルド権限を検索
- * 2. user_guilds DB からフォールバック
- * 3. Discord API からフォールバック（成功時は DB に書き戻し）
- *
- * @param guildId 対象ギルドID
- */
-async function resolveServerAuth(guildId: string): Promise<AuthResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return {
-      success: false,
-      error: UNAUTHORIZED_ERROR,
-    };
-  }
-
-  // 1. キャッシュから権限を検索
-  const cached = getCachedGuilds(user.id);
-  if (cached) {
-    const guild = cached.guilds.find((g) => g.guildId === guildId);
-    if (guild) {
-      return {
-        success: true,
-        auth: { supabase, userId: user.id, permissions: guild.permissions },
-      };
-    }
-  }
-
-  // 2. user_guilds DB からフォールバック
-  const userGuildsService = createUserGuildsService(supabase);
-  const dbResult = await userGuildsService.getUserGuildPermissions(
-    user.id,
-    guildId
-  );
-
-  if (dbResult.success && dbResult.data !== null) {
-    return {
-      success: true,
-      auth: {
-        supabase,
-        userId: user.id,
-        permissions: parsePermissions(dbResult.data),
-      },
-    };
-  }
-
-  // 3. Discord API からフォールバック
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.provider_token) {
-    return {
-      success: false,
-      error: {
-        code: "UNAUTHORIZED",
-        message:
-          "Discordアクセストークンが期限切れです。再度ログインしてください。",
-      },
-    };
-  }
-
-  const discordResult = await getUserGuilds(session.provider_token);
-  if (!discordResult.success) {
-    return {
-      success: false,
-      error: {
-        code: "FETCH_FAILED",
-        message: discordResult.error.message,
-      },
-    };
-  }
-
-  const discordGuild = discordResult.data.find((g) => g.id === guildId);
-  if (!discordGuild) {
-    return {
-      success: false,
-      error: {
-        code: "PERMISSION_DENIED",
-        message: "このギルドのメンバーではありません。",
-      },
-    };
-  }
-
-  // Discord API 成功時に user_guilds へ書き戻し（次回以降の DB 参照を可能にする）
-  // upsertSingleGuild を使用し、他ギルドのメンバーシップを削除しない
-  const syncResult = await userGuildsService.upsertSingleGuild({
-    guildId,
-    permissions: discordGuild.permissions,
-  });
-  if (!syncResult.success) {
-    captureException(
-      new Error(
-        `[resolveServerAuth] user_guilds upsert failed: ${syncResult.error.message}`
-      )
-    );
-  }
-
-  return {
-    success: true,
-    auth: {
-      supabase,
-      userId: user.id,
-      permissions: parsePermissions(discordGuild.permissions),
-    },
-  };
 }
 
 // ──────────────────────────────────────────────

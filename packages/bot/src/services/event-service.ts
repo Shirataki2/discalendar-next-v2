@@ -316,7 +316,8 @@ export type CreateEventFromPollInput = {
   actorUserId: string;
 };
 
-const DEFAULT_POLL_EVENT_DURATION_MS = 60 * 60 * 1000; // 1 hour
+/** 投票から昇格された events の ends_at が未指定のときの既定継続時間 (1 時間) */
+export const DEFAULT_POLL_EVENT_DURATION_MS = 60 * 60 * 1000;
 
 export async function createEventFromPoll(
   input: CreateEventFromPollInput

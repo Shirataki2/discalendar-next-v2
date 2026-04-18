@@ -49,6 +49,7 @@ export function PollDetailClient({
 
   const isFinalized = snapshot.poll.status === "finalized";
   const isClosed = snapshot.poll.status !== "open";
+  const showManageControls: boolean = canManage && !isFinalized;
 
   const handleClose = async () => {
     setBusy(true);
@@ -128,7 +129,7 @@ export function PollDetailClient({
         <p className="mt-4 text-destructive text-sm">{errorMessage}</p>
       ) : null}
 
-      {canManage === true && !isFinalized ? (
+      {showManageControls ? (
         <div className="mt-6 flex gap-2">
           <Button
             disabled={busy || isClosed}
@@ -138,7 +139,7 @@ export function PollDetailClient({
             投票を締め切る
           </Button>
           <Button disabled={busy} onClick={() => handleFinalize()}>
-            yes 最多で確定
+            ○ 最多で確定
           </Button>
         </div>
       ) : null}

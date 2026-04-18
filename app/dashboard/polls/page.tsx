@@ -21,19 +21,18 @@ export default async function PollsPage() {
   }
 
   const cached = getCachedGuilds(user.id);
-  const memberGuildIds = new Set(cached?.guilds.map((g) => g.guildId) ?? []);
+  const memberGuildIds = Array.from(
+    new Set(cached?.guilds.map((g) => g.guildId) ?? [])
+  );
 
-  // ユーザーが所属するギルドの poll を集約
-  const polls: PollRecord[] = [];
-  for (const guildId of memberGuildIds) {
-    const result = await listPolls(supabase, guildId);
-    if (result.success) {
-      polls.push(...result.data);
-    }
-  }
+  // 所属ギルドを並列にフェッチしてレイテンシの線形悪化を避ける
+  const results = await Promise.all(
+    memberGuildIds.map((guildId) => listPolls(supabase, guildId))
+  );
 
-  // 新しい順にソート
-  polls.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const polls: PollRecord[] = results
+    .flatMap((r) => (r.success ? r.data : []))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6">

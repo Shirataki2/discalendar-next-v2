@@ -13,7 +13,10 @@ import type {
 } from "../types/poll.js";
 import { logger } from "../utils/logger.js";
 import { classifyPollError } from "./classify-poll-error.js";
-import { createEventFromPoll } from "./event-service.js";
+import {
+  createEventFromPoll,
+  DEFAULT_POLL_EVENT_DURATION_MS,
+} from "./event-service.js";
 import { getSupabaseClient } from "./supabase.js";
 
 const MIN_OPTIONS = 2;
@@ -27,9 +30,9 @@ function validateOption(
   option: CreatePollInput["options"][number],
   positions: Set<number>
 ): PollServiceError | null {
-  if (option.position < 0 || option.position > 9) {
+  if (option.position < 0 || option.position > MAX_OPTIONS - 1) {
     return invalidInput(
-      `option.position must be within 0..9 (received ${option.position})`
+      `option.position must be within 0..${MAX_OPTIONS - 1} (received ${option.position})`
     );
   }
   if (positions.has(option.position)) {
@@ -107,7 +110,7 @@ function aggregateVotes(
     if (!agg) {
       continue;
     }
-    agg.counts[vote.choice as ChoiceLabel] += 1;
+    agg.counts[vote.choice] += 1;
     if (vote.choice === "yes") {
       agg.yesVoters.push(vote.user_id);
     }
@@ -689,7 +692,9 @@ export async function finalizePoll(
   const warnings: string[] = [];
   const fallbackEnd =
     targetOption.ends_at ??
-    new Date(Date.parse(targetOption.starts_at) + 60 * 60 * 1000).toISOString();
+    new Date(
+      Date.parse(targetOption.starts_at) + DEFAULT_POLL_EVENT_DURATION_MS
+    ).toISOString();
   const overlapping = await hasOverlappingEvents(
     input.guildId,
     targetOption.starts_at,
@@ -732,12 +737,21 @@ export async function finalizePoll(
         );
       }
     }
+    // Supabase の生メッセージは Bot の返信にも乗せず、固定メッセージに統一する
+    logger.error(
+      {
+        error: eventCreate.error,
+        pollId: input.pollId,
+        guildId: input.guildId,
+      },
+      "events INSERT failed during poll finalize"
+    );
     return {
       success: false,
       error: {
         code: "EVENT_CREATE_FAILED",
-        message: eventCreate.error.message,
-        details: eventCreate.error.details,
+        message:
+          "イベントの作成に失敗しました。しばらくしてから再試行してください。",
       },
     };
   }

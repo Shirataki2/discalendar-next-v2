@@ -13,6 +13,8 @@ import { buildPollEmbed } from "../utils/poll-embed.js";
 export const POLL_VOTE_CUSTOM_ID_PREFIX = "poll:";
 
 const REFRESH_DEBOUNCE_MS = 1500;
+/** Discord の ActionRow は 1 メッセージあたり最大 5 行 */
+const MAX_ACTION_ROWS = 5;
 const refreshTimers = new Map<string, NodeJS.Timeout>();
 
 type CustomIdParts = {
@@ -71,7 +73,7 @@ function buildVoteRows(
         .setDisabled(disabled)
     );
     rows.push(row);
-    if (rows.length >= 5) {
+    if (rows.length >= MAX_ACTION_ROWS) {
       break;
     }
   }

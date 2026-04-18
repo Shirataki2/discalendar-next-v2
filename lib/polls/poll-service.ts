@@ -1,7 +1,7 @@
+import { captureException } from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { classifyPollError } from "./classify-error";
 import type {
-  ChoiceLabel,
   FinalizePollInput,
   FinalizePollOutput,
   PollOptionRecord,
@@ -13,6 +13,7 @@ import type {
 } from "./types";
 
 const DEFAULT_POLL_DURATION_MS = 60 * 60 * 1000;
+const MAX_LIST_LIMIT = 100;
 
 function aggregateVotes(
   options: PollOptionRecord[],
@@ -35,7 +36,7 @@ function aggregateVotes(
     if (!agg) {
       continue;
     }
-    agg.counts[vote.choice as ChoiceLabel] += 1;
+    agg.counts[vote.choice] += 1;
     if (vote.choice === "yes") {
       agg.yesVoters.push(vote.user_id);
     }
@@ -55,7 +56,6 @@ export async function listPolls(
   client: SupabaseClient,
   guildId: string
 ): Promise<PollResult<PollRecord[]>> {
-  const MAX_LIST_LIMIT = 100;
   const { data, error } = await client
     .from("event_polls")
     .select("*")
@@ -338,6 +338,13 @@ async function hasOverlappingEvents(
     .gte("start_at", startAt)
     .lte("start_at", endAt);
   if (error) {
+    // 読み取り失敗は警告スキップにとどめつつ Sentry に送り運用で検知できるようにする
+    captureException(
+      new Error(
+        `[hasOverlappingEvents] events read failed: ${error.message ?? "unknown"}`
+      ),
+      { extra: { guildId, startAt, endAt } }
+    );
     return false;
   }
   return Array.isArray(data) && data.length > 0;
@@ -368,7 +375,22 @@ async function createEventFromOption(
     .single();
 
   if (error || !data) {
-    return { success: false, error: error?.message ?? "events insert failed" };
+    // Supabase の生メッセージはクライアントに漏らさず、Sentry へ詳細を送る
+    captureException(
+      new Error(
+        `[createEventFromOption] events insert failed: ${
+          error?.message ?? "no row returned"
+        }`
+      ),
+      {
+        extra: {
+          guildId: snapshot.poll.guild_id,
+          pollId: snapshot.poll.id,
+          optionId: option.id,
+        },
+      }
+    );
+    return { success: false, error: "events insert failed" };
   }
   return { success: true, eventId: (data as { id: string }).id };
 }
@@ -453,7 +475,7 @@ export async function finalizePoll(
       success: false,
       error: {
         code: "EVENT_CREATE_FAILED",
-        message: eventCreate.error,
+        message: "イベントの作成に失敗しました。しばらくしてから再試行してください。",
       },
     };
   }

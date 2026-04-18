@@ -8,11 +8,13 @@ import {
   SlashCommandBuilder,
   type SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
+import { getConfig } from "../config.js";
 import { getEventSettings } from "../services/event-service.js";
 import { getGuildConfig } from "../services/guild-service.js";
 import {
   closePoll,
   createPoll,
+  deletePoll,
   finalizePoll,
 } from "../services/poll-service.js";
 import type { Command } from "../types/command.js";
@@ -27,6 +29,8 @@ const MAX_OPTIONS = 10;
 const DEFAULT_DURATION_MINUTES = 60;
 const MIN_DURATION_MINUTES = 15;
 const MAX_DURATION_MINUTES = 24 * 60;
+/** Discord の ActionRow は 1 メッセージあたり最大 5 行 */
+const MAX_ACTION_ROWS = 5;
 
 function buildCommandData(): SlashCommandSubcommandsOnlyBuilder {
   return new SlashCommandBuilder()
@@ -202,7 +206,7 @@ function buildVoteRows(
     );
     rows.push(row);
     // Discord の ActionRow は最大 5 行まで
-    if (rows.length >= 5) {
+    if (rows.length >= MAX_ACTION_ROWS) {
       break;
     }
   }
@@ -342,7 +346,6 @@ async function executeCreate(
       { error: sendError, pollId: result.data.poll.id },
       "Failed to post poll message; attempting rollback"
     );
-    const { deletePoll } = await import("../services/poll-service.js");
     await deletePoll(result.data.poll.id, guildId);
     await interaction.editReply({
       content: "投票メッセージの投稿に失敗しました。投票を取り消しました",
@@ -466,7 +469,6 @@ async function executeFinalize(
 
   const { snapshot, eventId, warnings } = result.data;
 
-  const { getConfig } = await import("../config.js");
   const baseUrl = getConfig().webBaseUrl;
   // updatePollMessage 内では既定の baseUrl を渡せないため、ここで差し替え
   const channelId = snapshot.poll.channel_id;

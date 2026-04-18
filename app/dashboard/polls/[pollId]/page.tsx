@@ -28,23 +28,25 @@ export default async function PollDetailPage({ params }: Props) {
   const cached = getCachedGuilds(user.id);
   const guilds = cached?.guilds ?? [];
 
-  // 全ギルドを対象にスナップショット取得を試みる（RLS が非メンバーを弾く）
-  let snapshot: Awaited<ReturnType<typeof getPollSnapshot>> | null = null;
-  let matchedGuildId: string | null = null;
-  for (const g of guilds) {
-    const result = await getPollSnapshot(supabase, g.guildId, pollId);
-    if (result.success) {
-      snapshot = result;
-      matchedGuildId = g.guildId;
-      break;
-    }
-  }
+  // poll の guild_id を先に引き、そこから所属判定する（RLS が非メンバーを弾く）
+  const { data: pollRow } = await supabase
+    .from("event_polls")
+    .select("guild_id")
+    .eq("id", pollId)
+    .single();
 
-  if (!snapshot?.success) {
+  if (!pollRow?.guild_id) {
     notFound();
   }
 
+  const matchedGuildId = String(pollRow.guild_id);
   const matchedGuild = guilds.find((g) => g.guildId === matchedGuildId);
+
+  const snapshot = await getPollSnapshot(supabase, matchedGuildId, pollId);
+  if (!snapshot.success) {
+    notFound();
+  }
+
   const canManage = matchedGuild
     ? canManageGuild(matchedGuild.permissions)
     : false;
