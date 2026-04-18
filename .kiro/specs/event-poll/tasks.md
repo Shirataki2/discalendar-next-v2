@@ -96,7 +96,7 @@
   - Bot 側と同一の `PollServiceError` コードを返すよう `classifySupabaseError` を経由してマッピングする
   - Bot 版と等価性を担保するため、`finalizePoll` のタイ検出・既 finalized・events INSERT 失敗時ロールバックを同じシナリオで検証する単体テストを追加する
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.9, 5.6, 5.7_
-- [ ] 4.2 (P) Server Action（`finalizePollAction`, `closePollAction`）を実装する
+- [x] 4.2 (P) Server Action（`finalizePollAction`, `closePollAction`）を実装する
   - `"use server"` ディレクティブで Cookie 認証を通し、未認証時は `/auth/login` にリダイレクトする
   - 入力の UUID / text 形状バリデーションを行い、`PollService` を呼び出して結果を `sanitizeResult` で整形する
   - `revalidatePath("/dashboard/polls")` と finalize 成功時の `eventId` を含む Result を返す
