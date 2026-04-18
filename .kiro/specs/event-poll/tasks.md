@@ -32,7 +32,7 @@
   - 既存 `classify-error.ts` を拡張し、Postgres エラーを `PollServiceError` にマップするヘルパーを追加する
   - 型と分類ロジックの単体テストを追加する（`TIE_BREAK_REQUIRED` の `candidateOptionIds` 伝搬含む）
   - _Requirements: 8.1_
-- [ ] 2.2 `createPoll` / `getPoll` / `deletePoll` を実装する
+- [x] 2.2 `createPoll` / `getPoll` / `deletePoll` を実装する
   - `createPoll` は options 件数（2〜10）と時刻のバリデーションを行い、`event_polls` と `event_poll_options` を 1 トランザクションで INSERT し `PollSnapshot` を返す
   - `getPoll` は guild スコープで poll・options・votes 集計（yes/maybe/no 人数と yes 投票者 user_id 配列）を取得する
   - `deletePoll` は作成失敗時のロールバック用に呼ばれる想定。`event_polls` の DELETE と CASCADE 動作確認を含む
