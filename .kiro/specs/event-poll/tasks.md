@@ -125,7 +125,7 @@
   - 「確定」ボタンは `finalizePollAction` を呼び、成功時は `/dashboard?event=<eventId>` にリダイレクトする。`TIE_BREAK_REQUIRED` の場合は候補選択モーダルを表示する
   - メンバー権限ユーザーで操作 UI が非表示になること、管理者で操作成功時にリダイレクトされること、タイ検出時にモーダルが出ることを統合テストで確認する
   - _Requirements: 5.2, 5.3, 5.5, 5.6, 5.7_
-- [ ] 5.3 (P) 投票一覧カード・候補リスト・確定モーダルなどの UI コンポーネントを `components/polls/` に実装する
+- [x] 5.3 (P) 投票一覧カード・候補リスト・確定モーダルなどの UI コンポーネントを `components/polls/` に実装する
   - `poll-card.tsx`（一覧表示）、`poll-option-row.tsx`（候補1行）、`poll-finalize-modal.tsx`（タイ選択／最終確認）を作成する
   - それぞれに Storybook ストーリー（`*.stories.tsx`）と Vitest + Testing Library テスト（`*.test.tsx`）を co-locate する
   - CLAUDE.md の Component Development Rules に従い、shadcn/ui プリミティブを再利用する
