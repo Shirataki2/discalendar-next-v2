@@ -19,6 +19,10 @@ import rsvpCommand from "./commands/rsvp.js";
 import { getConfig } from "./config.js";
 import { onGuildCreate, onGuildDelete, onGuildUpdate } from "./events/guild.js";
 import { handleModalSubmit } from "./handlers/modal-submit.js";
+import {
+  handlePollVoteInteraction,
+  isPollVoteInteraction,
+} from "./handlers/poll-vote.js";
 import { startHeartbeatTask } from "./tasks/heartbeat.js";
 import { startNotifyTask } from "./tasks/notify.js";
 import { startPresenceTask } from "./tasks/presence.js";
@@ -87,22 +91,55 @@ export class DiscalendarBot extends Client {
     }
   }
 
+  private async runModalHandler(
+    interaction: ModalSubmitInteraction
+  ): Promise<void> {
+    try {
+      await handleModalSubmit(interaction);
+    } catch (error) {
+      logger.error({ error }, "Modal submit handler failed");
+      captureError(error, {
+        source: "modal",
+        guildId: interaction.guildId ?? undefined,
+        userId: interaction.user.id,
+      });
+      await safeReplyError(
+        interaction,
+        "モーダルの処理中にエラーが発生しました。"
+      );
+    }
+  }
+
+  private async runPollVoteHandler(
+    interaction: Parameters<typeof handlePollVoteInteraction>[0]
+  ): Promise<void> {
+    try {
+      await handlePollVoteInteraction(interaction);
+    } catch (error) {
+      logger.error({ error }, "Poll vote handler failed");
+      captureError(error, {
+        source: "button",
+        name: interaction.customId,
+        guildId: interaction.guildId ?? undefined,
+        userId: interaction.user.id,
+      });
+      if (!(interaction.replied || interaction.deferred)) {
+        await interaction.reply({
+          content: "投票処理中にエラーが発生しました。",
+          ephemeral: true,
+        });
+      }
+    }
+  }
+
   private async handleInteraction(interaction: Interaction): Promise<void> {
     if (interaction.isModalSubmit()) {
-      try {
-        await handleModalSubmit(interaction);
-      } catch (error) {
-        logger.error({ error }, "Modal submit handler failed");
-        captureError(error, {
-          source: "modal",
-          guildId: interaction.guildId ?? undefined,
-          userId: interaction.user.id,
-        });
-        await safeReplyError(
-          interaction,
-          "モーダルの処理中にエラーが発生しました。"
-        );
-      }
+      await this.runModalHandler(interaction);
+      return;
+    }
+
+    if (interaction.isButton() && isPollVoteInteraction(interaction.customId)) {
+      await this.runPollVoteHandler(interaction);
       return;
     }
 

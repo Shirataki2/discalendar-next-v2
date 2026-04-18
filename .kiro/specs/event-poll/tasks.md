@@ -77,7 +77,7 @@
   - 成功時は元メッセージの Embed を `確定: <候補日時>` に更新し、`/dashboard?event=<event_id>` へのリンクを含める
   - 既 finalized / INSERT 失敗 / 既存イベント重複警告の経路を単体テストでカバーする
   - _Requirements: 4.1, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 7.3_
-- [ ] 3.5 永続ボタンハンドラ `poll-vote` を実装し `bot.ts` に組み込む
+- [x] 3.5 永続ボタンハンドラ `poll-vote` を実装し `bot.ts` に組み込む
   - `customId` を `poll:<pollId>:<optionId>:<choice>` 形式でパースし、不正形式は warn ログと ephemeral 応答で返す
   - `PollService.castVote` を呼び、`recorded` / `revoked` / `rejected_closed` に応じた ephemeral 応答と Embed 再構築を行う
   - 1.5 秒のメッセージ更新デバウンス（同一 message_id 単位）を実装し、Discord レートリミット回避する
