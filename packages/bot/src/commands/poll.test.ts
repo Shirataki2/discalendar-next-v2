@@ -28,11 +28,15 @@ vi.mock("../utils/permissions.js", () => ({
     mockHasManagementPermission(...args),
 }));
 
+const mockLoggerInfo = vi.fn();
+const mockLoggerWarn = vi.fn();
+const mockLoggerError = vi.fn();
+
 vi.mock("../utils/logger.js", () => ({
   logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
+    info: (...args: unknown[]) => mockLoggerInfo(...args),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
+    error: (...args: unknown[]) => mockLoggerError(...args),
     debug: vi.fn(),
   },
 }));
@@ -502,6 +506,37 @@ describe("poll command", () => {
       await pollCommand.execute(interaction as never);
 
       expect(interaction.editReply).toHaveBeenCalled();
+    });
+
+    it("成功時は構造化ログに pollId / eventId / guildId を含める", async () => {
+      mockFinalizePoll.mockResolvedValue({
+        success: true,
+        data: {
+          snapshot: finalizedSnapshot(),
+          eventId: "evt-1",
+          warnings: [],
+        },
+      });
+
+      const interaction = buildInteraction("guild-1", {
+        subcommand: "finalize",
+        strings: { poll_id: "poll-1", option_id: "opt-1" },
+      });
+
+      const pollCommand = (await import("./poll.js")).default;
+      await pollCommand.execute(interaction as never);
+
+      const logged = mockLoggerInfo.mock.calls.find(
+        (call) => call[1] === "poll_finalize success"
+      );
+      expect(logged).toBeDefined();
+      if (logged) {
+        expect(logged[0]).toMatchObject({
+          guildId: "guild-1",
+          pollId: "poll-1",
+          eventId: "evt-1",
+        });
+      }
     });
 
     it("warnings がある場合はメッセージに含める", async () => {

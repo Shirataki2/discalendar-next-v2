@@ -132,7 +132,7 @@
   - _Requirements: 5.2, 5.5_
 
 - [ ] 6. ログ・監査・エラーハンドリングを整備する
-- [ ] 6.1 Bot 側の操作ログ（pino）を `/poll` 全サブコマンドと `poll-vote` ハンドラに追加する
+- [x] 6.1 Bot 側の操作ログ（pino）を `/poll` 全サブコマンドと `poll-vote` ハンドラに追加する
   - `guildId`, `pollId`, `actorUserId`, `subcommand`, `resultCode`, `warnings` を構造化出力する
   - 成功・失敗両パスでログが出ることを単体テストで検証する
   - _Requirements: 8.1, 8.2_
