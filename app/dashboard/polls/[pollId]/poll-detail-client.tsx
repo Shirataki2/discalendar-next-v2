@@ -128,7 +128,7 @@ export function PollDetailClient({
         <p className="mt-4 text-destructive text-sm">{errorMessage}</p>
       ) : null}
 
-      {canManage && !isFinalized ? (
+      {canManage === true && !isFinalized ? (
         <div className="mt-6 flex gap-2">
           <Button
             disabled={busy || isClosed}

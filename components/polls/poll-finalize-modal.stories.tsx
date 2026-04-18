@@ -36,11 +36,7 @@ export const Default: Story = {
             created_at: "2026-04-18T00:00:00Z",
           },
         ]}
-        onConfirm={(id) => {
-          // biome-ignore lint/suspicious/noConsole: storybook demo
-          console.log("confirm", id);
-          return Promise.resolve();
-        }}
+        onConfirm={(_id) => Promise.resolve()}
         onOpenChange={setOpen}
         open={open}
       />

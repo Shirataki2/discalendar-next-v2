@@ -136,7 +136,7 @@
   - `guildId`, `pollId`, `actorUserId`, `subcommand`, `resultCode`, `warnings` を構造化出力する
   - 成功・失敗両パスでログが出ることを単体テストで検証する
   - _Requirements: 8.1, 8.2_
-- [ ] 6.2 Web Server Action のエラー情報漏洩対策と Sentry 連携を追加する
+- [x] 6.2 Web Server Action のエラー情報漏洩対策と Sentry 連携を追加する
   - `sanitizeResult` で `details` を削除済みであることをテストで保証する
   - Server Action で失敗時に Sentry へ `capture` する（既存 Sentry integration を利用）
   - _Requirements: 8.3_
@@ -150,7 +150,7 @@
   - ユーザー視点でダッシュボードの投票詳細ページを開き、Bot 側で投票が入った状態が 5 秒以内に画面に反映されること
   - 管理者が Web から `finalize` を実行し、ダッシュボードカレンダーに昇格後のイベントが表示されること
   - _Requirements: 5.3, 5.6_
-- [ ] 7.3 lint / type-check / 全テストスイートの通過を確認する
+- [x] 7.3 lint / type-check / 全テストスイートの通過を確認する
   - `pnpm ultracite check`, `pnpm run type-check`, `pnpm vitest run`, `packages/bot` の `npm run type-check` / `npm run test` を実行する
   - 失敗があれば修正する
   - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 5.2, 5.3, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3_
