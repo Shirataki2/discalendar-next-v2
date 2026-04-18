@@ -58,7 +58,7 @@
   - `status` に応じて `締切済` / `確定: <候補日時>` を末尾に付与し、確定時は `events` への Web リンク（`/dashboard?event=<event_id>` 相当）を表示する
   - 最大件数テスト・yes 20 名超テスト・closed/finalized バッジ表示テストを追加する
   - _Requirements: 1.7, 2.5, 2.6, 3.2, 4.8_
-- [ ] 3.2 (P) `/poll create` サブコマンドを実装する
+- [x] 3.2 (P) `/poll create` サブコマンドを実装する
   - `SlashCommandBuilder.addSubcommand("create")` で title / description / options（例: カンマ区切り、または 10 個までの個別オプション）を受け取り、`deferReply({ ephemeral: true })` でタイムアウト対策する
   - `hasManagementPermission` と `guild_config.restricted` による権限チェックを行う
   - 件数バリデーション（2〜10）と時刻パース（既存 `utils/datetime.ts` 再利用）を実施する
