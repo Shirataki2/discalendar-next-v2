@@ -17,7 +17,7 @@ const STATUS_LABELS: Record<
 > = {
   open: { label: "受付中", variant: "default" },
   closed: { label: "締切済", variant: "secondary" },
-  finalized: { label: "確定済", variant: "destructive" },
+  finalized: { label: "確定済", variant: "secondary" },
 };
 
 function formatDate(iso: string): string {

@@ -331,12 +331,14 @@ async function hasOverlappingEvents(
   startAt: string,
   endAt: string
 ): Promise<boolean> {
+  // 半開区間 [startAt, endAt) を使ったオーバーラップ条件:
+  //   existing.start_at < endAt AND existing.end_at > startAt
   const { data, error } = await client
     .from("events")
     .select("id")
     .eq("guild_id", guildId)
-    .gte("start_at", startAt)
-    .lte("start_at", endAt);
+    .lt("start_at", endAt)
+    .gt("end_at", startAt);
   if (error) {
     // 読み取り失敗は警告スキップにとどめつつ Sentry に送り運用で検知できるようにする
     captureException(
@@ -496,7 +498,45 @@ export async function finalizePoll(
   });
 
   if (!finalize.success) {
+    captureException(
+      new Error(
+        `[finalizePoll] finalize update failed after event creation: ${finalize.error.code}`
+      ),
+      {
+        extra: {
+          pollId: input.pollId,
+          guildId: input.guildId,
+          eventId,
+        },
+      }
+    );
     return finalize;
+  }
+
+  // 楽観的排他: status="closed" の行が他のアクターによって変更され
+  // 0 行更新となった場合は conflict として扱う。events は作成済みのため
+  // 孤立するが、補償ロジックは reconciliation 側に委ねる（現状はログ出力のみ）。
+  if (!finalize.data) {
+    captureException(
+      new Error(
+        "[finalizePoll] poll status changed concurrently; finalize updated zero rows"
+      ),
+      {
+        extra: {
+          pollId: input.pollId,
+          guildId: input.guildId,
+          eventId,
+        },
+      }
+    );
+    return {
+      success: false,
+      error: {
+        code: "POLL_ALREADY_FINALIZED",
+        message:
+          "他の操作によって投票の状態が変更されました。最新の状態を確認してください。",
+      },
+    };
   }
 
   const finalizedSnapshot: PollSnapshot = {

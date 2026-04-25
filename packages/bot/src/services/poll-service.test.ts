@@ -96,7 +96,7 @@ describe("poll-service", () => {
   });
 
   describe("createPoll", () => {
-    it("2〜10 件の options 範囲外は INVALID_INPUT を返し DB を呼ばない", async () => {
+    it("2〜5 件の options 範囲外は INVALID_INPUT を返し DB を呼ばない", async () => {
       const { createPoll } = await import("./poll-service.js");
 
       const resultTooFew = await createPoll({
@@ -902,9 +902,9 @@ describe("poll-service", () => {
     }
 
     function mockExistingEventsForDupCheck(rows: Array<{ id: string }>) {
-      const lte = vi.fn().mockResolvedValue({ data: rows, error: null });
-      const gte = vi.fn().mockReturnValue({ lte });
-      const eq = vi.fn().mockReturnValue({ gte });
+      const gt = vi.fn().mockResolvedValue({ data: rows, error: null });
+      const lt = vi.fn().mockReturnValue({ gt });
+      const eq = vi.fn().mockReturnValue({ lt });
       const select = vi.fn().mockReturnValue({ eq });
       return { select };
     }

@@ -207,9 +207,9 @@ describe("web poll-service", () => {
       const updateMethod = buildUpdateChain().update;
 
       // events table: overlap check and INSERT
-      const overlapLte = vi.fn().mockResolvedValue({ data: [], error: null });
-      const overlapGte = vi.fn().mockReturnValue({ lte: overlapLte });
-      const overlapEq = vi.fn().mockReturnValue({ gte: overlapGte });
+      const overlapGt = vi.fn().mockResolvedValue({ data: [], error: null });
+      const overlapLt = vi.fn().mockReturnValue({ gt: overlapGt });
+      const overlapEq = vi.fn().mockReturnValue({ lt: overlapLt });
       const overlapSelect = vi.fn().mockReturnValue({ eq: overlapEq });
 
       const insertSingle = vi.fn().mockResolvedValue({

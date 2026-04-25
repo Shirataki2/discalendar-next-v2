@@ -20,7 +20,12 @@ import {
 import { getSupabaseClient } from "./supabase.js";
 
 const MIN_OPTIONS = 2;
-const MAX_OPTIONS = 10;
+/**
+ * Discord の ActionRow は 1 メッセージあたり最大 5 行であり、1 候補 = 1 行
+ * として ButtonBuilder を生成しているため、候補は最大 5 件に制限する。
+ * （DB 側のトリガーは互換のため 10 件のままだが、サービス層で先に弾く）
+ */
+const MAX_OPTIONS = 5;
 
 function invalidInput(message: string): PollServiceError {
   return { code: "INVALID_INPUT", message };
@@ -283,6 +288,44 @@ export async function getPoll(
       aggregates: aggregateVotes(options, votes),
     },
   };
+}
+
+export async function updatePollMessageId(
+  pollId: string,
+  guildId: string,
+  messageId: string
+): Promise<PollResult<void>> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("event_polls")
+    .update({ message_id: messageId })
+    .eq("id", pollId)
+    .eq("guild_id", guildId)
+    .select("id");
+
+  if (error) {
+    logger.error(
+      { error, pollId, guildId },
+      "Failed to update event_polls.message_id"
+    );
+    return {
+      success: false,
+      error: classifyPollError(error, "updatePollMessageId"),
+    };
+  }
+
+  if (!data || data.length === 0) {
+    return {
+      success: false,
+      error: {
+        code: "POLL_NOT_FOUND",
+        message: "poll not found while updating message_id",
+      },
+    };
+  }
+
+  return { success: true, data: undefined };
 }
 
 export async function deletePoll(
@@ -574,12 +617,15 @@ async function hasOverlappingEvents(
   endAt: string
 ): Promise<boolean> {
   const supabase = getSupabaseClient();
+  // 半開区間 [startAt, endAt) を使ったオーバーラップ条件:
+  //   existing.start_at < endAt AND existing.end_at > startAt
+  // これにより候補開始前から実行中のイベントも検出できる。
   const { data, error } = await supabase
     .from("events")
     .select("id")
     .eq("guild_id", guildId)
-    .gte("start_at", startAt)
-    .lte("start_at", endAt);
+    .lt("start_at", endAt)
+    .gt("end_at", startAt);
 
   if (error) {
     logger.warn(
@@ -648,6 +694,40 @@ export type FinalizePollOutput = {
   warnings: string[];
 };
 
+async function rollbackToOpenIfNeeded(
+  pollId: string,
+  guildId: string,
+  originalStatus: PollRecord["status"]
+): Promise<void> {
+  if (originalStatus !== "open") {
+    return;
+  }
+  const rollback = await updatePollStatus({
+    pollId,
+    guildId,
+    nextStatus: "open",
+    currentStatus: "closed",
+  });
+  if (rollback.error) {
+    logger.error(
+      { error: rollback.error, pollId },
+      "Failed to roll back poll status after events INSERT failure"
+    );
+  }
+}
+
+function buildOverlapWarnings(
+  overlapping: boolean,
+  targetOption: PollOptionRecord
+): string[] {
+  if (!overlapping) {
+    return [];
+  }
+  return [
+    `同ギルド内に開始時刻が重複する既存イベントがあります (候補: ${targetOption.starts_at}).`,
+  ];
+}
+
 export async function finalizePoll(
   input: FinalizePollInput
 ): Promise<PollResult<FinalizePollOutput>> {
@@ -689,7 +769,6 @@ export async function finalizePoll(
   const targetOption = resolved.data;
   const targetOptionId = targetOption.id;
 
-  const warnings: string[] = [];
   const fallbackEnd =
     targetOption.ends_at ??
     new Date(
@@ -700,11 +779,7 @@ export async function finalizePoll(
     targetOption.starts_at,
     fallbackEnd
   );
-  if (overlapping) {
-    warnings.push(
-      `同ギルド内に開始時刻が重複する既存イベントがあります (候補: ${targetOption.starts_at}).`
-    );
-  }
+  const warnings = buildOverlapWarnings(overlapping, targetOption);
 
   const eventCreate = await createEventFromPoll({
     poll: {
@@ -722,21 +797,7 @@ export async function finalizePoll(
   });
 
   if (!eventCreate.success) {
-    // コンペンセーション: closed→元ステータスに戻す
-    if (originalStatus === "open") {
-      const rollback = await updatePollStatus({
-        pollId: input.pollId,
-        guildId: input.guildId,
-        nextStatus: "open",
-        currentStatus: "closed",
-      });
-      if (rollback.error) {
-        logger.error(
-          { error: rollback.error, pollId: input.pollId },
-          "Failed to roll back poll status after events INSERT failure"
-        );
-      }
-    }
+    await rollbackToOpenIfNeeded(input.pollId, input.guildId, originalStatus);
     // Supabase の生メッセージは Bot の返信にも乗せず、固定メッセージに統一する
     logger.error(
       {
@@ -777,6 +838,22 @@ export async function finalizePoll(
       "events INSERT succeeded but poll finalize UPDATE failed; events row is orphaned until reconciliation"
     );
     return { success: false, error: finalize.error };
+  }
+
+  if (!finalize.updated) {
+    // 楽観的排他: 他のアクターが status を変更したため 0 行更新となった
+    logger.error(
+      { pollId: input.pollId, eventId },
+      "events INSERT succeeded but poll finalize UPDATE matched zero rows (concurrent state change); events row is orphaned until reconciliation"
+    );
+    return {
+      success: false,
+      error: {
+        code: "POLL_ALREADY_FINALIZED",
+        message:
+          "他の操作によって投票の状態が変更されました。最新の状態を確認してください。",
+      },
+    };
   }
 
   const finalizedSnapshot: PollSnapshot = {

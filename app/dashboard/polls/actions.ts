@@ -27,6 +27,15 @@ function permissionDenied(message: string): PollServiceError {
   return { code: "FORBIDDEN", message };
 }
 
+/**
+ * Sentry に送るべき「真に予期しない」エラーコードのみ true を返す。
+ * POLL_NOT_FOUND / POLL_ALREADY_CLOSED 等のビジネス上の正常系エラーは
+ * 運用ノイズになるため除外する。
+ */
+function shouldReportToSentry(code: PollServiceError["code"]): boolean {
+  return code === "INTERNAL" || code === "EVENT_CREATE_FAILED";
+}
+
 export type SanitizedPollResult<T> = PollResult<T>;
 
 function sanitizeResult<T>(result: PollResult<T>): SanitizedPollResult<T> {
@@ -113,7 +122,7 @@ export async function closePollAction(
     if (result.success) {
       revalidatePath("/dashboard/polls");
       revalidatePath(`/dashboard/polls/${input.pollId}`);
-    } else {
+    } else if (shouldReportToSentry(result.error.code)) {
       captureException(
         new Error(`closePollAction failed: ${result.error.code}`),
         {
@@ -186,16 +195,18 @@ export async function finalizePollAction(
     });
 
     if (!result.success) {
-      captureException(
-        new Error(`finalizePollAction failed: ${result.error.code}`),
-        {
-          extra: {
-            pollId: input.pollId,
-            guildId: input.guildId,
-            code: result.error.code,
-          },
-        }
-      );
+      if (shouldReportToSentry(result.error.code)) {
+        captureException(
+          new Error(`finalizePollAction failed: ${result.error.code}`),
+          {
+            extra: {
+              pollId: input.pollId,
+              guildId: input.guildId,
+              code: result.error.code,
+            },
+          }
+        );
+      }
       return sanitizeResult(result);
     }
 

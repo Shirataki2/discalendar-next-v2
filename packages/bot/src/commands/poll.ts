@@ -16,6 +16,7 @@ import {
   createPoll,
   deletePoll,
   finalizePoll,
+  updatePollMessageId,
 } from "../services/poll-service.js";
 import type { Command } from "../types/command.js";
 import type { PollOptionInput, PollSnapshot } from "../types/poll.js";
@@ -25,7 +26,12 @@ import { hasManagementPermission } from "../utils/permissions.js";
 import { buildPollEmbed } from "../utils/poll-embed.js";
 
 const MIN_OPTIONS = 2;
-const MAX_OPTIONS = 10;
+/**
+ * Discord の ActionRow 上限（5 行）に揃えて 1 候補 = 1 ActionRow にする。
+ * 6 件以上を許可すると一部候補に投票ボタンが表示されず、ユーザーが投票
+ * できない候補が混在することになるため、コマンド側で受付段階から制限する。
+ */
+const MAX_OPTIONS = 5;
 const DEFAULT_DURATION_MINUTES = 60;
 const MIN_DURATION_MINUTES = 15;
 const MAX_DURATION_MINUTES = 24 * 60;
@@ -39,7 +45,7 @@ function buildCommandData(): SlashCommandSubcommandsOnlyBuilder {
     .addSubcommand((sub) =>
       sub
         .setName("create")
-        .setDescription("新しい投票を作成します（候補 2〜10 件、JST）")
+        .setDescription("新しい投票を作成します（候補 2〜5 件、JST）")
         .addStringOption((opt) =>
           opt
             .setName("title")
@@ -329,6 +335,24 @@ async function executeCreate(
       embeds: [embed],
       components,
     });
+
+    const persist = await updatePollMessageId(
+      result.data.poll.id,
+      guildId,
+      sent.id
+    );
+    if (!persist.success) {
+      logger.error(
+        {
+          error: persist.error,
+          pollId: result.data.poll.id,
+          guildId,
+          messageId: sent.id,
+        },
+        "Failed to persist poll message_id; close/finalize may not refresh the message"
+      );
+    }
+
     logger.info(
       {
         guildId,
