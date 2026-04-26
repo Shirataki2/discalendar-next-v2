@@ -31,7 +31,8 @@ export function DocsEdit() {
       </ul>
       <p>
         予定名は部分一致で検索されます。詳しい使い方は
-        コマンド一覧をご確認ください。
+        <a href="/docs/commands">コマンド一覧</a>
+        をご確認ください。
       </p>
 
       <h2>注意事項</h2>

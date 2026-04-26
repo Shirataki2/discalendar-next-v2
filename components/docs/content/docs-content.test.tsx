@@ -45,6 +45,9 @@ const EVENT_LIST_PATTERN = /予定のリスト/;
 const CREATE_EVENT_PATTERN = /予定を作成/;
 const HELP_MESSAGE_PATTERN = /ヘルプメッセージ/;
 const JOIN_SERVER_PATTERN = /サーバーに参加させる/;
+const RECURRING_EVENT_PATTERN = /繰り返し予定/;
+const RSVP_MANAGE_PATTERN = /出欠の管理/;
+const DISCORD_EDIT_PATTERN = /Discordコマンドから編集/;
 
 // Patterns for replaced h1 title tests
 const GETTING_STARTED_INTRO_PATTERN = /Discalendarの導入から基本操作まで/;
@@ -262,6 +265,23 @@ describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の
       ).toBeInTheDocument();
     });
 
+    it("繰り返し予定のセクションを含む", () => {
+      render(<DocsCalendar />);
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: RECURRING_EVENT_PATTERN,
+        })
+      ).toBeInTheDocument();
+    });
+
+    it("出欠管理のセクションを含む", () => {
+      render(<DocsCalendar />);
+      expect(
+        screen.getByRole("heading", { level: 2, name: RSVP_MANAGE_PATTERN })
+      ).toBeInTheDocument();
+    });
+
     it("article要素でラップされている", () => {
       const { container } = render(<DocsCalendar />);
       expect(container.querySelector("article")).toBeInTheDocument();
@@ -291,6 +311,13 @@ describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の
       render(<DocsEdit />);
       expect(
         screen.getByRole("heading", { level: 2, name: DELETE_EVENT_PATTERN })
+      ).toBeInTheDocument();
+    });
+
+    it("Discordコマンドからの編集・削除セクションを含む", () => {
+      render(<DocsEdit />);
+      expect(
+        screen.getByRole("heading", { level: 2, name: DISCORD_EDIT_PATTERN })
       ).toBeInTheDocument();
     });
 
