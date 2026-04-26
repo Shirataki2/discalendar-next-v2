@@ -10,6 +10,8 @@ export type Config = {
   sentryDsn: string | undefined;
   /** 開発用: 指定するとグローバルではなくギルドコマンドとして登録（レート制限回避） */
   devGuildId: string | undefined;
+  /** Web ダッシュボードの URL（/poll finalize リンク先の組み立てに使用） */
+  webBaseUrl: string;
 };
 
 function requireEnv(name: string): string {
@@ -37,6 +39,7 @@ export function getConfig(): Config {
     logLevel: process.env.LOG_LEVEL?.toLowerCase() ?? "info",
     sentryDsn: process.env.SENTRY_DSN || undefined,
     devGuildId: process.env.DEV_GUILD_ID || undefined,
+    webBaseUrl: process.env.WEB_BASE_URL ?? "https://discalendar.app",
   };
 
   return cachedConfig;
