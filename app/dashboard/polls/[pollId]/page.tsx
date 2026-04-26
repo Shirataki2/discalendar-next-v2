@@ -1,6 +1,11 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { canManageGuild } from "@/lib/discord/permissions";
+import {
+  canManageGuild,
+  type DiscordPermissions,
+  parsePermissions,
+} from "@/lib/discord/permissions";
 import { getCachedGuilds } from "@/lib/guilds/cache";
 import { getPollSnapshot } from "@/lib/polls/poll-service";
 import { createClient } from "@/lib/supabase/server";
@@ -13,6 +18,24 @@ export const metadata: Metadata = {
 type Props = {
   params: Promise<{ pollId: string }>;
 };
+
+async function fetchGuildPermissionsFromDb(
+  supabase: SupabaseClient,
+  userId: string,
+  guildId: string
+): Promise<DiscordPermissions | null> {
+  const { data, error } = await supabase
+    .from("user_guilds")
+    .select("permissions")
+    .eq("user_id", userId)
+    .eq("guild_id", guildId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+  return parsePermissions((data as { permissions: string }).permissions);
+}
 
 export default async function PollDetailPage({ params }: Props) {
   const { pollId } = await params;
@@ -47,9 +70,18 @@ export default async function PollDetailPage({ params }: Props) {
     notFound();
   }
 
-  const canManage = matchedGuild
-    ? canManageGuild(matchedGuild.permissions)
-    : false;
+  // キャッシュは ephemeral なため、cold instance や直接遷移時は user_guilds
+  // から permissions を取得する。サーバーアクション側 (authorizeManage) でも
+  // 再検証されるためセキュリティではなく UX (ボタン非表示) の問題対策。
+  let permissions = matchedGuild?.permissions ?? null;
+  if (permissions === null) {
+    permissions = await fetchGuildPermissionsFromDb(
+      supabase,
+      user.id,
+      matchedGuildId
+    );
+  }
+  const canManage = permissions !== null && canManageGuild(permissions);
 
   return (
     <PollDetailClient canManage={canManage} initialSnapshot={snapshot.data} />

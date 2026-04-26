@@ -460,8 +460,10 @@ describe("poll-service", () => {
     /**
      * castVote では次の順序で DB を呼ぶ:
      *   1) event_polls.select("status").eq("id").single()   — closed ガード
-     *   2) event_poll_votes.select("id, choice").eq("poll_id").eq("option_id").eq("user_id").maybeSingle()
-     *   3) upsert / delete いずれか
+     *   2) event_poll_options.select("id").eq("id").eq("poll_id").maybeSingle()
+     *      — option が当該 poll に属することの整合性検証
+     *   3) event_poll_votes.select("id, choice").eq("poll_id").eq("option_id").eq("user_id").maybeSingle()
+     *   4) upsert / delete いずれか
      */
     function buildPollStatusChain(status: "open" | "closed" | "finalized") {
       const single = vi
@@ -470,6 +472,17 @@ describe("poll-service", () => {
       const eqId = vi.fn().mockReturnValue({ single });
       const select = vi.fn().mockReturnValue({ eq: eqId });
       return { select, eqId };
+    }
+
+    function buildOptionOwnershipChain(found: boolean) {
+      const maybeSingle = vi.fn().mockResolvedValue({
+        data: found ? { id: "opt-1" } : null,
+        error: null,
+      });
+      const eqPoll = vi.fn().mockReturnValue({ maybeSingle });
+      const eqId = vi.fn().mockReturnValue({ eq: eqPoll });
+      const select = vi.fn().mockReturnValue({ eq: eqId });
+      return { select };
     }
 
     function buildExistingVoteChain(
@@ -516,6 +529,7 @@ describe("poll-service", () => {
 
     it("既存 vote がない場合は upsert して recorded(previous=null) を返す", async () => {
       const pollChain = buildPollStatusChain("open");
+      const optionChain = buildOptionOwnershipChain(true);
       const existingChain = buildExistingVoteChain(null);
 
       const upsertResolved = vi
@@ -526,6 +540,9 @@ describe("poll-service", () => {
       mockFrom.mockImplementation((table: string) => {
         if (table === "event_polls") {
           return { select: pollChain.select };
+        }
+        if (table === "event_poll_options") {
+          return { select: optionChain.select };
         }
         if (table === "event_poll_votes") {
           return { select: existingChain.select, upsert };
@@ -558,6 +575,7 @@ describe("poll-service", () => {
 
     it("既存 vote と異なる choice で upsert し previous を返す", async () => {
       const pollChain = buildPollStatusChain("open");
+      const optionChain = buildOptionOwnershipChain(true);
       const existingChain = buildExistingVoteChain({
         id: "vote-1",
         choice: "maybe",
@@ -571,6 +589,9 @@ describe("poll-service", () => {
       mockFrom.mockImplementation((table: string) => {
         if (table === "event_polls") {
           return { select: pollChain.select };
+        }
+        if (table === "event_poll_options") {
+          return { select: optionChain.select };
         }
         if (table === "event_poll_votes") {
           return { select: existingChain.select, upsert };
@@ -595,6 +616,7 @@ describe("poll-service", () => {
 
     it("同一 choice の再送信は vote を削除し revoked を返す", async () => {
       const pollChain = buildPollStatusChain("open");
+      const optionChain = buildOptionOwnershipChain(true);
       const existingChain = buildExistingVoteChain({
         id: "vote-1",
         choice: "yes",
@@ -607,6 +629,9 @@ describe("poll-service", () => {
       mockFrom.mockImplementation((table: string) => {
         if (table === "event_polls") {
           return { select: pollChain.select };
+        }
+        if (table === "event_poll_options") {
+          return { select: optionChain.select };
         }
         if (table === "event_poll_votes") {
           return {
@@ -632,6 +657,41 @@ describe("poll-service", () => {
       }
       expect(upsert).not.toHaveBeenCalled();
       expect(deleteEq).toHaveBeenCalledWith("id", "vote-1");
+    });
+
+    it("option_id が当該 poll に属さない場合は INVALID_INPUT を返す", async () => {
+      const pollChain = buildPollStatusChain("open");
+      const optionChain = buildOptionOwnershipChain(false);
+      const existingSelect = vi.fn();
+      const upsert = vi.fn();
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "event_polls") {
+          return { select: pollChain.select };
+        }
+        if (table === "event_poll_options") {
+          return { select: optionChain.select };
+        }
+        if (table === "event_poll_votes") {
+          return { select: existingSelect, upsert };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+
+      const { castVote } = await import("./poll-service.js");
+      const result = await castVote({
+        pollId: "poll-1",
+        optionId: "opt-foreign",
+        userId: "u1",
+        choice: "yes",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("INVALID_INPUT");
+      }
+      expect(existingSelect).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
     });
 
     it("poll が存在しない場合は POLL_NOT_FOUND を返す", async () => {

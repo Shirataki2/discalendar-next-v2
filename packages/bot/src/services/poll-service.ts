@@ -391,6 +391,41 @@ export async function castVote(
     };
   }
 
+  // 深層防御: customId は通常サーバーが組み立てるが、Discord に直接 HTTP
+  // リクエストを送れるユーザーが poll_id と無関係な option_id を混入させた
+  // インタラクションを送る可能性があるため、option が当該 poll に属する
+  // ことを DB で確認する (event_poll_votes は両方への独立 FK のみ)。
+  const { data: optionRow, error: optionError } = await supabase
+    .from("event_poll_options")
+    .select("id")
+    .eq("id", input.optionId)
+    .eq("poll_id", input.pollId)
+    .maybeSingle();
+
+  if (optionError) {
+    logger.error(
+      {
+        error: optionError,
+        pollId: input.pollId,
+        optionId: input.optionId,
+      },
+      "Failed to verify option_id belongs to poll"
+    );
+    return {
+      success: false,
+      error: classifyPollError(optionError, "castVote"),
+    };
+  }
+  if (!optionRow) {
+    return {
+      success: false,
+      error: {
+        code: "INVALID_INPUT",
+        message: "option_id does not belong to this poll",
+      },
+    };
+  }
+
   const { data: existing, error: existingError } = await supabase
     .from("event_poll_votes")
     .select("id, choice")
@@ -764,6 +799,10 @@ export async function finalizePoll(
 
   const resolved = resolveTargetOption(snapshot, input.optionId);
   if (!resolved.success) {
+    // open→closed の先行遷移を行った後で resolve に失敗した場合
+    // (例: yes 票が 0 件) は poll が closed のまま固定されるため
+    // 元の open に戻す。
+    await rollbackToOpenIfNeeded(input.pollId, input.guildId, originalStatus);
     return resolved;
   }
   const targetOption = resolved.data;

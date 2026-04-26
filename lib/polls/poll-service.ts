@@ -437,6 +437,17 @@ export async function finalizePoll(
 
   const resolved = resolveTargetOption(snapshot, input.optionId);
   if (!resolved.success) {
+    // open→closed の先行遷移後に resolve が失敗するケース (例: yes 票 0 件)
+    // ではユーザー操作で復旧する手段がなくなるため open に戻す。
+    if (originalStatus === "open") {
+      await conditionalUpdateStatus({
+        client,
+        pollId: input.pollId,
+        guildId: input.guildId,
+        nextStatus: "open",
+        currentStatus: "closed",
+      });
+    }
     return resolved;
   }
   const targetOption = resolved.data;
