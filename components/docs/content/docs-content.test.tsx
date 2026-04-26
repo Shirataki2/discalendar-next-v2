@@ -306,9 +306,18 @@ describe("Task 4.3: ドキュメントコンテンツ（初期設定、予定の
       expect(screen.getByText(SLASH_COMMANDS_PATTERN)).toBeInTheDocument();
     });
 
-    it("全5コマンドの見出しを表示する", () => {
+    it("全コマンドの見出しを表示する", () => {
       render(<DocsCommands />);
-      const commands = ["/init", "/list", "/create", "/help", "/invite"];
+      const commands = [
+        "/init",
+        "/list",
+        "/create",
+        "/edit",
+        "/delete",
+        "/rsvp",
+        "/help",
+        "/invite",
+      ];
       for (const cmd of commands) {
         expect(
           screen.getByRole("heading", { level: 2, name: cmd })
