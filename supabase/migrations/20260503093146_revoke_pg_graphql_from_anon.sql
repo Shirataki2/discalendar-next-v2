@@ -28,6 +28,8 @@
 --   * `events`           - has `anon_can_read_public_events` policy (public calendar)
 --                          (not in DIS-176 list because column-level grants are
 --                          already restricted via `restrict_anon_event_columns`).
+--   * `event_series`     - has `anon_can_read_public_event_series` policy (public calendar)
+--                          and column-level grants are restricted alongside `events`.
 -- These remain reachable via PostgREST and stay as expected pg_graphql exposures.
 
 REVOKE ALL ON TABLE
