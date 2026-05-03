@@ -13,8 +13,10 @@ ALTER FUNCTION public.update_updated_at_column()
     SET search_path = public, pg_temp;
 
 -- 通知履歴追記関数（SECURITY DEFINER のため特に重要）
+-- 既存の SECURITY DEFINER 関数（upsert_user_guild, sync_user_guilds, ICS feed token 関数群など）と
+-- 一貫性を保つため、pg_temp を含めずに public のみを指定する。
 ALTER FUNCTION public.append_notification(UUID, JSONB)
-    SET search_path = public, pg_temp;
+    SET search_path = public;
 
 -- event_polls の options 件数上限トリガー関数
 ALTER FUNCTION public.assert_poll_option_limit()
